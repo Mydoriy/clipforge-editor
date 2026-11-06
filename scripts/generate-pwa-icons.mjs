@@ -138,3 +138,4 @@ const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512
 fs.writeFileSync(path.join(iconsDir, 'icon.svg'), svgContent, 'utf8');
 
 console.log('✅ Generated PWA icons in public/icons/: icon-192.png, icon-512.png, icon-maskable.png, icon.svg');
+

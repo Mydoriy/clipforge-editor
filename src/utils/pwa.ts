@@ -160,3 +160,4 @@ export function applyPwaUpdate(force = false): boolean {
   window.location.reload();
   return true;
 }
+

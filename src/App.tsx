@@ -12,6 +12,7 @@ const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Edi
 const DesignStudio = lazy(() => import('./pages/DesignStudio').then((m) => ({ default: m.DesignStudio })));
 const SectionPage = lazy(() => import('./pages/SectionPage').then((m) => ({ default: m.SectionPage })));
 const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })));
+const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })));
 const Modals = lazy(() => import('./components/Modals').then((m) => ({ default: m.Modals })));
 
 const PageLoader: React.FC = () => (
@@ -86,6 +87,9 @@ export const App: React.FC = () => {
               </>
             }
           />
+
+          {/* Standalone Landing Page */}
+          <Route path="/welcome" element={<Welcome />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

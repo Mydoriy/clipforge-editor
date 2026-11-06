@@ -74,6 +74,13 @@
 - **Cài đặt Ứng dụng & Safari iOS Guide**: Bắt sự kiện `beforeinstallprompt` với nút "Cài đặt App" trong Settings modal; hướng dẫn 3 bước trực quan riêng cho Safari/iOS (Share → Add to Home Screen).
 - **Cập nhật Phiên bản An toàn**: Phát hiện worker mới và hiển thị thông báo "Có bản cập nhật mới"; kiểm tra an toàn chặn reload khi trạng thái autosave đang ghi dữ liệu hoặc đang xuất video.
 
+### 🌐 L2 (Trang Giới Thiệu & SEO Hoàn Tất):
+- **Trang Landing Tĩnh Độc Lập (`/welcome`)**: Hero giới thiệu hấp dẫn, mô phỏng trực quan workspace dựng video dọc 9:16 thời gian thực, 6 tính năng nổi bật (Timeline multi-track, WebCodecs GPU, preset chữ, 3D LUT, PWA offline, bảo mật local-first), bảng so sánh chi tiết "Chạy hoàn toàn trên trình duyệt, video không bị tải lên server" đối chiếu với các Cloud-based Editor, ma trận tương thích trình duyệt (Chrome, Edge, Safari, Firefox), 5 câu hỏi thường gặp FAQ có accordion mượt mà, và tuyên bố minh bạch không liên kết.
+- **Tối ưu SEO & Metadata Hoàn Chỉnh**: Cấu hình canonical URL, thẻ đa ngôn ngữ `hreflang` (`vi`, `en`, `x-default`), Open Graph và Twitter Cards (`summary_large_image`), dữ liệu có cấu trúc chuẩn Schema.org `SoftwareApplication` (đánh giá 4.9★, 0$ miễn phí), tích hợp tự nhiên từ khóa: "chỉnh sửa video online không cần đăng nhập", "cắt ghép video trên trình duyệt miễn phí".
+- **Sitemap & Robots**: `public/sitemap.xml` và `public/robots.txt` định tuyến chuẩn cho toàn bộ crawler tìm kiếm (Googlebot, Bingbot...).
+- **Tuân thủ Bản quyền & Nhận diện**: Không sử dụng bất kỳ logo hay tên thương hiệu của CapCut/ByteDance trong nội dung marketing; ghi rõ tuyên bố độc lập trong footer và metadata.
+- **Bộ Kiểm Thử Tự Động L2**: 5/5 test suites tự động trong `src/tests/l2SeoLanding.test.mjs` xác thực sitemap, robots, SEO meta, JSON-LD, disclaimer và route.
+
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)

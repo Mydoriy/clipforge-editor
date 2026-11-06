@@ -126,3 +126,4 @@ test('L1: Index.html PWA metadata & iOS Safari touch icon linkage', () => {
   assert.ok(htmlContent.includes('apple-touch-icon'), 'index.html must specify apple-touch-icon for iOS Safari');
   assert.ok(htmlContent.includes('apple-mobile-web-app-capable'), 'index.html must set apple-mobile-web-app-capable');
 });
+
