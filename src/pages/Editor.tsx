@@ -8,6 +8,7 @@ import { CategoryPanel, PlayerCanvas, Inspector, Timeline as TimelineComponent }
 import { EditPilot } from '../components/EditPilot';
 import { Mascot } from '../components/Mascot';
 import { sharedCompositor } from '../engine/compositor';
+import { masterAudio } from '../engine/audioEngine';
 import { matchShortcut } from '../utils/shortcuts';
 import { acquireProjectLock, type ProjectLockHandle } from '../utils/projectLock';
 import { saveCrashCheckpoint, markCleanExit, checkUnsavedCrashCheckpoint, clearCrashCheckpoint, type CrashCheckpoint } from '../utils/crashRecovery';
@@ -130,6 +131,8 @@ export const Editor: React.FC = () => {
       }
       setIsReadOnly(false);
       sharedCompositor.cleanup();
+      masterAudio.clearCache();
+      masterAudio.pauseAll();
     };
   }, [id, setCurrentProjectId, setProjectTitle, setClips, setDuration, setTimelines, setActiveTimelineId, updateProjectSettings, setMediaItems, setIsReadOnly]);
 

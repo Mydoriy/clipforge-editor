@@ -69,16 +69,27 @@ export async function generateProxyVideo480p(sourceUrl: string): Promise<string>
         canvas.width = 480;
         canvas.height = 854; // 9:16 vertical 480p
         const ctx = canvas.getContext('2d');
+        let resUrl = sourceUrl;
         if (ctx) {
           ctx.drawImage(video, 0, 0, 480, 854);
-          const proxyDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          resolve(proxyDataUrl);
-        } else {
-          resolve(sourceUrl);
+          resUrl = canvas.toDataURL('image/jpeg', 0.7);
         }
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch (e) {}
+        resolve(resUrl);
       };
 
-      video.onerror = () => resolve(sourceUrl);
+      video.onerror = () => {
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch (e) {}
+        resolve(sourceUrl);
+      };
     } catch (e) {
       resolve(sourceUrl);
     }
@@ -115,14 +126,26 @@ export async function generateMediaMetadata(file: File, objectUrl: string): Prom
         c.width = 160;
         c.height = 284;
         const ctx = c.getContext('2d');
+        let thumb = '';
         if (ctx) {
           ctx.drawImage(v, 0, 0, 160, 284);
-          resolve(c.toDataURL('image/jpeg', 0.8));
-        } else {
-          resolve('');
+          thumb = c.toDataURL('image/jpeg', 0.8);
         }
+        try {
+          v.pause();
+          v.removeAttribute('src');
+          v.load();
+        } catch (e) {}
+        resolve(thumb);
       };
-      v.onerror = () => resolve('');
+      v.onerror = () => {
+        try {
+          v.pause();
+          v.removeAttribute('src');
+          v.load();
+        } catch (e) {}
+        resolve('');
+      };
     });
   } else if (file.type.startsWith('image')) {
     thumbnailUrl = objectUrl;
