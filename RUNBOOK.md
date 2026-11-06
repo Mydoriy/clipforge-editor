@@ -124,3 +124,4 @@ Khi người dùng báo lỗi qua modal **"Báo lỗi & Góp ý"** hoặc bấm 
 | `deviceMemoryGB` | `< 4` | Thiết bị người dùng RAM thấp ($\le 4$GB), dễ gặp lỗi tràn bộ nhớ khi decode video 4K/60fps. | Hướng dẫn người dùng bật **Proxy Mode** trong Cài đặt để ứng dụng tự động giảm độ phân giải preview xuống 480p mượt mà. |
 | `storageEstimate.percent` | `> 80%` | Bộ nhớ đệm IndexedDB hoặc OPFS của trình duyệt sắp đầy hạn mức (`QuotaExceededError`). | Hướng dẫn người dùng vào **Quản lý lưu trữ (Cloud Storage)** trên thanh sidebar để dọn dẹp cache thumbnail/waveform hoặc xuất file `.capproj` sao lưu rồi dọn Thùng rác. |
 | `fileSystemAccess` | `false` | Người dùng đang dùng Firefox hoặc Safari (chưa hỗ trợ W3C File System Access API). | Hệ thống tự động kích hoạt fallback cơ chế nạp file qua thẻ `<input type="file">` và tải file thành phẩm về qua download link truyền thống. Khuyên dùng Chrome/Edge để có trải nghiệm streaming tốt nhất. |
+

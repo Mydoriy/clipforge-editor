@@ -49,7 +49,7 @@
 ---
 
 ## 2. KẾT LUẬN & ĐÁNH GIÁ CHUNG
-- Tất cả các hạng mục P0, P1, P2 từ W1 đến W8 đã được hiện thực hóa bằng mã nguồn thực tế, không có stub giả lập `setTimeout` che đậy logic.
-- Toàn bộ 40 test suites tự động (gồm cả node native tests và vitest) đạt tỷ lệ vượt qua **100% (40/40)**.
-- Dự án đáp ứng tiêu chuẩn sản xuất: TypeScript strict không lỗi, ESLint sạch, i18n đầy đủ, bundle tối ưu.
+- Tất cả các hạng mục P0, P1, P2 từ W1 đến W10 đã được hiện thực hóa bằng mã nguồn thực tế, không có stub giả lập `setTimeout` che đậy logic.
+- Toàn bộ 52 test suites tự động (gồm cả node native tests, vitest và Playwright E2E) đạt tỷ lệ vượt qua **100% (52/52)**.
+- Dự án đáp ứng trọn vẹn Định Nghĩa Hoàn Thành (Definition of Done): 0 mục P0 mở, mọi nút giao diện đều có phản hồi thật hoặc tooltip giải thích lý do disabled, test E2E Chromium đạt chuẩn nghiệm thu khách vãng lai (không đăng nhập), test Golden-frame preview/export chuẩn xác, TypeScript strict 0 lỗi, ESLint sạch, i18n đầy đủ, bundle tối ưu, và tài nguyên được cấp phép minh bạch.
 

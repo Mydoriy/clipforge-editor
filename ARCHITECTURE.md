@@ -170,3 +170,4 @@ graph TD
 1. **Zero Server Dependency**: Ứng dụng phải luôn chạy hoàn chỉnh ở chế độ Guest ngoại tuyến mà không yêu cầu backend, không gửi dữ liệu ra ngoài trừ khi người dùng chủ động cấu hình.
 2. **Deterministic Timeline Mathematics**: Mọi toán tử biến đổi timeline phải là hàm thuần túy (pure functions) nhận `(clips, ...params)` và trả về mảng `clips` mới, có unit test tự động xác minh.
 3. **Hardware-First Encoding**: Ưu tiên WebCodecs hardware encoder trước khi fallback về WebAssembly để đảm bảo tốc độ và tiết kiệm pin thiết bị.
+

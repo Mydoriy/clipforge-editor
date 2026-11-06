@@ -95,3 +95,4 @@ npm run build
    - Những nội dung cố tình bỏ qua (nếu có) và rủi ro người dùng cần biết.
 
 Cảm ơn sự đóng góp quý báu của bạn cho sự phát triển của ClipForge Desktop Web!
+

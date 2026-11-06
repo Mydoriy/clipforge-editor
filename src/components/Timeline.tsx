@@ -1467,7 +1467,7 @@ export const Timeline: React.FC = () => {
             className={`p-1.5 rounded-md transition-colors ${
               undoStack.length > 0 ? 'hover:bg-[#262626] text-white hover:text-[#1FC8DB]' : 'text-[#8A8A8A]/40 cursor-not-allowed'
             }`}
-            title="Hoàn tác (Ctrl+Z)"
+            title={undoStack.length === 0 ? 'Không có thao tác nào để hoàn tác (Ctrl+Z)' : 'Hoàn tác (Ctrl+Z)'}
           >
             <Undo2 className="w-3.5 h-3.5" />
           </button>
@@ -1477,7 +1477,7 @@ export const Timeline: React.FC = () => {
             className={`p-1.5 rounded-md transition-colors ${
               redoStack.length > 0 ? 'hover:bg-[#262626] text-white hover:text-[#1FC8DB]' : 'text-[#8A8A8A]/40 cursor-not-allowed'
             }`}
-            title="Làm lại (Ctrl+Shift+Z / Ctrl+Y)"
+            title={redoStack.length === 0 ? 'Không có thao tác nào để làm lại (Ctrl+Y)' : 'Làm lại (Ctrl+Shift+Z / Ctrl+Y)'}
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
@@ -1488,7 +1488,7 @@ export const Timeline: React.FC = () => {
           <button
             onClick={handleSplit}
             className="p-1.5 hover:bg-[#262626] hover:text-[#1FC8DB] text-white rounded-md transition-colors"
-            title="Tách clip tại playhead (S / Ctrl+B)"
+            title="Tách clip tại playhead (Phím C hoặc S)"
           >
             <Scissors className="w-3.5 h-3.5" />
           </button>
@@ -1500,7 +1500,7 @@ export const Timeline: React.FC = () => {
             className={`p-1.5 rounded-md transition-colors ${
               selectedClipId ? 'hover:bg-[#262626] hover:text-[#1FC8DB] text-white' : 'text-[#8A8A8A]/40 cursor-not-allowed'
             }`}
-            title="Cắt bỏ phần bên trái playhead (Phím Q)"
+            title={!selectedClipId ? 'Vui lòng chọn một clip trên timeline để cắt trái (Phím Q)' : 'Cắt bỏ phần bên trái playhead (Phím Q)'}
           >
             <ArrowLeftToLine className="w-3.5 h-3.5" />
           </button>
@@ -1512,7 +1512,7 @@ export const Timeline: React.FC = () => {
             className={`p-1.5 rounded-md transition-colors ${
               selectedClipId ? 'hover:bg-[#262626] hover:text-[#1FC8DB] text-white' : 'text-[#8A8A8A]/40 cursor-not-allowed'
             }`}
-            title="Cắt bỏ phần bên phải playhead (Phím W)"
+            title={!selectedClipId ? 'Vui lòng chọn một clip trên timeline để cắt phải (Phím W)' : 'Cắt bỏ phần bên phải playhead (Phím W)'}
           >
             <ArrowRightToLine className="w-3.5 h-3.5" />
           </button>
@@ -1524,7 +1524,7 @@ export const Timeline: React.FC = () => {
             className={`p-1.5 rounded-md transition-colors ${
               selectedClipId || selectedClipIds.length > 0 ? 'hover:bg-rose-950/40 text-rose-300' : 'text-[#8A8A8A]/40 cursor-not-allowed'
             }`}
-            title="Xóa clip (Del) / Giữ Shift+Del để xóa gập (Ripple Delete)"
+            title={!selectedClipId && selectedClipIds.length === 0 ? 'Vui lòng chọn một clip trên timeline để xóa' : 'Xóa clip (Del) / Giữ Shift+Del để xóa gập (Ripple Delete)'}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -1542,7 +1542,7 @@ export const Timeline: React.FC = () => {
                 ? 'hover:bg-[#262626] text-white hover:text-amber-400'
                 : 'text-[#8A8A8A]/40 cursor-not-allowed'
             }`}
-            title={selectedClip?.locked ? 'Mở khóa clip này' : 'Khóa clip bảo vệ không cho sửa/xóa nhầm'}
+            title={!selectedClipId ? 'Vui lòng chọn một clip để khóa hoặc mở khóa' : selectedClip?.locked ? 'Mở khóa clip này' : 'Khóa clip bảo vệ không cho sửa/xóa nhầm'}
           >
             {selectedClip?.locked ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
           </button>

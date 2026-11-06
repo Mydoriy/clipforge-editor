@@ -85,3 +85,4 @@ test('W10-7: RUNBOOK.md provides deploy, rollback and diagnostic interpretation 
   assert.ok(content.includes('Root Cause Analysis') || content.includes('nguyên nhân gốc'), 'Must provide root cause analysis');
   assert.ok(content.includes('sharedArrayBuffer') && content.includes('webCodecs'), 'Must interpret key hardware flags');
 });
+

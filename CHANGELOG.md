@@ -58,3 +58,4 @@ Tất cả những thay đổi đáng chú ý của dự án **ClipForge Desktop
   - Cập nhật [README.md](file:///d:/Editor/README.md), [ARCHITECTURE.md](file:///d:/Editor/ARCHITECTURE.md), [CONTRIBUTING.md](file:///d:/Editor/CONTRIBUTING.md), [USER_GUIDE.md](file:///d:/Editor/USER_GUIDE.md) (song ngữ VI/EN), [.env.example](file:///d:/Editor/.env.example).
   - Quản lý phiên bản chuẩn Semantic Versioning (`APP_VERSION = '1.0.0'`) hiển thị động trong About Modal và Header.
   - Quy trình vận hành & SRE tại [RUNBOOK.md](file:///d:/Editor/RUNBOOK.md) (Deploy, Rollback, Phân tích System Diagnostics).
+

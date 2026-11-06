@@ -45,4 +45,3 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm run test:e2e
-        continue-on-error: true

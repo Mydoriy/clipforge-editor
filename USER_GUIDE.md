@@ -135,3 +135,4 @@ Selecting a clip reveals the **Details** panel on the right:
 ## 7. Troubleshooting & Diagnostics
 - Open **Menu ▾** $\rightarrow$ **Settings** $\rightarrow$ **System Check** to verify WebCodecs, WebGL2, and OPFS browser hardware support.
 - If editing high-bitrate 4K footage on modest hardware, enable **Proxy Mode** in settings for smooth 480p preview playback.
+
