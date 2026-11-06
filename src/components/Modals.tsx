@@ -33,6 +33,7 @@ import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import { APP_VERSION, APP_NAME, APP_BUILD_DATE } from '../constants/version';
 import { SystemCheckModal } from './SystemCheckModal';
 import { isIosSafari, isStandaloneMode, installPwaApp, applyPwaUpdate } from '../utils/pwa';
+import { trackEvent, getTelemetryConsent, setTelemetryConsent } from '../utils/telemetry';
 import {
   X,
   Crown,
@@ -67,6 +68,7 @@ import {
   CheckCircle2,
   Upload,
   AlertTriangle,
+  Activity,
   FileText,
   Image as ImageIcon,
   SlidersHorizontal,
@@ -1749,6 +1751,10 @@ export const Modals: React.FC = () => {
                   };
 
                   await db.projects.add(newProj);
+                  trackEvent('project_created', {
+                    aspect: newProjAspect,
+                    resolution: newProjRes
+                  });
                   setCurrentProjectId(id);
                   setProjectTitle(title);
                   closeModal();
@@ -2772,9 +2778,9 @@ export const Modals: React.FC = () => {
               {/* Sentry Crash Telemetry Opt-in */}
               <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
                 <div>
-                  <span className="font-semibold block">Báo cáo sự cố ẩn danh (Sentry Telemetry)</span>
+                  <span className="font-semibold block">Báo cáo sự cố & Telemetry ẩn danh (Opt-in)</span>
                   <span className="text-[10px] text-[#9CA3AF]">
-                    Chỉ gửi log lỗi sự cố kèm thông số trình duyệt khi bạn đồng ý, hoàn toàn ẩn danh
+                    Chỉ thu thập log lỗi & hiệu năng kỹ thuật khi bạn đồng ý, không cookie, không gửi video hay tên file
                   </span>
                 </div>
                 <input
@@ -2783,14 +2789,34 @@ export const Modals: React.FC = () => {
                   onChange={(e) => {
                     const checked = e.target.checked;
                     setSentryConsent(checked);
-                    localStorage.setItem('clipforge_sentry_consent', checked ? 'true' : 'false');
+                    setTelemetryConsent(checked ? 'granted' : 'denied');
                     showToast(
-                      checked ? 'Đã bật thu thập sự cố Sentry ẩn danh' : 'Đã tắt thu thập sự cố Sentry',
+                      checked ? 'Đã bật thu thập telemetry & sự cố ẩn danh' : 'Đã tắt hoàn toàn telemetry',
                       'info'
                     );
                   }}
                   className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
                 />
+              </div>
+
+              {/* Link to Internal Telemetry Dashboard */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
+                <div>
+                  <span className="font-semibold block">Dashboard Đo Lường Kỹ Thuật (Telemetry)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Xem tỉ lệ export thành công, p50/p95, và top mã lỗi được ghi nhận cục bộ
+                  </span>
+                </div>
+                <a
+                  href="/telemetry"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-[#22D3EE]/15 hover:bg-[#22D3EE] text-[#22D3EE] hover:text-black font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Mở Dashboard</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
 
               {/* Trang Privacy link */}

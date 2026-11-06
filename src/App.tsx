@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { EditPilot } from './components/EditPilot';
 import { OnboardingTour } from './components/OnboardingTour';
+import { TelemetryConsentBanner } from './components/TelemetryConsentBanner';
 
 // Code-split pages and modals to satisfy initial bundle budget (<300KB gzip)
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
@@ -13,6 +14,7 @@ const DesignStudio = lazy(() => import('./pages/DesignStudio').then((m) => ({ de
 const SectionPage = lazy(() => import('./pages/SectionPage').then((m) => ({ default: m.SectionPage })));
 const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })));
 const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })));
+const TelemetryDashboard = lazy(() => import('./pages/TelemetryDashboard').then((m) => ({ default: m.TelemetryDashboard })));
 const Modals = lazy(() => import('./components/Modals').then((m) => ({ default: m.Modals })));
 
 const PageLoader: React.FC = () => (
@@ -38,6 +40,7 @@ const MainLayout: React.FC = () => {
       </Suspense>
       <OnboardingTour />
       <Toasts />
+      <TelemetryConsentBanner />
     </div>
   );
 };
@@ -90,6 +93,9 @@ export const App: React.FC = () => {
 
           {/* Standalone Landing Page */}
           <Route path="/welcome" element={<Welcome />} />
+
+          {/* Internal Telemetry Dashboard */}
+          <Route path="/telemetry" element={<TelemetryDashboard />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

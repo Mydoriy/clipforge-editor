@@ -96,3 +96,4 @@ test('L2.5: App.tsx has route for /welcome', () => {
   assert.ok(content.includes('path="/welcome"'), 'App.tsx must define /welcome route');
   assert.ok(content.includes('Welcome'), 'App.tsx must reference Welcome component');
 });
+

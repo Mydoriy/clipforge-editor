@@ -1,5 +1,6 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RotateCcw, Copy, Check } from 'lucide-react';
+import { reportError } from '../utils/telemetry';
 
 interface Props {
   panelName: string;
@@ -41,14 +42,12 @@ export class PanelErrorBoundary extends Component<Props, State> {
       console.warn('Failed to persist local error log:', e);
     }
 
-    // 2. Optional Sentry logging (only if explicitly enabled by user consent)
-    const sentryConsent = localStorage.getItem('clipforge_sentry_consent') === 'true';
-    if (sentryConsent && (window as any).Sentry) {
-      (window as any).Sentry.captureException(error, {
-        tags: { panel: this.props.panelName },
-        extra: errorInfo
-      });
-    }
+    // 2. Optional Sentry logging & anonymous telemetry (only if explicitly enabled by user consent)
+    reportError(error, {
+      error_code: 'REACT_PANEL_ERROR',
+      panel: this.props.panelName,
+      componentStack: errorInfo.componentStack
+    });
   }
 
   handleCopyDiagnostics = async () => {

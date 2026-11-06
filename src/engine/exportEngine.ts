@@ -1,6 +1,7 @@
 import { sharedCompositor } from './compositor';
 import type { TimelineClip } from '../store/useEditorStore';
 import * as Mp4Muxer from 'mp4-muxer';
+import { trackEvent } from '../utils/telemetry';
 
 export interface ExportProgress {
   progress: number; // 0 - 100
@@ -90,6 +91,13 @@ export async function exportVideoWithWebCodecs(
 
   const hasWebCodecs = typeof window !== 'undefined' && typeof (window as any).VideoEncoder !== 'undefined';
   const startTimestamp = Date.now();
+
+  trackEvent('export_started', {
+    resolution: res,
+    codec: options.codec || 'h264',
+    fps,
+    duration_sec: Math.round(exportDuration)
+  });
 
   if (hasWebCodecs && format === 'mp4' && Mp4Muxer.Muxer) {
     try {
@@ -189,17 +197,35 @@ export async function exportVideoWithWebCodecs(
       if (options.writableStream) {
         // Data written directly to FileSystemWritableFileStream - minimal RAM used!
         if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất ghi file streaming vào ổ đĩa!' });
+        trackEvent('export_success', {
+          resolution: res,
+          codec: options.codec || 'h264',
+          export_duration_ms: Date.now() - startTimestamp,
+          file_size_bytes: 0
+        });
         return new Blob([], { type: 'video/mp4' });
       }
 
       const buffer = (target as Mp4Muxer.ArrayBufferTarget).buffer;
       const finalBlob = new Blob([buffer], { type: 'video/mp4' });
       if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất xuất video MP4!' });
+      trackEvent('export_success', {
+        resolution: res,
+        codec: options.codec || 'h264',
+        export_duration_ms: Date.now() - startTimestamp,
+        file_size_bytes: finalBlob.size
+      });
       return finalBlob;
     } catch (err: any) {
       if (err.message === 'EXPORT_CANCELLED') {
         throw err;
       }
+      trackEvent('export_failed', {
+        resolution: res,
+        codec: options.codec || 'h264',
+        error_code: err?.name || 'WEBCODECS_ENCODE_FAILED',
+        error_stage: 'webcodecs_render'
+      });
       console.warn('WebCodecs encoder failed, falling back to MediaRecorder:', err);
     }
   }
@@ -255,9 +281,23 @@ async function exportWithMediaRecorderFallback(
     recorder.onstop = () => {
       const finalBlob = new Blob(chunks, { type: mimeType });
       if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất xuất video!' });
+      trackEvent('export_success', {
+        resolution: `${height}p`,
+        codec: 'mediarecorder',
+        export_duration_ms: Date.now() - startTimestamp,
+        file_size_bytes: finalBlob.size
+      });
       resolve(finalBlob);
     };
-    recorder.onerror = (e) => reject(e);
+    recorder.onerror = (e) => {
+      trackEvent('export_failed', {
+        resolution: `${height}p`,
+        codec: 'mediarecorder',
+        error_code: 'MEDIA_RECORDER_ERROR',
+        error_stage: 'media_recorder'
+      });
+      reject(e);
+    };
 
     recorder.start(100);
 

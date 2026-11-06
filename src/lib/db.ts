@@ -10,6 +10,7 @@ import {
   requestPersistentStorage,
   createProjectSnapshot
 } from '../db';
+import { trackEvent } from '../utils/telemetry';
 
 export {
   db,
@@ -69,6 +70,11 @@ export async function safeAddMedia(media: MediaEntity): Promise<{ success: boole
     }
 
     await db.media.add(media);
+    trackEvent('media_imported', {
+      media_type: media.type,
+      mime_type: media.blob?.type || media.type,
+      size_bytes_approx: media.size || 0
+    });
     return { success: true };
   } catch (err: any) {
     if (err.name === 'QuotaExceededError' || err.code === 22) {

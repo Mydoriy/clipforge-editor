@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Film, Sliders, CheckCircle, ArrowRight, X, Play } from 'lucide-react';
+import { trackEvent } from '../utils/telemetry';
 
 interface Props {
   forceOpen?: boolean;
@@ -21,11 +22,16 @@ export const OnboardingTour: React.FC<Props> = ({ forceOpen = false, onClose }) 
     const completed = localStorage.getItem('clipforge_onboarding_completed') === 'true';
     if (!completed) {
       setIsOpen(true);
+      trackEvent('onboarding_step', { step_index: 0, action: 'view' });
     }
   }, [forceOpen]);
 
-  const handleFinish = (openSample: boolean = false) => {
+  const handleFinish = (openSample: boolean = false, isSkip: boolean = false) => {
     localStorage.setItem('clipforge_onboarding_completed', 'true');
+    trackEvent('onboarding_step', {
+      step_index: step,
+      action: isSkip ? 'skip' : 'complete'
+    });
     setIsOpen(false);
     if (onClose) onClose();
     if (openSample) {
@@ -144,7 +150,7 @@ export const OnboardingTour: React.FC<Props> = ({ forceOpen = false, onClose }) 
         {/* Footer actions */}
         <div className="flex items-center justify-between pt-3 border-t border-[#1F2937] mt-1">
           <button
-            onClick={() => handleFinish(false)}
+            onClick={() => handleFinish(false, true)}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#9CA3AF] hover:text-white transition-colors"
           >
             Bỏ qua (Skip)
@@ -153,7 +159,10 @@ export const OnboardingTour: React.FC<Props> = ({ forceOpen = false, onClose }) 
           <div className="flex items-center gap-2">
             {step < steps.length - 1 ? (
               <button
-                onClick={() => setStep((s) => s + 1)}
+                onClick={() => {
+                  trackEvent('onboarding_step', { step_index: step + 1, action: 'next' });
+                  setStep((s) => s + 1);
+                }}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#1FC8DB] to-cyan-500 hover:opacity-90 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
               >
                 <span>Tiếp tục</span>

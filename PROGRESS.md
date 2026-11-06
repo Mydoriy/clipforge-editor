@@ -81,10 +81,24 @@
 - **Tuân thủ Bản quyền & Nhận diện**: Không sử dụng bất kỳ logo hay tên thương hiệu của CapCut/ByteDance trong nội dung marketing; ghi rõ tuyên bố độc lập trong footer và metadata.
 - **Bộ Kiểm Thử Tự Động L2**: 5/5 test suites tự động trong `src/tests/l2SeoLanding.test.mjs` xác thực sitemap, robots, SEO meta, JSON-LD, disclaimer và route.
 
+### 🛡️ L3 (Đo Lường Tôn Trọng Quyền Riêng Tư Hoàn Tất):
+- **Mặc Định Tắt (Opt-in) & Không Cookie Theo Dõi**: Hệ thống đo lường mặc định `disabled` cho đến khi người dùng chủ động đồng ý qua banner nổi bật `TelemetryConsentBanner` hoặc tùy chỉnh trong Settings modal; không sử dụng bất kỳ cookie theo dõi bên thứ ba hay kỹ thuật canvas fingerprinting.
+- **Khử Khuẩn Dữ Liệu Nghiêm Ngặt (Strict PII Sanitization)**: Hàm `sanitizeTelemetryData` lọc sạch tuyệt đối tên file, đường dẫn thư mục cục bộ (`C:\...`, `/Users/...`), tiêu đề dự án, nội dung video, query parameters mang token hay API key.
+- **Tập Sự Kiện Đo Lường Kỹ Thuật Đầy Đủ**:
+  - `project_created`: Tỉ lệ khung hình, độ phân giải (tuyệt đối KHÔNG gửi tên dự án).
+  - `media_imported`: Định dạng file, mime type, kích thước byte xấp xỉ (tuyệt đối KHÔNG gửi tên file hay nội dung video).
+  - `export_started`, `export_success`, `export_failed`: Độ phân giải, codec, fps, thời lượng xử lý (ms), kích thước file đầu ra, mã lỗi và giai đoạn lỗi.
+  - `app_error`: Mã lỗi kỹ thuật, phân loại lỗi và thông báo đã được lọc đường dẫn.
+  - `feature_used`: Theo dõi tần suất sử dụng các công cụ dựng phim chính.
+  - `onboarding_step`: Theo dõi tỉ lệ người dùng trải nghiệm, chuyển tiếp, bỏ qua và hoàn tất tour giới thiệu ban đầu.
+- **Dashboard Kỹ Thuật Nội Bộ (`/telemetry`)**: Hiển thị trực quan tỉ lệ export thành công (% và số lượng), thời gian xuất p50 / p95 theo từng độ phân giải (720p, 1080p, 4K), top mã lỗi kỹ thuật phổ biến nhất, phân bố trình duyệt & hệ điều hành, tỉ lệ thiết bị hỗ trợ tăng tốc phần cứng WebCodecs, phễu onboarding, danh sách sự kiện ẩn danh gần nhất và nút xóa sạch dữ liệu cục bộ.
+- **Báo Lỗi Sentry Có Source Map & Lọc Nhạy Cảm**: Thiết lập `sourcemap: 'hidden'` trong `vite.config.ts`, tự động gắn phiên bản `APP_VERSION`, thông số chẩn đoán phần cứng (System Check), và hook `sentryBeforeSend` lọc sạch query strings và file paths trước khi phát tán.
+- **Bộ Kiểm Thử Tự Động L3**: 6/6 test suites tự động trong `src/tests/l3Telemetry.test.mjs` bảo vệ toàn diện các luồng opt-in, sanitize, metrics, và error filtering.
+
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)
-- **Thu thập Phản hồi & Telemetry (L2 - L3)**: Vận hành kênh tiếp nhận phản hồi từ người dùng thực tế và hoàn thiện kế hoạch mở rộng.
+- **Vận hành Kênh Tiếp nhận Đóng góp & Phản hồi (L4/L5)**: Triển khai mẫu khảo sát phản hồi người dùng vãng lai và kênh báo lỗi GitHub Issues công khai.
 - **Kiểm thử trên Safari/WebKit vật lý**: Tiếp tục xác nhận trải nghiệm trên macOS/iOS Safari thực tế.
 - **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
 - **Thêm container WebM native**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.
