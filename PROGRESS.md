@@ -116,10 +116,19 @@
 - **Chính Sách Dữ Liệu & Nút Xóa Dữ Liệu Cục Bộ / Cloud**: Triển khai `src/utils/dataPrivacy.ts` với hàm `wipeAllLocalData()` xóa sạch IndexedDB (Dexie), OPFS, CacheStorage và Web Storage bằng 1 nút (Factory Reset); và hàm `deleteCloudAccountAndData()` xóa vĩnh viễn dự án và tệp media trên Supabase Storage rồi đăng xuất; tích hợp trực tiếp vào khu vực Vùng nguy hiểm trong Cài đặt hệ thống (`Modals.tsx`).
 - **Bộ Kiểm Thử Tự Động L6**: 5/5 test suites tự động trong `src/tests/l6SupportOps.test.mjs` bảo vệ toàn diện các chức năng Hỗ trợ & Vận hành. Tổng số bài test tự động của dự án đạt **95/95 test suites pass 100%**.
 
+### 🗺️ L7 (Kế Hoạch Phiên Bản Kế Tiếp v1.1 Hoàn Tất):
+- **Tài liệu Kế hoạch Chiến lược `ROADMAP_V1_1.md`**: Xây dựng lộ trình nâng cấp phiên bản v1.1 dựa trên bằng chứng thực nghiệm từ `BETA_REPORT.md` (20 testers, 5 nhiệm vụ) và dữ liệu đo lường kỹ thuật Telemetry (tỉ lệ xuất 95%, độ trễ p50/p95, các mã lỗi phổ biến), phân chia thành 3 nhóm rõ rệt:
+  1. *Sửa lỗi & Độ ổn định (3 mục)*: Watchdog chống treo GPU khi xuất 4K (`ERR_WEBCODECS_TIMEOUT`), Cơ chế cấp lại quyền đọc tệp hàng loạt (Batch Relink), và Bộ lọc bù trôi xung nhịp âm thanh cho Safari/Firefox.
+  2. *Tính năng được yêu cầu nhiều nhất (4 mục)*: Cắt tự động khoảng lặng giọng nói (Smart Silence Remover / Jump Cut), Mở rộng kho hiệu ứng âm thanh SFX thịnh hành CC0/In-House, Chia sẻ nhanh qua Web Share API Level 2, và Bộ chuyển cảnh động GLSL Shader Transitions.
+  3. *Tối ưu hiệu năng & Dung lượng (3 mục)*: Chuyển đổi hoàn toàn sang Dedicated WebCodecs Processing Worker, Lượng tử hóa model Whisper ONNX INT8 (~18MB), và Tái sử dụng texture WebGL (Texture Pooling).
+  - Mỗi mục đều có lý do xác đáng từ dữ liệu thực tế, ước lượng công cụ thể (tổng cộng 26.5 ngày công cho sprint 4 tuần) và đánh giá rủi ro kỹ thuật.
+- **Đánh Giá Chuyên Sâu Kiến Trúc Desktop (Tauri vs Web PWA)**: So sánh chi tiết về kích thước bundle, rào cản cài đặt, tốc độ export, codec mở rộng (ProRes, H.265/HEVC), và hệ thống tệp. Đưa ra khuyến nghị chiến lược: **Chưa làm Tauri ở v1.1 mà giữ vững lợi thế cạnh tranh cốt lõi Web Local-First 0-cài đặt; xem xét Tauri cho phiên bản Pro Studio ở v1.2 khi phân khúc người dùng chuyên nghiệp đòi hỏi render 4K dài $>15$ phút**.
+- **Bộ Kiểm Thử Tự Động L7**: 3/3 test suites tự động trong `src/tests/l7Roadmap.test.mjs`. Tổng số bài test tự động của toàn bộ dự án đạt **98/98 test suites pass 100%**.
+
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)
-- **Công bố Bản Phát Hành Chính Thức v1.0.0**: Toàn bộ các mốc tiền phát hành (L0, L1, L2, L3, L4, L5, L6) đã hoàn tất 100%. Sẵn sàng thông báo ra cộng đồng người dùng và mở rộng đóng góp.
+- **Công bố Bản Phát Hành Chính Thức v1.0.0**: Toàn bộ các mốc tiền phát hành (L0, L1, L2, L3, L4, L5, L6, L7) đã hoàn tất 100%. Sẵn sàng thông báo ra cộng đồng người dùng và mở rộng đóng góp.
 - **Kiểm thử trên Safari/WebKit vật lý**: Tiếp tục xác nhận trải nghiệm trên macOS/iOS Safari thực tế.
 - **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
 - **Thêm container WebM native**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.
