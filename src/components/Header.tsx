@@ -38,7 +38,8 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     toggleSidebar,
     isPro,
     notifications,
-    markAllNotificationsAsRead
+    markAllNotificationsAsRead,
+    autosaveStatus
   } = useEditorStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -162,6 +163,21 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           )}
           <span className="text-[11px] px-2 py-0.5 rounded-lg bg-[#111827] text-[#9CA3AF] border border-[#1F2937] font-mono">
             9:16
+          </span>
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium hidden sm:flex items-center gap-1 transition-all ${
+              autosaveStatus === 'saving'
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+            }`}
+            title="Dự án được tự động lưu mỗi 3 giây vào Dexie IndexedDB"
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                autosaveStatus === 'saving' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'
+              }`}
+            />
+            <span>{autosaveStatus === 'saving' ? 'Đang lưu...' : 'Đã lưu'}</span>
           </span>
         </div>
       ) : (

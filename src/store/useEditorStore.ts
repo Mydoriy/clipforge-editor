@@ -4,7 +4,7 @@ import type { Language } from '../i18n';
 
 export interface TimelineClip {
   id: string;
-  track: 'video' | 'audio' | 'text' | 'sticker' | 'effect';
+  track: 'video' | 'audio' | 'text' | 'sticker' | 'effect' | 'transition';
   name: string;
   start: number; // in seconds
   duration: number; // in seconds
@@ -18,7 +18,15 @@ export interface TimelineClip {
   opacity?: number;
   speed?: number;
   volume?: number;
+  fadeIn?: number; // seconds
+  fadeOut?: number; // seconds
+  brightness?: number; // -50 to 50
+  contrast?: number; // -50 to 50
+  saturation?: number; // -50 to 50
   filter?: string;
+  transitionType?: string;
+  textAnimIn?: string; // 'none' | 'pop' | 'slideUp' | 'fadeIn' | 'typewriter' | 'zoomIn'
+  textAnimOut?: string; // 'none' | 'fade' | 'slideDown' | 'zoomOut'
   particleType?: string;
 }
 
@@ -68,6 +76,11 @@ interface EditorState {
   // Notifications
   notifications: AppNotification[];
   markAllNotificationsAsRead: () => void;
+  addNotification: (notif: AppNotification) => void;
+
+  // Autosave status
+  autosaveStatus: 'idle' | 'saving' | 'saved';
+  setAutosaveStatus: (status: 'idle' | 'saving' | 'saved') => void;
 
   // Settings
   settings: AppSettings;
@@ -119,6 +132,15 @@ interface EditorState {
   updateClip: (id: string, updates: Partial<TimelineClip>) => void;
   deleteClip: (id: string) => void;
   splitClip: (id: string, atTime: number) => void;
+  duplicateClip: (id: string) => void;
+  trimClipStart: (id: string, newStart: number) => void;
+  trimClipEnd: (id: string, newEnd: number) => void;
+
+  // Timeline Zoom & Snap
+  timelineZoom: number;
+  setTimelineZoom: (zoom: number) => void;
+  snapEnabled: boolean;
+  toggleSnap: () => void;
 
   // EditPilot Drawer & Chat
   editPilotOpen: boolean;
@@ -199,6 +221,14 @@ export const useEditorStore = create<EditorState>()(
           notifications: state.notifications.map((n) => ({ ...n, read: true }))
         }));
       },
+      addNotification: (notif) => {
+        set((state) => ({
+          notifications: [notif, ...state.notifications]
+        }));
+      },
+
+      autosaveStatus: 'idle',
+      setAutosaveStatus: (status) => set({ autosaveStatus: status }),
 
       settings: {
         defaultResolution: '1080p',
@@ -369,6 +399,59 @@ export const useEditorStore = create<EditorState>()(
           selectedClipId: part2.id
         });
       },
+      duplicateClip: (id) => {
+        const clip = get().clips.find((c) => c.id === id);
+        if (!clip) return;
+        const newClip: TimelineClip = {
+          ...clip,
+          id: 'clip-' + Date.now(),
+          name: `${clip.name} (Copy)`,
+          start: clip.start + clip.duration
+        };
+        const currentClips = get().clips;
+        set({
+          undoStack: [...get().undoStack, currentClips],
+          redoStack: [],
+          clips: [...currentClips, newClip],
+          selectedClipId: newClip.id
+        });
+        if (newClip.start + newClip.duration > get().duration) {
+          set({ duration: Math.ceil(newClip.start + newClip.duration) });
+        }
+      },
+      trimClipStart: (id, newStart) => {
+        const clip = get().clips.find((c) => c.id === id);
+        if (!clip) return;
+        const currentEnd = clip.start + clip.duration;
+        const clampedStart = Math.max(0, Math.min(newStart, currentEnd - 0.2));
+        const newDuration = currentEnd - clampedStart;
+        const currentClips = get().clips;
+        set({
+          undoStack: [...get().undoStack, currentClips],
+          redoStack: [],
+          clips: currentClips.map((c) => (c.id === id ? { ...c, start: clampedStart, duration: newDuration } : c))
+        });
+      },
+      trimClipEnd: (id, newEnd) => {
+        const clip = get().clips.find((c) => c.id === id);
+        if (!clip) return;
+        const clampedEnd = Math.max(clip.start + 0.2, newEnd);
+        const newDuration = clampedEnd - clip.start;
+        const currentClips = get().clips;
+        set({
+          undoStack: [...get().undoStack, currentClips],
+          redoStack: [],
+          clips: currentClips.map((c) => (c.id === id ? { ...c, duration: newDuration } : c))
+        });
+        if (clampedEnd > get().duration) {
+          set({ duration: Math.ceil(clampedEnd) });
+        }
+      },
+
+      timelineZoom: 1,
+      setTimelineZoom: (zoom) => set({ timelineZoom: Math.max(0.5, Math.min(3, zoom)) }),
+      snapEnabled: true,
+      toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
 
       undoStack: [],
       redoStack: [],

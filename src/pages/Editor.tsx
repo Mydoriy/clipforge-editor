@@ -28,7 +28,7 @@ export const Editor: React.FC = () => {
     }
   }, [id, setCurrentProjectId, setProjectTitle, setClips, setDuration]);
 
-  // Keyboard Shortcuts (Space, Ctrl+B, Del, Shift+S)
+  // Keyboard Shortcuts (Space, S split, Del, +/- zoom, Ctrl+Z / Ctrl+Shift+Z, Shift+S)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
@@ -39,7 +39,24 @@ export const Editor: React.FC = () => {
       if (e.code === 'Space') {
         e.preventDefault();
         store.setIsPlaying(!store.isPlaying);
+      } else if (e.code === 'KeyS' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        // 'S' key: Split at playhead
+        e.preventDefault();
+        if (store.selectedClipId) {
+          store.splitClip(store.selectedClipId, store.currentTime);
+          store.showToast('Đã tách clip tại playhead (S)', 'info');
+        } else {
+          // If no clip selected, split the first video clip that intersects currentTime
+          const activeClip = store.clips.find(
+            (c) => store.currentTime > c.start && store.currentTime < c.start + c.duration
+          );
+          if (activeClip) {
+            store.splitClip(activeClip.id, store.currentTime);
+            store.showToast(`Đã tách clip "${activeClip.name}" (S)`, 'info');
+          }
+        }
       } else if (e.code === 'KeyB' && (e.ctrlKey || e.metaKey)) {
+        // Ctrl+B split
         e.preventDefault();
         if (store.selectedClipId) {
           store.splitClip(store.selectedClipId, store.currentTime);
@@ -48,7 +65,27 @@ export const Editor: React.FC = () => {
         if (store.selectedClipId) {
           e.preventDefault();
           store.deleteClip(store.selectedClipId);
+          store.showToast('Đã xóa clip', 'info');
         }
+      } else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          store.redo();
+          store.showToast('Làm lại (Redo)', 'info');
+        } else {
+          store.undo();
+          store.showToast('Hoàn tác (Undo)', 'info');
+        }
+      } else if (e.code === 'KeyY' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        store.redo();
+        store.showToast('Làm lại (Redo)', 'info');
+      } else if (e.code === 'Equal' || e.code === 'NumpadAdd') {
+        e.preventDefault();
+        store.setTimelineZoom(store.timelineZoom + 0.25);
+      } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
+        e.preventDefault();
+        store.setTimelineZoom(store.timelineZoom - 0.25);
       } else if (e.code === 'KeyS' && e.shiftKey) {
         e.preventDefault();
         store.toggleSafeZone();
@@ -58,6 +95,32 @@ export const Editor: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Autosave every 3 seconds to IndexedDB
+  useEffect(() => {
+    if (!id) return;
+
+    const interval = setInterval(async () => {
+      const { settings, clips, duration, projectTitle, setAutosaveStatus } = useEditorStore.getState();
+      if (settings.autosave === false) return;
+
+      try {
+        setAutosaveStatus('saving');
+        await db.projects.update(id, {
+          title: projectTitle,
+          duration,
+          updatedAt: Date.now(),
+          tracksData: { clips }
+        });
+        setAutosaveStatus('saved');
+      } catch (err) {
+        console.warn('Autosave error:', err);
+        setAutosaveStatus('idle');
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [id]);
 
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0c0e14]">

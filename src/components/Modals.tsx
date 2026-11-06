@@ -61,12 +61,17 @@ export const Modals: React.FC = () => {
     settings,
     updateSettings,
     setCurrentProjectId,
-    setProjectTitle
+    setProjectTitle,
+    projectTitle,
+    addNotification
   } = useEditorStore();
 
   const navigate = useNavigate();
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportStatus, setExportStatus] = useState<string>('');
+  const [exportRes, setExportRes] = useState<'720p' | '1080p' | '4k'>('1080p');
+  const [exportFps, setExportFps] = useState<24 | 30 | 60>(30);
+  const [exportFormat, setExportFormat] = useState<'mp4' | 'webm'>('mp4');
   const [promptInput, setPromptInput] = useState('');
 
   // New Project Modal State
@@ -791,25 +796,46 @@ export const Modals: React.FC = () => {
   const handleStartExport = async () => {
     try {
       setExportProgress(0);
-      setExportStatus('Đang khởi tạo canvas 9:16...');
-      const blob = await exportTimelineVideo(clips, duration, ({ progress, status }) => {
-        setExportProgress(progress);
-        setExportStatus(status);
-      });
+      setExportStatus(`Đang render canvas 9:16 (${exportRes}, ${exportFps}fps, ${exportFormat.toUpperCase()})...`);
+      const blob = await exportTimelineVideo(
+        clips,
+        duration,
+        {
+          resolution: exportRes,
+          fps: exportFps,
+          format: exportFormat
+        },
+        ({ progress, status }) => {
+          setExportProgress(progress);
+          setExportStatus(status);
+        }
+      );
 
       // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ClipForge_916_${Date.now()}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`;
+      const cleanTitle = (projectTitle || 'CapCut_916').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const ext = exportFormat === 'mp4' ? 'mp4' : 'webm';
+      a.download = `${cleanTitle}_${exportRes}_${exportFps}fps_${Date.now()}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+
+      // Add to notifications bell drawer
+      addNotification({
+        id: 'notif-' + Date.now(),
+        title: 'Xuất video hoàn tất',
+        desc: `Video "${projectTitle || '9:16 Vertical Video'}" (${exportRes.toUpperCase()}, ${exportFps} FPS, ${exportFormat.toUpperCase()}) đã được xuất thành công và lưu về máy!`,
+        time: 'Vừa xong',
+        read: false,
+        type: 'export'
+      });
 
       showToast(t.exportSuccess, 'success');
       setTimeout(() => {
         setExportProgress(null);
         closeModal();
-      }, 1000);
+      }, 1200);
     } catch (err: any) {
       showToast(`Lỗi xuất video: ${err.message}`, 'error');
       setExportProgress(null);
@@ -1209,31 +1235,101 @@ export const Modals: React.FC = () => {
         {/* 1. EXPORT MODAL */}
         {activeModal === 'export' && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 text-cyan-400">
+            <div className="flex items-center gap-2.5 text-[#22D3EE]">
               <Download className="w-6 h-6" />
               <h3 className="text-lg font-bold text-white">{t.export} 9:16 Video</h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex flex-col gap-1">
-                <span className="text-slate-400">Độ phân giải (Vertical)</span>
-                <span className="font-bold text-white font-mono">1080 × 1920 (FHD)</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex flex-col gap-1">
-                <span className="text-slate-400">Tốc độ khung hình</span>
-                <span className="font-bold text-white font-mono">30 FPS (Mượt mà)</span>
+            {/* Resolution Selector */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                1. Độ phân giải (Resolution)
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: '720p', label: '720p (HD)', desc: '720 × 1280' },
+                  { id: '1080p', label: '1080p (FHD)', desc: '1080 × 1920' },
+                  { id: '4k', label: '4K (UHD)', desc: '2160 × 3840' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setExportRes(item.id as any)}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all ${
+                      exportRes === item.id
+                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
+                        : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                    }`}
+                  >
+                    <span className="font-bold text-xs">{item.label}</span>
+                    <span className="text-[10px] text-[#22D3EE] font-mono mt-0.5">{item.desc}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
+            {/* FPS Selector */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                2. Tốc độ khung hình (Frame Rate)
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { fps: 24, label: '24 FPS', desc: 'Điện ảnh (Film)' },
+                  { fps: 30, label: '30 FPS', desc: 'Chuẩn TikTok' },
+                  { fps: 60, label: '60 FPS', desc: 'Siêu mượt (Pro)' }
+                ].map((item) => (
+                  <button
+                    key={item.fps}
+                    onClick={() => setExportFps(item.fps as any)}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all ${
+                      exportFps === item.fps
+                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
+                        : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                    }`}
+                  >
+                    <span className="font-bold text-xs">{item.label}</span>
+                    <span className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Format Selector */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                3. Định dạng xuất (Format)
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { fmt: 'mp4', label: 'MP4 (H.264 / AVC)', desc: 'Tương thích mọi thiết bị' },
+                  { fmt: 'webm', label: 'WebM (VP9)', desc: 'Nén nhẹ & tối ưu web' }
+                ].map((item) => (
+                  <button
+                    key={item.fmt}
+                    onClick={() => setExportFormat(item.fmt as any)}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all ${
+                      exportFormat === item.fmt
+                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
+                        : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                    }`}
+                  >
+                    <span className="font-bold text-xs">{item.label}</span>
+                    <span className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Progress or Start Button */}
             {exportProgress !== null ? (
-              <div className="flex flex-col gap-2 p-4 rounded-xl bg-slate-900 border border-cyan-500/40">
+              <div className="flex flex-col gap-2.5 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1">
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-cyan-400">{exportStatus}</span>
-                  <span className="font-mono text-white">{exportProgress}%</span>
+                  <span className="text-[#22D3EE]">{exportStatus}</span>
+                  <span className="font-mono text-white font-bold">{exportProgress}%</span>
                 </div>
-                <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+                <div className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all duration-150"
+                    className="h-full bg-gradient-to-r from-[#22D3EE] to-sky-400 transition-all duration-150"
                     style={{ width: `${exportProgress}%` }}
                   />
                 </div>
@@ -1242,13 +1338,13 @@ export const Modals: React.FC = () => {
               <div className="flex flex-col gap-2 pt-2">
                 <button
                   onClick={handleStartExport}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4 stroke-[2.5]" />
                   <span>Bắt đầu xuất video ngay (Client Render)</span>
                 </button>
-                <span className="text-[11px] text-slate-400 text-center">
-                  Quá trình render hoàn toàn thực thi tại trình duyệt qua Canvas & MediaRecorder. Không tốn dung lượng máy chủ.
+                <span className="text-[11px] text-[#9CA3AF] text-center">
+                  Render trực tiếp 100% bằng Canvas & MediaRecorder trong trình duyệt. Không tải video lên máy chủ.
                 </span>
               </div>
             )}
