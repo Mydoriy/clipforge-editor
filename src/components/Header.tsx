@@ -13,7 +13,12 @@ import {
   Cloud,
   HardDrive,
   Eye,
-  EyeOff
+  EyeOff,
+  Bell,
+  Settings,
+  CheckCheck,
+  Sparkles,
+  Info
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -30,12 +35,19 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     projectTitle,
     setProjectTitle,
     showToast,
-    toggleSidebar
+    toggleSidebar,
+    isPro,
+    notifications,
+    markAllNotificationsAsRead
   } = useEditorStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+
   const t = translations[language];
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleShare = () => {
     if (navigator.share) {
@@ -51,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
 
   return (
     <header className="h-14 bg-[#0E1320] border-b border-[#1F2937] px-5 flex items-center justify-between select-none z-30 shrink-0">
-      {/* Left: Logo + Menu */}
+      {/* Left: Logo + Mobile Hamburger + Menu */}
       <div className="flex items-center gap-3">
         {!isEditor && (
           <button
@@ -62,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             <MenuIcon className="w-4 h-4" />
           </button>
         )}
+
         <Logo size="md" />
 
         {isEditor && (
@@ -159,14 +172,14 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         </div>
       )}
 
-      {/* Right: Actions, Language, Pro, Export */}
-      <div className="flex items-center gap-3">
+      {/* Right: Actions, Language, Bell, Settings, Pro, Export, Window decor */}
+      <div className="flex items-center gap-2.5">
         {/* Safe Zone Toggle in Editor */}
         {isEditor && (
           <button
             onClick={toggleSafeZone}
             title={safeZoneEnabled ? 'Tắt vùng an toàn 9:16' : 'Bật vùng an toàn 9:16 (TikTok/Reels)'}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all hover-lift ${
+            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border transition-all hover-lift ${
               safeZoneEnabled
                 ? 'bg-[#22D3EE]/15 border-[#22D3EE]/50 text-[#22D3EE]'
                 : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
@@ -177,37 +190,119 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           </button>
         )}
 
-        {/* Cloud Sync / Guest Storage Indicator */}
-        <div
-          onClick={() => openModal(isSupabaseConfigured ? 'cloud' : 'guest')}
-          title={isSupabaseConfigured ? 'Đang đồng bộ Supabase Cloud' : 'Chế độ khách: Dữ liệu lưu an toàn trong IndexedDB'}
-          className="flex items-center gap-2 text-[11px] px-2.5 py-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#E5E7EB] cursor-pointer hover:border-[#22D3EE]/50 transition-all hover-lift"
-        >
-          {isSupabaseConfigured ? (
-            <>
-              <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-300 font-semibold">Cloud Sync</span>
-            </>
-          ) : (
-            <>
-              <HardDrive className="w-3.5 h-3.5 text-[#22D3EE]" />
-              <span className="text-[#9CA3AF] font-medium">{t.guestMode}</span>
-            </>
+        {/* 1. NÚT "VN" DROPDOWN: Chuyển đổi ngôn ngữ VN/EN tức thì */}
+        <div className="relative">
+          <button
+            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+            className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border border-[#1F2937] transition-all hover-lift"
+            title="Đổi ngôn ngữ toàn app"
+          >
+            <Globe className="w-3.5 h-3.5 text-[#22D3EE]" />
+            <span>{language}</span>
+            <ChevronDown className="w-3 h-3 text-[#9CA3AF]" />
+          </button>
+
+          {langDropdownOpen && (
+            <div
+              className="absolute right-0 mt-2 w-36 bg-[#111827] border border-[#1F2937] rounded-xl shadow-2xl py-1 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
+              onMouseLeave={() => setLangDropdownOpen(false)}
+            >
+              <button
+                onClick={() => {
+                  setLanguage('VN');
+                  setLangDropdownOpen(false);
+                  showToast('Đã đổi ngôn ngữ sang Tiếng Việt (VN)', 'success');
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] ${
+                  language === 'VN' ? 'text-[#22D3EE] font-bold' : ''
+                }`}
+              >
+                <span>Tiếng Việt</span>
+                <span className="text-[10px] text-[#9CA3AF]">VN</span>
+              </button>
+              <button
+                onClick={() => {
+                  setLanguage('EN');
+                  setLangDropdownOpen(false);
+                  showToast('Language changed to English (EN)', 'success');
+                }}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] ${
+                  language === 'EN' ? 'text-[#22D3EE] font-bold' : ''
+                }`}
+              >
+                <span>English</span>
+                <span className="text-[10px] text-[#9CA3AF]">EN</span>
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Language Switcher */}
+        {/* 2. CHUÔNG THÔNG BÁO (NOTIFICATION BELL WITH DRAWER) */}
+        <div className="relative">
+          <button
+            onClick={() => setNotifDrawerOpen(!notifDrawerOpen)}
+            className="relative p-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] transition-all hover-lift"
+            title="Thông báo hệ thống"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center shadow">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Drawer Popover */}
+          {notifDrawerOpen && (
+            <div
+              className="absolute right-0 mt-2 w-80 bg-[#111827] border border-[#1F2937] rounded-2xl shadow-2xl p-3 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
+              onMouseLeave={() => setNotifDrawerOpen(false)}
+            >
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1F2937]">
+                <span className="font-bold text-white text-xs">Thông báo</span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => {
+                      markAllNotificationsAsRead();
+                      showToast('Đã đánh dấu đã đọc tất cả', 'info');
+                    }}
+                    className="flex items-center gap-1 text-[10px] text-[#22D3EE] hover:underline font-semibold"
+                  >
+                    <CheckCheck className="w-3 h-3" />
+                    <span>Đánh dấu đã đọc</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-colors ${
+                      n.read
+                        ? 'bg-[#0B0F19]/60 border-[#1F2937] text-[#9CA3AF]'
+                        : 'bg-[#111827] border-[#22D3EE]/40 text-[#E5E7EB]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-xs">{n.title}</span>
+                      <span className="text-[9px] text-[#9CA3AF]">{n.time}</span>
+                    </div>
+                    <p className="text-[11px] text-[#9CA3AF] leading-relaxed">{n.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. BÁNH RĂNG SETTINGS */}
         <button
-          onClick={() => {
-            const nextLang = language === 'VN' ? 'EN' : 'VN';
-            setLanguage(nextLang);
-            showToast(`Ngôn ngữ: ${nextLang === 'VN' ? 'Tiếng Việt' : 'English'}`);
-          }}
-          className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border border-[#1F2937] transition-all hover-lift"
-          title="Đổi ngôn ngữ / Change language"
+          onClick={() => openModal('settings')}
+          className="p-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] transition-all hover-lift"
+          title="Cài đặt hệ thống (Settings)"
         >
-          <Globe className="w-3.5 h-3.5 text-[#22D3EE]" />
-          <span>{language}</span>
+          <Settings className="w-4 h-4" />
         </button>
 
         {/* Pro Pill: Gradient tím → hồng (#7C3AED → #EC4899) */}
@@ -216,10 +311,10 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white shadow-md shadow-pink-500/20 transition-all hover-lift"
         >
           <Crown className="w-3.5 h-3.5 text-amber-300" />
-          <span>{t.proBadge}</span>
+          <span>{isPro ? 'PRO VIP' : t.proBadge}</span>
         </button>
 
-        {/* Share Button */}
+        {/* Share Button (Editor only) */}
         {isEditor && (
           <button
             onClick={handleShare}
@@ -233,11 +328,18 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {/* Bright Cyan Export Button */}
         <button
           onClick={() => openModal('export')}
-          className="flex items-center gap-1.5 text-xs font-extrabold px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-cyan-300 hover:to-sky-300 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all hover-lift active:scale-95"
+          className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-cyan-300 hover:to-sky-300 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all hover-lift active:scale-95"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>{t.export}</span>
         </button>
+
+        {/* 4. BA CHẤM TRÒN BÊN PHẢI (Trang trí cửa sổ Desktop) */}
+        <div className="hidden lg:flex items-center gap-1.5 ml-1 pl-2 border-l border-[#1F2937] text-[#9CA3AF]">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#1F2937] hover:bg-slate-600 transition-colors" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#1F2937] hover:bg-slate-600 transition-colors" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#1F2937] hover:bg-slate-600 transition-colors" />
+        </div>
       </div>
     </header>
   );

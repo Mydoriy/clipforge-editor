@@ -30,6 +30,23 @@ export interface UserProfile {
   isPro?: boolean;
 }
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  desc: string;
+  time: string;
+  read: boolean;
+  type: 'feature' | 'tip' | 'export';
+}
+
+export interface AppSettings {
+  defaultResolution: '720p' | '1080p' | '4k';
+  defaultFps: 24 | 30 | 60;
+  defaultAspect: '9:16' | '16:9' | '1:1';
+  autosave: boolean;
+  aiApiKey: string;
+}
+
 export interface ToastState {
   id: string;
   message: string;
@@ -41,10 +58,20 @@ interface EditorState {
   language: Language;
   setLanguage: (lang: Language) => void;
   
-  // Auth state
+  // Auth & Pro state
   user: UserProfile | null;
   signIn: (name: string, email: string) => void;
   signOut: () => void;
+  isPro: boolean;
+  setIsPro: (val: boolean) => void;
+
+  // Notifications
+  notifications: AppNotification[];
+  markAllNotificationsAsRead: () => void;
+
+  // Settings
+  settings: AppSettings;
+  updateSettings: (updates: Partial<AppSettings>) => void;
 
   // Responsive Sidebar
   sidebarOpen: boolean;
@@ -110,6 +137,61 @@ export const useEditorStore = create<EditorState>()(
       },
 
       user: null,
+      isPro: (localStorage.getItem('clipforge_pro') === 'true'),
+      setIsPro: (val) => {
+        localStorage.setItem('clipforge_pro', val ? 'true' : 'false');
+        set({ isPro: val });
+      },
+
+      notifications: [
+        {
+          id: 'notif-1',
+          title: 'Ra mắt CapCut Desktop Web v3.0!',
+          desc: 'Trải nghiệm chỉnh sửa video dọc 9:16 mượt mà với Dexie IndexedDB và FFmpeg.wasm.',
+          time: 'Vừa xong',
+          read: false,
+          type: 'feature'
+        },
+        {
+          id: 'notif-2',
+          title: 'Mẹo tăng tương tác TikTok',
+          desc: 'Chèn Hook 3 giây đầu để giữ chân người xem vượt 80% tỷ lệ lướt qua.',
+          time: '15 phút trước',
+          read: false,
+          type: 'tip'
+        },
+        {
+          id: 'notif-3',
+          title: 'Xuất video hoàn tất',
+          desc: 'Video 9:16 đã được render thành công ở độ phân giải 1080p 30fps.',
+          time: '1 giờ trước',
+          read: false,
+          type: 'export'
+        }
+      ],
+      markAllNotificationsAsRead: () => {
+        set((state) => ({
+          notifications: state.notifications.map((n) => ({ ...n, read: true }))
+        }));
+      },
+
+      settings: {
+        defaultResolution: '1080p',
+        defaultFps: 30,
+        defaultAspect: '9:16',
+        autosave: true,
+        aiApiKey: localStorage.getItem('clipforge_ai_key') || ''
+      },
+      updateSettings: (updates) => {
+        set((state) => {
+          const newSettings = { ...state.settings, ...updates };
+          if (updates.aiApiKey !== undefined) {
+            localStorage.setItem('clipforge_ai_key', updates.aiApiKey);
+          }
+          return { settings: newSettings };
+        });
+      },
+
       signIn: (name, email) => {
         set({
           user: {
@@ -292,7 +374,9 @@ export const useEditorStore = create<EditorState>()(
         language: state.language,
         safeZoneEnabled: state.safeZoneEnabled,
         projectTitle: state.projectTitle,
-        user: state.user
+        user: state.user,
+        isPro: state.isPro,
+        settings: state.settings
       })
     }
   )

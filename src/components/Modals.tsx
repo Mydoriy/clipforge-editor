@@ -27,6 +27,7 @@ import {
 export const Modals: React.FC = () => {
   const {
     language,
+    setLanguage,
     activeModal,
     closeModal,
     clips,
@@ -36,7 +37,11 @@ export const Modals: React.FC = () => {
     addClip,
     updateClip,
     setClips,
-    signIn
+    signIn,
+    isPro,
+    setIsPro,
+    settings,
+    updateSettings
   } = useEditorStore();
 
   const [exportProgress, setExportProgress] = useState<number | null>(null);
@@ -397,42 +402,248 @@ export const Modals: React.FC = () => {
           </div>
         )}
 
-        {/* 2. PRO MODAL */}
+        {/* 2. PRO PRICING MODAL (3 GÓI FREE / PRO THÁNG / PRO NĂM) */}
         {activeModal === 'pro' && (
-          <div className="flex flex-col gap-4 text-center items-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-pink-500/30">
+          <div className="flex flex-col gap-5 text-center items-center max-w-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#7C3AED] to-[#EC4899] flex items-center justify-center shadow-lg shadow-pink-500/30">
               <Crown className="w-7 h-7 text-white" />
             </div>
+
             <div>
-              <h3 className="text-lg font-bold text-white">Nâng cấp ClipForge Pro</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Khai phá toàn bộ sức mạnh AI, chất lượng xuất 4K và thư viện âm thanh độc quyền
+              <h3 className="text-xl font-bold text-white">Nâng cấp CapCut Web Pro</h3>
+              <p className="text-xs text-[#9CA3AF] mt-1">
+                Khai phá chất lượng xuất 4K 60fps, toàn bộ kho Hook viral và bộ công cụ AI thông minh
               </p>
             </div>
 
-            <div className="w-full flex flex-col gap-2 text-left text-xs">
-              {[
-                'Không giới hạn xuất video 4K 60fps',
-                'Tự động tách giọng & khử ồn AI bằng WebCodecs',
-                'Bộ hơn 200+ mẫu Hook TikTok & Reels có sẵn',
-                'Đồng bộ đám mây Supabase không giới hạn'
-              ].map((feat, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
-                  <Check className="w-4 h-4 text-pink-400 shrink-0" />
-                  <span className="text-slate-200">{feat}</span>
+            {/* 3 Pricing Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full text-left">
+              {/* Gói Free */}
+              <div className="p-4 rounded-2xl bg-[#0B0F19] border border-[#1F2937] flex flex-col justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-[#9CA3AF] uppercase">Gói Free</span>
+                  <div className="text-lg font-black text-white">0đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span></div>
+                  <span className="text-[10px] text-[#9CA3AF]">Dành cho người mới bắt đầu dựng video</span>
                 </div>
-              ))}
+                <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Xuất video 1080p 30fps</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Không giới hạn độ dài</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Lưu trữ Dexie IndexedDB</div>
+                  <div className="flex items-center gap-1.5 text-[#9CA3AF]"><X className="w-3.5 h-3.5 text-slate-600 shrink-0" /> Không hỗ trợ xuất 4K</div>
+                </div>
+                <span className="py-2 text-center text-xs font-semibold text-[#9CA3AF] bg-[#111827] rounded-xl border border-[#1F2937]">
+                  Gói hiện tại
+                </span>
+              </div>
+
+              {/* Gói Pro Tháng */}
+              <div className="p-4 rounded-2xl bg-[#111827] border-2 border-purple-500/50 flex flex-col justify-between gap-3 shadow-lg">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-400 uppercase">Pro Tháng</span>
+                  </div>
+                  <div className="text-lg font-black text-white">199.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span></div>
+                  <span className="text-[10px] text-[#9CA3AF]">Dành cho Content Creator chuyên nghiệp</span>
+                </div>
+                <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Xuất siêu nét 4K 60fps</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Tự động tạo phụ đề AI</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Toàn bộ kho Hook viral</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Khử ồn thông minh</div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsPro(true);
+                    showToast('🎉 Đã kích hoạt gói Pro Tháng (Bản demo)!', 'success');
+                    closeModal();
+                  }}
+                  className="py-2 text-center text-xs font-bold text-white bg-gradient-to-r from-[#7C3AED] to-[#EC4899] rounded-xl hover-lift shadow transition-all"
+                >
+                  Chọn gói Tháng
+                </button>
+              </div>
+
+              {/* Gói Pro Năm (Tiết kiệm 40%) */}
+              <div className="p-4 rounded-2xl bg-[#111827] border-2 border-[#22D3EE]/80 flex flex-col justify-between gap-3 relative shadow-xl shadow-cyan-500/10">
+                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#22D3EE] to-sky-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
+                  Tiết kiệm 40%
+                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-[#22D3EE] uppercase">Pro Năm (VIP)</span>
+                  <div className="text-lg font-black text-white">99.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span></div>
+                  <span className="text-[10px] text-[#9CA3AF]">Thanh toán 1.190.000đ / năm</span>
+                </div>
+                <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Toàn bộ quyền lợi Pro</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Đám mây Supabase Cloud</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Bộ lọc màu độc quyền</div>
+                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Hỗ trợ ưu tiên 24/7</div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsPro(true);
+                    showToast('🎉 Đã kích hoạt gói Pro Năm (Bản demo)!', 'success');
+                    closeModal();
+                  }}
+                  className="py-2 text-center text-xs font-bold text-slate-950 bg-[#22D3EE] hover:bg-cyan-300 rounded-xl hover-lift shadow transition-all"
+                >
+                  Chọn gói Năm
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={() => {
-                showToast('🎉 Đã kích hoạt bản quyền Pro thành công!', 'success');
-                closeModal();
-              }}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:opacity-95 text-white font-bold text-sm shadow-xl transition-all"
-            >
-              Kích hoạt trải nghiệm Pro Miễn Phí
-            </button>
+            {/* Nút lớn "Try Pro free" */}
+            <div className="w-full pt-3 border-t border-[#1F2937] flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setIsPro(true);
+                  showToast('🎉 Đã bật cờ isPro trong localStorage (hiện huy hiệu PRO)! Bản demo: mọi tính năng cốt lõi vẫn miễn phí.', 'success');
+                  closeModal();
+                }}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#7C3AED] via-[#EC4899] to-pink-500 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-purple-900/30 hover-lift transition-all flex items-center justify-center gap-2"
+              >
+                <Crown className="w-4 h-4 text-amber-300" />
+                <span>Try Pro free / Dùng thử Pro miễn phí</span>
+              </button>
+              <span className="text-[10px] text-[#9CA3AF]">
+                * Đây là bản demo: Bấm để bật huy hiệu PRO và trải nghiệm không giới hạn. Không yêu cầu thanh toán hay thẻ tín dụng.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* BÁNH RĂNG SETTINGS MODAL */}
+        {activeModal === 'settings' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center gap-2.5 text-[#22D3EE] pb-3 border-b border-[#1F2937]">
+              <Sliders className="w-5 h-5" />
+              <h3 className="text-base font-bold text-white">Cài đặt hệ thống (Settings)</h3>
+            </div>
+
+            <div className="flex flex-col gap-4 text-xs text-[#E5E7EB]">
+              {/* Ngôn ngữ */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block">Ngôn ngữ giao diện (Language)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Chuyển đổi toàn bộ ngôn ngữ hệ thống</span>
+                </div>
+                <select
+                  value={language}
+                  onChange={(e) => {
+                    setLanguage(e.target.value as any);
+                    showToast(`Đã đổi ngôn ngữ sang ${e.target.value === 'VN' ? 'Tiếng Việt' : 'English'}`);
+                  }}
+                  className="bg-[#0B0F19] border border-[#1F2937] rounded-xl px-3 py-1.5 text-xs text-[#E5E7EB] outline-none"
+                >
+                  <option value="VN">Tiếng Việt (VN)</option>
+                  <option value="EN">English (EN)</option>
+                </select>
+              </div>
+
+              {/* Chất lượng export mặc định */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block">Độ phân giải xuất mặc định</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Độ nét khi render video 9:16</span>
+                </div>
+                <select
+                  value={settings.defaultResolution}
+                  onChange={(e) => updateSettings({ defaultResolution: e.target.value as any })}
+                  className="bg-[#0B0F19] border border-[#1F2937] rounded-xl px-3 py-1.5 text-xs text-[#E5E7EB] outline-none"
+                >
+                  <option value="720p">720p HD (Nhanh)</option>
+                  <option value="1080p">1080p Full HD (Khuyên dùng)</option>
+                  <option value="4k">4K Ultra HD (Pro)</option>
+                </select>
+              </div>
+
+              {/* FPS mặc định */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block">Tốc độ khung hình (FPS)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Độ mượt mà của chuyển động</span>
+                </div>
+                <select
+                  value={settings.defaultFps}
+                  onChange={(e) => updateSettings({ defaultFps: parseInt(e.target.value, 10) as any })}
+                  className="bg-[#0B0F19] border border-[#1F2937] rounded-xl px-3 py-1.5 text-xs text-[#E5E7EB] outline-none"
+                >
+                  <option value={24}>24 FPS (Cinematic)</option>
+                  <option value={30}>30 FPS (Tiêu chuẩn)</option>
+                  <option value={60}>60 FPS (Siêu mượt)</option>
+                </select>
+              </div>
+
+              {/* Tỉ lệ khung hình mặc định */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block">Tỉ lệ khung mặc định</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Khung hình khi tạo dự án mới</span>
+                </div>
+                <select
+                  value={settings.defaultAspect}
+                  onChange={(e) => updateSettings({ defaultAspect: e.target.value as any })}
+                  className="bg-[#0B0F19] border border-[#1F2937] rounded-xl px-3 py-1.5 text-xs text-[#E5E7EB] outline-none"
+                >
+                  <option value="9:16">9:16 (Dọc TikTok, Reels, Shorts)</option>
+                  <option value="16:9">16:9 (Ngang YouTube)</option>
+                  <option value="1:1">1:1 (Vuông Instagram)</option>
+                </select>
+              </div>
+
+              {/* Bật/Tắt Autosave */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block">Tự động lưu dự án (Autosave)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Lưu thay đổi vào IndexedDB sau mỗi thao tác</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.autosave}
+                  onChange={(e) => {
+                    updateSettings({ autosave: e.target.checked });
+                    showToast(e.target.checked ? 'Đã bật Autosave' : 'Đã tắt Autosave');
+                  }}
+                  className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
+                />
+              </div>
+
+              {/* Nhập API Key tùy chọn cho AI */}
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-[#1F2937]">
+                <span className="font-semibold">Khóa API AI tùy chọn (OpenAI / Gemini):</span>
+                <input
+                  type="password"
+                  value={settings.aiApiKey}
+                  onChange={(e) => updateSettings({ aiApiKey: e.target.value })}
+                  placeholder="sk-... hoặc AIza... (Lưu cục bộ an toàn)"
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-[#E5E7EB] outline-none"
+                />
+                <span className="text-[10px] text-[#9CA3AF]">
+                  Khóa được lưu trực tiếp trên thiết bị của bạn, không gửi lên bất kỳ máy chủ nào.
+                </span>
+              </div>
+
+              {/* Xóa toàn bộ dữ liệu (Danger Zone) */}
+              <div className="flex flex-col gap-2 pt-3 border-t border-rose-500/30">
+                <span className="font-bold text-rose-400">Vùng nguy hiểm (Danger Zone):</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ dự án và tệp trong IndexedDB? Hành động này không thể hoàn tác!')) {
+                      await db.projects.clear();
+                      await db.media.clear();
+                      await db.trash.clear();
+                      localStorage.clear();
+                      showToast('Đã xóa toàn bộ dữ liệu. Đang tải lại...', 'warning');
+                      setTimeout(() => window.location.reload(), 800);
+                    }
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-500/50 text-rose-300 font-bold text-xs hover-lift transition-all"
+                >
+                  Xóa toàn bộ dữ liệu ứng dụng (IndexedDB)
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
