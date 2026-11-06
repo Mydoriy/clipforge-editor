@@ -91,3 +91,4 @@ Toàn bộ 22 mẫu template trong mục "Templates" (\`src/pages/SectionPage.ts
 22. **Lyric Video Subtitle Pop** - Phụ đề chạy karaoke nghệ thuật.
 
 > **Giấy phép áp dụng cho Mẫu**: **MIT / CC0**. Người dùng có toàn quyền chỉnh sửa, thay thế nội dung, xuất video và đăng tải thương mại mà không cần xin phép hay ghi nguồn.
+

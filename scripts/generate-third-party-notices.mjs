@@ -171,3 +171,4 @@ const outputPath = path.join(rootDir, 'THIRD_PARTY_NOTICES.md');
 fs.writeFileSync(outputPath, noticeContent, 'utf8');
 
 console.log(`✅ THIRD_PARTY_NOTICES.md generated successfully at: ${outputPath}`);
+

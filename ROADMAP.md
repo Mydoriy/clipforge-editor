@@ -34,6 +34,8 @@ Tài liệu này tổng hợp và phân loại toàn bộ lộ trình phát tri�
 | **P1-7** | **Trợ Lý Dựng Phim EditPilot (W1/W5)** | Parser lệnh ngôn ngữ tự nhiên thành thao tác timeline có sandbox an toàn; Giao diện trò chuyện trực tiếp bên trong Editor. | Hoàn thành |
 | **P1-8** | **Trải Nghiệm & Đa Ngôn Ngữ (W7)** | Onboarding tour có hướng dẫn trực quan; Kiểm tra xung đột phím tắt; Đồng bộ 100% i18n Tiếng Việt & Tiếng Anh được kiểm thử qua script CI tự động. | Hoàn thành |
 | **P1-9** | **Giấy Phép Tài Sản & Bên Thứ Ba (W9)** | 100% tài nguyên CC0/MIT/OFL (`ASSETS_LICENSES.md`); Tự sinh `THIRD_PARTY_NOTICES.md` phân định bản build FFmpeg.wasm LGPL v2.1+ so với GPL v3; Trang Terms/Privacy. | Hoàn thành |
+| **P1-10** | **Tài Liệu Toàn Diện & Hướng Dẫn (W10)** | `README.md` mới, `ARCHITECTURE.md` (4 sơ đồ Mermaid), `CONTRIBUTING.md`, `USER_GUIDE.md` song ngữ VI/EN, `.env.example`, Semantic Versioning `1.0.0`. | Hoàn thành |
+| **P1-11** | **Vận Hành, Rollback & Chẩn Đoán (W10)** | [RUNBOOK.md](file:///d:/Editor/RUNBOOK.md): Quy trình deploy 4 bước, rollback khẩn cấp <30s, ma trận phân tích nguyên nhân gốc thông tin chẩn đoán kỹ thuật của người dùng. | Hoàn thành |
 
 ---
 

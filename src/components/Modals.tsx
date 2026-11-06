@@ -30,6 +30,7 @@ import {
   type BatchExportQueueItem
 } from '../engine/sceneDetector';
 import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
+import { APP_VERSION, APP_NAME, APP_BUILD_DATE } from '../constants/version';
 import {
   X,
   Crown,
@@ -4914,7 +4915,7 @@ export const Modals: React.FC = () => {
               CF
             </div>
             <div className="flex flex-col gap-1">
-              <h3 className="text-base font-bold text-white">ClipForge Desktop Web v3.0</h3>
+              <h3 className="text-base font-bold text-white">{APP_NAME} v{APP_VERSION}</h3>
               <p className="text-xs text-[#8A8A8A] leading-relaxed max-w-sm">
                 Trình biên tập video dọc 9:16 chuyên nghiệp cho TikTok, Reels và YouTube Shorts. Chạy 100% ngoại tuyến
                 trên trình duyệt qua Dexie IndexedDB, WebGL2 và WebCodecs.
@@ -4940,7 +4941,7 @@ export const Modals: React.FC = () => {
             </div>
 
             <div className="text-[11px] text-[#8A8A8A] font-mono bg-[#1F1F1F] px-3 py-1 rounded border border-[#333333]">
-              Build 2026.11 • Offline-First Native Engine (MIT License)
+              Build {APP_BUILD_DATE} • v{APP_VERSION} • Offline-First Native Engine (MIT License)
             </div>
           </div>
         )}

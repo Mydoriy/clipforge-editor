@@ -39,6 +39,12 @@
 | **Thông báo Bên thứ ba & Phân định FFmpeg.wasm (W9)** | Hoạt động | Tự động sinh `THIRD_PARTY_NOTICES.md` qua `npm run generate:licenses`. Làm rõ phân định bản build `@ffmpeg/core` tiêu chuẩn sử dụng LGPL v2.1+ so với GPL v3, ưu tiên WebCodecs native. File: `THIRD_PARTY_NOTICES.md`, `scripts/generate-third-party-notices.mjs`. | P1 | Đã hoàn thiện |
 | **Trang Terms & Privacy Policy (W9)** | Hoạt động | Trang `/privacy` và `/terms` đầy đủ nội dung: Quy định bản quyền người dùng, cam kết kiến trúc Local-First, giới hạn trách nhiệm và bảo mật API key. File: `src/pages/Privacy.tsx`, `src/App.tsx`. | P1 | Đã hoàn thiện |
 | **Cảnh báo Bản quyền khi Import Media (W9)** | Hoạt động | Banner cảnh báo bản quyền người dùng tải lên trong Media dropzone và Audio tab; nhắc nhở xử lý 100% client-side không lưu trữ tệp lên máy chủ. File: `src/components/CategoryPanel.tsx`. | P1 | Đã hoàn thiện |
+| **Tài Liệu Hướng Dẫn & Môi Trường (.env.example) (W10)** | Hoạt động | `README.md` mới hoàn chỉnh; file `.env.example` tài liệu hóa chi tiết toàn bộ biến môi trường (Supabase, AI Proxy, Sentry). File: `README.md`, `.env.example`. | P1 | Đã hoàn thiện |
+| **Sơ Đồ Kiến Trúc Hệ Thống (ARCHITECTURE.md) (W10)** | Hoạt động | Sơ đồ Mermaid đầy đủ 4 trục: Compositor pipeline, Web Workers isolation, Storage persistence, State immutability & Cloud sync. File: `ARCHITECTURE.md`. | P1 | Đã hoàn thiện |
+| **Quy Chuẩn Đóng Góp (CONTRIBUTING.md) (W10)** | Hoạt động | Quy chuẩn Conventional Commits, quy trình 6 bước kiểm thử bắt buộc, husky pre-commit hook, và triết lý "Ponytail lazy senior dev mode". File: `CONTRIBUTING.md`. | P2 | Đã hoàn thiện |
+| **Hướng Dẫn Sử Dụng Song Ngữ (USER_GUIDE.md) (W10)** | Hoạt động | Hướng dẫn chi tiết cho người dùng cuối bằng cả Tiếng Việt và English: từ tạo dự án, import, phím tắt, AI EditPilot đến xuất file và sao lưu `.capproj`. File: `USER_GUIDE.md`. | P1 | Đã hoàn thiện |
+| **Sổ Tay Vận Hành & SRE (RUNBOOK.md) (W10)** | Hoạt động | Quy trình chuẩn 4 bước deploy Vercel, giao thức rollback khẩn cấp tức thì (<30s), và ma trận phân tích nguyên nhân gốc thông tin chẩn đoán (System Diagnostics). File: `RUNBOOK.md`. | P1 | Đã hoàn thiện |
+| **Quản Lý Phiên Bản Semantic Versioning (W10)** | Hoạt động | Quản lý phiên bản tập trung tại `src/constants/version.ts` (`APP_VERSION = '1.0.0'`), hiển thị động trong Header và About modal; nhật ký [CHANGELOG.md](file:///d:/Editor/CHANGELOG.md). File: `CHANGELOG.md`, `src/constants/version.ts`, `src/components/Modals.tsx`. | P1 | Đã hoàn thiện |
 
 ---
 

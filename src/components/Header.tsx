@@ -4,6 +4,7 @@ import { Logo } from './Logo';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { db } from '../db';
+import { APP_VERSION, APP_NAME } from '../constants/version';
 import {
   Menu as MenuIcon,
   Crown,
@@ -690,7 +691,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         </div>
       ) : (
         <div className="hidden md:flex items-center gap-2 text-xs text-[#9CA3AF]">
-          <span className="font-semibold text-[#E5E7EB]">CapCut Desktop Web v3.0</span>
+          <span className="font-semibold text-[#E5E7EB]">{APP_NAME} v{APP_VERSION}</span>
           <span>•</span>
           <span className="text-[#1FC8DB] font-medium">9:16 Vertical Video Studio</span>
         </div>
