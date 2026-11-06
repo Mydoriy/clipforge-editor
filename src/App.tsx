@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { EditPilot } from './components/EditPilot';
+import { OnboardingTour } from './components/OnboardingTour';
 
 // Code-split pages and modals to satisfy initial bundle budget (<300KB gzip)
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
@@ -34,6 +35,7 @@ const MainLayout: React.FC = () => {
       <Suspense fallback={null}>
         <Modals />
       </Suspense>
+      <OnboardingTour />
       <Toasts />
     </div>
   );

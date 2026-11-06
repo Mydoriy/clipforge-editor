@@ -13,7 +13,7 @@ import { masterAudio } from '../engine/audioEngine';
 import { matchShortcut } from '../utils/shortcuts';
 import { acquireProjectLock, type ProjectLockHandle } from '../utils/projectLock';
 import { saveCrashCheckpoint, markCleanExit, checkUnsavedCrashCheckpoint, clearCrashCheckpoint, type CrashCheckpoint } from '../utils/crashRecovery';
-import { Sliders, Eye, AlertTriangle, Info, X, Lock, RotateCcw } from 'lucide-react';
+import { Sliders, Eye, AlertTriangle, Info, X, Lock, RotateCcw, Smartphone } from 'lucide-react';
 import { sanitizeSvg } from '../utils/sanitizer';
 
 export const Editor: React.FC = () => {
@@ -42,7 +42,15 @@ export const Editor: React.FC = () => {
     webGpu: false
   });
   const [dismissApiWarning, setDismissApiWarning] = useState(false);
+  const [isMobileScreen, setIsMobileScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [dismissMobileWarning, setDismissMobileWarning] = useState(false);
   const [unsavedCrashCheckpoint, setUnsavedCrashCheckpoint] = useState<CrashCheckpoint | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileScreen(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     let lockHandle: ProjectLockHandle | null = null;
@@ -734,6 +742,24 @@ export const Editor: React.FC = () => {
             className="text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-white/10"
           >
             ✕
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Screen Friendly Banner */}
+      {isMobileScreen && !dismissMobileWarning && (
+        <div className="bg-gradient-to-r from-amber-500/20 via-sky-500/20 to-cyan-500/20 border-b border-amber-500/40 px-4 py-2 flex items-center justify-between text-xs z-30 text-amber-200">
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Gợi ý:</strong> CapCut Desktop Web tối ưu tốt nhất cho màn hình ≥768px. Trên điện thoại, bạn nên xoay ngang màn hình để cắt ghép dễ dàng nhất.
+            </span>
+          </div>
+          <button
+            onClick={() => setDismissMobileWarning(true)}
+            className="px-2 py-0.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 font-bold text-[10px] ml-2 shrink-0"
+          >
+            Đã hiểu
           </button>
         </div>
       )}

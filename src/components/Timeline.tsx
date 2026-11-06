@@ -912,6 +912,40 @@ export const Timeline: React.FC = () => {
     }
   };
 
+  // Touch Pinch-to-zoom & Pointer gestures for tablet/touch devices
+  const touchPointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const initialPinchDistRef = useRef<number | null>(null);
+  const initialZoomRef = useRef<number>(timelineZoom);
+
+  const handleTimelinePointerDown = (e: React.PointerEvent) => {
+    touchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touchPointersRef.current.size === 2) {
+      const [p1, p2] = Array.from(touchPointersRef.current.values());
+      initialPinchDistRef.current = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      initialZoomRef.current = timelineZoom;
+    }
+  };
+
+  const handleTimelinePointerMove = (e: React.PointerEvent) => {
+    if (touchPointersRef.current.has(e.pointerId)) {
+      touchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (touchPointersRef.current.size === 2 && initialPinchDistRef.current) {
+      const [p1, p2] = Array.from(touchPointersRef.current.values());
+      const currentDist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const ratio = currentDist / Math.max(10, initialPinchDistRef.current);
+      const targetZoom = Math.max(0.5, Math.min(4.0, initialZoomRef.current * ratio));
+      setTimelineZoom(parseFloat(targetZoom.toFixed(2)));
+    }
+  };
+
+  const handleTimelinePointerUp = (e: React.PointerEvent) => {
+    touchPointersRef.current.delete(e.pointerId);
+    if (touchPointersRef.current.size < 2) {
+      initialPinchDistRef.current = null;
+    }
+  };
+
   // Fit timeline to window
   const handleFitTimeline = () => {
     setTimelineZoom(1.0);
@@ -1825,6 +1859,10 @@ export const Timeline: React.FC = () => {
           onMouseMove={handleTimelineMouseMove}
           onMouseLeave={handleTimelineMouseLeave}
           onWheel={handleTimelineWheel}
+          onPointerDown={handleTimelinePointerDown}
+          onPointerMove={handleTimelinePointerMove}
+          onPointerUp={handleTimelinePointerUp}
+          onPointerCancel={handleTimelinePointerUp}
           style={{ cursor: activeTool === 'hand' ? (isPanning ? 'grabbing' : 'grab') : activeTool === 'razor' ? 'crosshair' : 'default' }}
           className="flex-1 relative bg-[#141414] overflow-x-auto overflow-y-auto scrollbar-thin"
         >

@@ -281,3 +281,26 @@ export const translations = {
   }
 };
 
+export type TranslationDictionary = typeof translations.VN;
+
+export function formatLocaleDate(date: number | Date, lang: Language): string {
+  const d = typeof date === 'number' ? new Date(date) : date;
+  const locale = lang === 'VN' ? 'vi-VN' : 'en-US';
+  return d.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+export function formatLocaleNumber(num: number, lang: Language): string {
+  const locale = lang === 'VN' ? 'vi-VN' : 'en-US';
+  return new Intl.NumberFormat(locale).format(num);
+}
+
+// Allows registering an additional language dynamically with a single file dictionary
+export function registerLanguage(code: string, dictionary: TranslationDictionary): void {
+  (translations as any)[code] = dictionary;
+}
+
+

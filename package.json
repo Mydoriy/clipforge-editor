@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "prepare": "husky"

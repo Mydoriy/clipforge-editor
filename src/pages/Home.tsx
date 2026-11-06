@@ -118,10 +118,13 @@ export const Home: React.FC = () => {
     navigate(`/editor/${id}`);
   };
 
-  // Delete project -> move to trash
+  // Delete project -> move to trash with confirmation
   const handleDeleteProject = async (proj: ProjectEntity, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setMenuOpenId(null);
+    if (!window.confirm(`Bạn có chắc muốn chuyển dự án "${proj.title}" vào Thùng rác?`)) {
+      return;
+    }
     await db.projects.delete(proj.id);
     await db.trash.add({
       id: 'trash-' + Date.now(),
@@ -130,7 +133,7 @@ export const Home: React.FC = () => {
       deletedAt: Date.now(),
       projectData: proj
     });
-    showToast(`Đã chuyển "${proj.title}" vào Thùng rác`, 'info');
+    showToast(`Đã chuyển "${proj.title}" vào Thùng rác (Mở Thùng rác để Khôi phục)`, 'info');
   };
 
   // Duplicate project

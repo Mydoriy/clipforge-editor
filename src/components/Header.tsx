@@ -15,6 +15,7 @@ import {
   EyeOff,
   Bell,
   Settings,
+  MessageSquarePlus,
   CheckCheck,
   Sparkles,
   Columns3,
@@ -835,9 +836,24 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           )}
         </div>
 
+        {/* Feedback / Bug Report button */}
+        <button
+          onClick={() => openModal('feedback')}
+          aria-label="Báo lỗi hoặc Góp ý phát triển (Feedback & Bug Report)"
+          className={`p-1.5 rounded-md border transition-all ${
+            isEditor
+              ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB]'
+              : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#22D3EE]'
+          }`}
+          title="Báo lỗi / Góp ý tính năng (Feedback)"
+        >
+          <MessageSquarePlus className="w-3.5 h-3.5" />
+        </button>
+
         {/* Settings button */}
         <button
           onClick={() => openModal('settings')}
+          aria-label="Cài đặt hệ thống (Settings)"
           className={`p-1.5 rounded-md border transition-all ${
             isEditor
               ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'

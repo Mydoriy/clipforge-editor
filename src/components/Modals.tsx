@@ -4,7 +4,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { exportTimelineVideo, exportAudioOnly, exportCurrentFrameAsPng, exportCaptionsSrt } from '../utils/videoExporter';
 import { convertVideoToGif } from '../lib/ffmpeg';
-import { DEFAULT_SHORTCUTS, eventToKeyCombo, formatDisplayKey } from '../utils/shortcuts';
+import { DEFAULT_SHORTCUTS, eventToKeyCombo, formatDisplayKey, detectShortcutConflict } from '../utils/shortcuts';
 import { isSupabaseConfigured, supabase } from '../utils/supabase';
 import { db, createDefaultProject, createProjectSnapshot, type ProjectEntity, type SnapshotEntity } from '../db';
 import { checkStorageQuota, type StorageEstimateResult } from '../lib/db';
@@ -49,7 +49,11 @@ import {
   SlidersHorizontal,
   HardDrive,
   ExternalLink,
-  Shield
+  Shield,
+  MessageSquarePlus,
+  Bug,
+  HelpCircle,
+  Copy
 } from 'lucide-react';
 
 export const Modals: React.FC = () => {
@@ -106,6 +110,10 @@ export const Modals: React.FC = () => {
   const [promptInput, setPromptInput] = useState('');
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimateResult | null>(null);
   const [sentryConsent, setSentryConsent] = useState<boolean>(() => typeof window !== 'undefined' && localStorage.getItem('clipforge_sentry_consent') === 'true');
+  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'perf'>('bug');
+  const [feedbackTitle, setFeedbackTitle] = useState('');
+  const [feedbackDesc, setFeedbackDesc] = useState('');
+  const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
 
   useEffect(() => {
     if (activeModal === 'cloud' || activeModal === 'projectSync' || activeModal === 'storage') {
@@ -184,6 +192,15 @@ export const Modals: React.FC = () => {
 
       const combo = eventToKeyCombo(e);
       if (!combo) return;
+
+      const conflict = detectShortcutConflict(recordingShortcutId, combo, settings.customShortcuts);
+      if (conflict.hasConflict) {
+        showToast(
+          `Xung đột phím tắt: "${combo}" đã được gán cho "${conflict.conflictingActionName}". Vui lòng chọn tổ hợp phím khác!`,
+          'warning'
+        );
+        return;
+      }
 
       rebindShortcut(recordingShortcutId, combo);
       showToast(`Đã gán phím tắt mới: ${combo}`, 'success');
@@ -1951,7 +1968,11 @@ export const Modals: React.FC = () => {
 
               {/* Export Progress or CTA */}
               {exportProgress !== null ? (
-                <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex flex-col gap-3 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1"
+                >
                   <div className="flex justify-between items-center text-xs font-semibold">
                     <span className="text-[#22D3EE] flex items-center gap-2">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1959,7 +1980,14 @@ export const Modals: React.FC = () => {
                     </span>
                     <span className="font-mono text-white font-bold">{exportProgress}%</span>
                   </div>
-                  <div className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden">
+                  <div
+                    className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden"
+                    role="progressbar"
+                    aria-valuenow={exportProgress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Tiến trình xuất video ${exportProgress}%`}
+                  >
                     <div
                       className="h-full bg-gradient-to-r from-[#22D3EE] to-sky-400 transition-all duration-150"
                       style={{ width: `${exportProgress}%` }}
@@ -4202,6 +4230,145 @@ export const Modals: React.FC = () => {
             </p>
             <div className="text-[11px] text-[#8A8A8A] font-mono bg-[#1F1F1F] px-3 py-1 rounded border border-[#333333]">
               Build 2026.11 • Offline-First Native Engine
+            </div>
+          </div>
+        )}
+
+        {/* 15. FEEDBACK & BUG REPORT MODAL */}
+        {activeModal === 'feedback' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center gap-2.5 text-[#22D3EE] pb-3 border-b border-[#1F2937]">
+              <MessageSquarePlus className="w-5 h-5" />
+              <div>
+                <h3 className="text-base font-bold text-white">Báo lỗi & Góp ý (Feedback)</h3>
+                <p className="text-[11px] text-[#9CA3AF]">
+                  Phản hồi của bạn giúp CapCut Desktop Web ngày càng hoàn thiện hơn
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {/* Type selector */}
+              <div className="flex items-center gap-2">
+                {[
+                  { id: 'bug', label: 'Báo lỗi', icon: Bug },
+                  { id: 'feature', label: 'Góp ý tính năng', icon: Sparkles },
+                  { id: 'perf', label: 'Hiệu năng', icon: Zap }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setFeedbackType(t.id as any)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      feedbackType === t.id
+                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-[#22D3EE]'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                    }`}
+                  >
+                    <t.icon className="w-3.5 h-3.5" />
+                    <span>{t.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Title input */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-[#E5E7EB]">Tiêu đề:</span>
+                <input
+                  type="text"
+                  value={feedbackTitle}
+                  onChange={(e) => setFeedbackTitle(e.target.value)}
+                  placeholder="Mô tả ngắn gọn vấn đề hoặc ý tưởng..."
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+                />
+              </div>
+
+              {/* Description textarea */}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-[#E5E7EB]">Chi tiết nội dung:</span>
+                <textarea
+                  rows={4}
+                  value={feedbackDesc}
+                  onChange={(e) => setFeedbackDesc(e.target.value)}
+                  placeholder="Mô tả chi tiết các bước tái hiện lỗi hoặc kỳ vọng tính năng..."
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-white outline-none resize-none"
+                />
+              </div>
+
+              {/* Include diagnostics toggle */}
+              <label className="flex items-center gap-2 text-xs text-[#9CA3AF] cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={includeDiagnostics}
+                  onChange={(e) => setIncludeDiagnostics(e.target.checked)}
+                  className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
+                />
+                <span>Tự động đính kèm thông số chẩn đoán hệ thống (trình duyệt, WebCodecs, bộ nhớ)</span>
+              </label>
+
+              {/* Action buttons */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#1F2937] mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const diagnosticData = {
+                      time: new Date().toISOString(),
+                      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+                      screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'N/A',
+                      webCodecs: typeof window !== 'undefined' && 'VideoEncoder' in window,
+                      webGpu: typeof navigator !== 'undefined' && 'gpu' in navigator,
+                      fsAccess: typeof window !== 'undefined' && 'showOpenFilePicker' in window,
+                      recentErrors: (() => {
+                        try {
+                          return JSON.parse(localStorage.getItem('clipforge_panel_errors') || '[]');
+                        } catch {
+                          return [];
+                        }
+                      })()
+                    };
+                    const blob = new Blob([JSON.stringify(diagnosticData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `clipforge-diagnostic-${Date.now()}.json`;
+                    a.click();
+                    showToast('Đã tải xuống tệp chẩn đoán hệ thống!', 'success');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Tải file chẩn đoán (.json)</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!feedbackTitle.trim()) {
+                        showToast('Vui lòng nhập tiêu đề trước khi sao chép!', 'warning');
+                        return;
+                      }
+                      const reportMarkdown = `# [${feedbackType.toUpperCase()}] ${feedbackTitle}\n\n${feedbackDesc}\n\n### Chẩn đoán kỹ thuật\n- User Agent: ${navigator.userAgent}\n- WebCodecs: ${'VideoEncoder' in window ? 'Có' : 'Không'}\n- WebGPU: ${'gpu' in navigator ? 'Có' : 'Không'}`;
+                      await navigator.clipboard.writeText(reportMarkdown);
+                      showToast('Đã sao chép báo cáo Markdown vào clipboard!', 'success');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-[#1F2937] hover:bg-[#374151] text-white font-semibold text-xs flex items-center gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Sao chép</span>
+                  </button>
+
+                  <a
+                    href={`https://github.com/Mydoriy/clipforge-editor/issues/new?title=${encodeURIComponent(`[${feedbackType.toUpperCase()}] ${feedbackTitle}`)}&body=${encodeURIComponent(feedbackDesc)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-[#22D3EE] to-sky-500 hover:opacity-90 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Mở GitHub Issue</span>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         )}

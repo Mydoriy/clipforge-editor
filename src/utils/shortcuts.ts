@@ -374,3 +374,45 @@ export function formatDisplayKey(combo: string): string {
     .replace('ArrowDown', '↓');
 }
 
+export interface ShortcutConflict {
+  hasConflict: boolean;
+  conflictingActionId?: string;
+  conflictingActionName?: string;
+}
+
+// Detect whether a proposed key combination conflicts with an existing shortcut
+export function detectShortcutConflict(
+  actionId: string,
+  newKey: string,
+  customShortcuts?: Record<string, string>
+): ShortcutConflict {
+  if (!newKey || !newKey.trim()) {
+    return { hasConflict: false };
+  }
+
+  const normalize = (str: string) =>
+    str
+      .toLowerCase()
+      .split('+')
+      .map((s) => s.trim())
+      .sort()
+      .join('+');
+
+  const normalizedNew = normalize(newKey);
+
+  for (const def of DEFAULT_SHORTCUTS) {
+    if (def.id === actionId) continue;
+    const currentKey = customShortcuts?.[def.id] || def.defaultKey;
+    if (normalize(currentKey) === normalizedNew) {
+      return {
+        hasConflict: true,
+        conflictingActionId: def.id,
+        conflictingActionName: def.name
+      };
+    }
+  }
+
+  return { hasConflict: false };
+}
+
+

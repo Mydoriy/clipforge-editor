@@ -26,6 +26,9 @@ jobs:
       - name: 1. Lint Check
         run: npm run lint
 
+      - name: 1b. i18n Translation Parity Check
+        run: npm run check:i18n
+
       - name: 2. TypeScript Strict Check
         run: npm run typecheck
 

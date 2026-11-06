@@ -99,3 +99,4 @@ CREATE POLICY "Allow authenticated users to delete their own vault files"
     ON storage.objects FOR DELETE
     TO authenticated
     USING (bucket_id = 'clipforge_vault' AND (storage.foldername(name))[1] = auth.uid()::text);
+

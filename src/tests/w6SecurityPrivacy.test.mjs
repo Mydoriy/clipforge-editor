@@ -158,3 +158,4 @@ test('W6: Security Headers in vercel.json & public/_headers', () => {
   const headersFileText = fs.readFileSync(headersFilePath, 'utf8');
   assert.ok(headersFileText.includes('Content-Security-Policy'), '_headers must have CSP');
 });
+

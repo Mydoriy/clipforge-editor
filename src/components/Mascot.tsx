@@ -78,6 +78,7 @@ export const Mascot: React.FC = () => {
       {/* Pixel Sprout Mascot Button */}
       <button
         onClick={() => setBubbleOpen(!bubbleOpen)}
+        aria-label="Linh vật Pixel Sprout - Nhấp để xem mẹo dựng"
         className="group relative flex items-center justify-center p-2 rounded-2xl bg-[#1F1F1F]/90 hover:bg-[#262626] border border-[#333333] hover:border-[#1FC8DB] shadow-xl backdrop-blur transition-all duration-200 active:scale-95"
         title="Linh vật Pixel Sprout - Nhấp để xem mẹo dựng!"
       >
