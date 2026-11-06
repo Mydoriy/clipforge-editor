@@ -76,3 +76,4 @@ export function clearCrashCheckpoint(projectId: string): void {
     // Ignore
   }
 }
+

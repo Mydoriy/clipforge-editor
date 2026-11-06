@@ -95,10 +95,6 @@ import {
   downloadSubtitleFile,
   type SubtitleItem
 } from '../utils/subtitles';
-import {
-  transcribeWithWhisper,
-  audioBlobTo16kHzMono
-} from '../utils/whisperTranscriber';
 
 export const CategoryPanel: React.FC = () => {
   const {
@@ -206,6 +202,26 @@ export const CategoryPanel: React.FC = () => {
   const [mediaFilter, setMediaFilter] = useState<'all' | 'video' | 'image' | 'audio'>('all');
   const [mediaSort, setMediaSort] = useState<'date' | 'name' | 'duration' | 'size'>('date');
   const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+  const [visibleMediaCount, setVisibleMediaCount] = useState<number>(60);
+  const mediaBlobUrlMapRef = useRef<Map<string, string>>(new Map());
+
+  const getMediaBlobUrl = (id: string, blob: Blob) => {
+    let url = mediaBlobUrlMapRef.current.get(id);
+    if (!url) {
+      url = URL.createObjectURL(blob);
+      mediaBlobUrlMapRef.current.set(id, url);
+    }
+    return url;
+  };
+
+  useEffect(() => {
+    return () => {
+      for (const url of mediaBlobUrlMapRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      mediaBlobUrlMapRef.current.clear();
+    };
+  }, []);
 
   // Modals & ContextMenu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; media: MediaEntity } | null>(null);
@@ -757,6 +773,9 @@ export const CategoryPanel: React.FC = () => {
           targetMedia = (await db.media.get(firstVideoOrAudio.mediaId)) || null;
         }
       }
+
+      // Dynamically load Whisper Transcriber and @xenova/transformers only when requested
+      const { transcribeWithWhisper, audioBlobTo16kHzMono } = await import('../utils/whisperTranscriber');
 
       if (targetMedia && targetMedia.blob) {
         setWhisperStatus('Đang trích xuất audio 16kHz mono...');
@@ -2353,10 +2372,13 @@ export const CategoryPanel: React.FC = () => {
                       );
                     }
 
-                    return list.map((media) => {
-                      const isSelected = selectedMediaIds.includes(media.id);
-                      const isFav = !!(media as any).favorite;
-                      const mediaUrl = URL.createObjectURL(media.blob);
+                    const visibleList = list.slice(0, visibleMediaCount);
+                    return (
+                      <>
+                        {visibleList.map((media) => {
+                          const isSelected = selectedMediaIds.includes(media.id);
+                          const isFav = !!(media as any).favorite;
+                          const mediaUrl = getMediaBlobUrl(media.id, media.blob);
 
                       return (
                         <div
@@ -2491,9 +2513,21 @@ export const CategoryPanel: React.FC = () => {
                           </div>
                         </div>
                       );
-                    });
-                  })()}
-                </div>
+                    })}
+                    {list.length > visibleMediaCount && (
+                      <div className="col-span-full py-2 flex justify-center">
+                        <button
+                          onClick={() => setVisibleMediaCount((prev) => prev + 40)}
+                          className="px-3 py-1.5 rounded-md bg-[#262626] hover:bg-[#333333] text-xs text-[#1FC8DB] font-semibold border border-[#333333] transition-colors cursor-pointer"
+                        >
+                          Tải thêm ({list.length - visibleMediaCount} tệp media)
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
               </div>
             )}
 

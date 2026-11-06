@@ -20,6 +20,7 @@ export interface AdvancedExportOptions {
   audioOnly?: boolean;
   abortSignal?: { aborted: boolean };
   aspect?: string;
+  writableStream?: any; // FileSystemWritableFileStream for streaming export without holding full video in RAM
 }
 
 export async function exportVideoWithWebCodecs(
@@ -94,14 +95,19 @@ export async function exportVideoWithWebCodecs(
     try {
       if (onProgress) onProgress({ progress: 0, status: 'Khởi tạo WebCodecs Hardware VideoEncoder...' });
 
+      // Stream directly to FileSystemWritableFileStream if available, eliminating memory buildup
+      const target = options.writableStream && (Mp4Muxer as any).FileSystemWritableFileStreamTarget
+        ? new (Mp4Muxer as any).FileSystemWritableFileStreamTarget(options.writableStream)
+        : new Mp4Muxer.ArrayBufferTarget();
+
       const muxer = new Mp4Muxer.Muxer({
-        target: new Mp4Muxer.ArrayBufferTarget(),
+        target,
         video: {
           codec: 'avc',
           width,
           height
         },
-        fastStart: 'in-memory'
+        fastStart: options.writableStream ? false : 'in-memory'
       });
 
       let encodeError: Error | null = null;
@@ -180,7 +186,13 @@ export async function exportVideoWithWebCodecs(
       await encoder.flush();
       muxer.finalize();
 
-      const buffer = muxer.target.buffer;
+      if (options.writableStream) {
+        // Data written directly to FileSystemWritableFileStream - minimal RAM used!
+        if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất ghi file streaming vào ổ đĩa!' });
+        return new Blob([], { type: 'video/mp4' });
+      }
+
+      const buffer = (target as Mp4Muxer.ArrayBufferTarget).buffer;
       const finalBlob = new Blob([buffer], { type: 'video/mp4' });
       if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất xuất video MP4!' });
       return finalBlob;

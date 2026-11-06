@@ -1,5 +1,5 @@
 import type { TimelineClip } from '../store/useEditorStore';
-import { FILTER_PRESETS } from '../utils/lutParser';
+import { FILTER_PRESETS } from '../utils/lutParser.ts';
 
 export interface RenderOptions {
   isExport?: boolean;
@@ -15,35 +15,95 @@ export class FrameCompositor {
   private offscreenCanvas: HTMLCanvasElement;
   private offscreenCtx: CanvasRenderingContext2D | null;
 
+  // Memory bounds to prevent memory leaks during 30+ min continuous editing
+  private readonly MAX_VIDEO_CACHE = 8;
+  private readonly MAX_IMAGE_CACHE = 30;
+
   constructor() {
-    this.offscreenCanvas = document.createElement('canvas');
-    this.offscreenCtx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
+    if (typeof document !== 'undefined') {
+      this.offscreenCanvas = document.createElement('canvas');
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
+    } else {
+      this.offscreenCanvas = null as any;
+      this.offscreenCtx = null;
+    }
   }
 
-  // Pre-load or retrieve video element synced to time
+  // Pre-load or retrieve video element synced to time with LRU cache eviction
   public getVideoElement(src: string): HTMLVideoElement {
     let video = this.videoCache.get(src);
-    if (!video) {
+    if (video) {
+      // Re-insert to mark as recently used
+      this.videoCache.delete(src);
+      this.videoCache.set(src, video);
+      return video;
+    }
+
+    // Evict oldest video element if exceeding max capacity
+    if (this.videoCache.size >= this.MAX_VIDEO_CACHE) {
+      const oldestKey = this.videoCache.keys().next().value;
+      if (oldestKey) {
+        const oldVideo = this.videoCache.get(oldestKey);
+        if (oldVideo) {
+          try {
+            oldVideo.pause();
+            oldVideo.removeAttribute('src');
+            oldVideo.load();
+          } catch (e) {
+            // Ignore unload errors
+          }
+        }
+        this.videoCache.delete(oldestKey);
+      }
+    }
+
+    if (typeof document !== 'undefined') {
       video = document.createElement('video');
       video.src = src;
       video.crossOrigin = 'anonymous';
       video.muted = true;
       video.playsInline = true;
       video.preload = 'auto';
-      this.videoCache.set(src, video);
+    } else {
+      video = { src, pause: () => {}, removeAttribute: () => {}, load: () => {} } as any;
     }
+    this.videoCache.set(src, video);
     return video;
   }
 
-  // Pre-load or retrieve image element
+  // Pre-load or retrieve image element with LRU cache eviction
   public getImageElement(src: string): HTMLImageElement {
     let img = this.imageCache.get(src);
-    if (!img) {
+    if (img) {
+      this.imageCache.delete(src);
+      this.imageCache.set(src, img);
+      return img;
+    }
+
+    // Evict oldest image element if exceeding max capacity
+    if (this.imageCache.size >= this.MAX_IMAGE_CACHE) {
+      const oldestKey = this.imageCache.keys().next().value;
+      if (oldestKey) {
+        const oldImg = this.imageCache.get(oldestKey);
+        if (oldImg) {
+          try {
+            oldImg.removeAttribute('src');
+          } catch (e) {
+            // Ignore
+          }
+        }
+        this.imageCache.delete(oldestKey);
+      }
+    }
+
+    if (typeof Image !== 'undefined') {
       img = new Image();
       img.src = src;
       img.crossOrigin = 'anonymous';
-      this.imageCache.set(src, img);
+    } else {
+      img = { src, removeAttribute: () => {} } as any;
     }
+    this.imageCache.set(src, img);
     return img;
   }
 
@@ -59,7 +119,21 @@ export class FrameCompositor {
       }
     }
     this.videoCache.clear();
+
+    for (const img of this.imageCache.values()) {
+      try {
+        img.removeAttribute('src');
+      } catch (e) {
+        // Ignore
+      }
+    }
     this.imageCache.clear();
+
+    // Free scratch GPU canvas memory
+    if (this.offscreenCanvas) {
+      this.offscreenCanvas.width = 1;
+      this.offscreenCanvas.height = 1;
+    }
   }
 
   // Master Deterministic Render Function (used for both Preview and Export)

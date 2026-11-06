@@ -127,6 +127,40 @@ export const Timeline: React.FC = () => {
   const relinkInputRef = useRef<HTMLInputElement | null>(null);
   const [relinkingClipId, setRelinkingClipId] = useState<string | null>(null);
 
+  // Virtualization window for rendering hundreds of clips smoothly
+  const [visibleTimeRange, setVisibleTimeRange] = useState<{ start: number; end: number }>({
+    start: 0,
+    end: 1000
+  });
+
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+
+    const computeWindow = () => {
+      const scrollLeft = el.scrollLeft;
+      const clientWidth = el.clientWidth;
+      const scrollWidth = el.scrollWidth || 1;
+      const rStart = scrollLeft / scrollWidth;
+      const rEnd = (scrollLeft + clientWidth) / scrollWidth;
+      const vStart = rStart * duration;
+      const vEnd = rEnd * duration;
+      const overscan = Math.max(1.5, (vEnd - vStart) * 0.4);
+      setVisibleTimeRange({
+        start: Math.max(0, vStart - overscan),
+        end: Math.min(duration, vEnd + overscan)
+      });
+    };
+
+    computeWindow();
+    el.addEventListener('scroll', computeWindow, { passive: true });
+    window.addEventListener('resize', computeWindow, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', computeWindow);
+      window.removeEventListener('resize', computeWindow);
+    };
+  }, [duration, timelineZoom]);
+
   const handleTriggerRelink = (clipId: string) => {
     setRelinkingClipId(clipId);
     if (relinkInputRef.current) relinkInputRef.current.click();
@@ -1963,8 +1997,13 @@ export const Timeline: React.FC = () => {
                       );
                     })}
 
-                    {/* Clips on Track */}
+                    {/* Clips on Track (Virtualized: only renders clips within visible time range) */}
                     {trackClips.map((clip) => {
+                      // Virtualization check: skip rendering if clip is completely out of view
+                      if (clip.start + clip.duration < visibleTimeRange.start || clip.start > visibleTimeRange.end) {
+                        return null;
+                      }
+
                       const leftPercent = (clip.start / duration) * 100;
                       const widthPercent = (clip.duration / duration) * 100;
                       const isSelected = selectedClipId === clip.id || selectedClipIds.includes(clip.id);
@@ -1990,14 +2029,17 @@ export const Timeline: React.FC = () => {
                               : 'hover:brightness-110 z-10'
                           } ${isGrouped ? 'border-dashed border-amber-400/80' : ''}`}
                         >
-                          {/* Filmstrip Repeating Thumbnails for Video/Image */}
+                          {/* Filmstrip Repeating Thumbnails for Video/Image (Capped to max 16 to conserve DOM/memory) */}
                           {clip.thumbnailUrl && (clip.type === 'video' || clip.type === 'image') && (
                             <div className="absolute inset-0 flex overflow-hidden pointer-events-none opacity-25 select-none">
-                              {Array.from({ length: Math.max(1, Math.ceil((clip.duration / duration) * 35 * timelineZoom)) }).map((_, idx) => (
+                              {Array.from({
+                                length: Math.min(16, Math.max(1, Math.ceil((clip.duration / duration) * 35 * timelineZoom)))
+                              }).map((_, idx) => (
                                 <img
                                   key={idx}
                                   src={clip.thumbnailUrl}
                                   alt=""
+                                  loading="lazy"
                                   className="h-full w-12 object-cover shrink-0 border-r border-black/20"
                                 />
                               ))}

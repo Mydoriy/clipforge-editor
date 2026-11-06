@@ -193,3 +193,4 @@ test('W2: Dexie legacy schema migration upgrade function preserves data', () => 
   assert.strictEqual(projectRecord.height, 1920);
   assert.strictEqual(projectRecord.fps, 30);
 });
+

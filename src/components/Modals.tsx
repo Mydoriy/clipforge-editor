@@ -1072,6 +1072,24 @@ export const Modals: React.FC = () => {
         ? { start: Math.max(0, exportRangeStart), end: Math.min(duration, Math.max(exportRangeStart + 0.5, exportRangeEnd)) }
         : undefined;
 
+      // Determine clean filename
+      const cleanTitle = (exportFileName || projectTitle || 'CapCut_Video').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const ext = exportAudioOnlyMode ? (exportAudioFormat === 'wav' ? 'wav' : 'mp3') : exportFormat;
+      const finalFileName = `${cleanTitle}_${exportRes}_${exportFps}fps_${Date.now()}.${ext}`;
+
+      // Open streaming writable file stream upfront if directory was selected
+      let fileStreamWritable: any = null;
+      let savedViaFs = false;
+
+      if (exportDirectoryHandle && !exportAudioOnlyMode && exportFormat === 'mp4') {
+        try {
+          const fileHandle = await exportDirectoryHandle.getFileHandle(finalFileName, { create: true });
+          fileStreamWritable = await fileHandle.createWritable();
+        } catch (fsErr) {
+          console.warn('Could not open direct file writable stream:', fsErr);
+        }
+      }
+
       let blob: Blob;
       if (exportAudioOnlyMode) {
         blob = await exportAudioOnly(
@@ -1095,7 +1113,8 @@ export const Modals: React.FC = () => {
             format: exportFormat,
             range,
             aspect: projectSettings?.aspect,
-            abortSignal: abortSignalRef.current
+            abortSignal: abortSignalRef.current,
+            writableStream: fileStreamWritable
           },
           ({ progress, status, remainingSeconds }) => {
             setExportProgress(progress);
@@ -1105,14 +1124,10 @@ export const Modals: React.FC = () => {
         );
       }
 
-      // Determine clean filename
-      const cleanTitle = (exportFileName || projectTitle || 'CapCut_Video').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
-      const ext = exportAudioOnlyMode ? (exportAudioFormat === 'wav' ? 'wav' : 'mp3') : exportFormat;
-      const finalFileName = `${cleanTitle}_${exportRes}_${exportFps}fps_${Date.now()}.${ext}`;
-
-      // Save via File System Access API if folder selected
-      let savedViaFs = false;
-      if (exportDirectoryHandle) {
+      if (fileStreamWritable) {
+        savedViaFs = true;
+        showToast(`Đã xuất streaming trực tiếp "${finalFileName}" vào thư mục "${exportDirectoryName}"!`, 'success');
+      } else if (exportDirectoryHandle) {
         try {
           const fileHandle = await exportDirectoryHandle.getFileHandle(finalFileName, { create: true });
           const writable = await fileHandle.createWritable();

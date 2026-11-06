@@ -70,6 +70,13 @@ export const PlayerCanvas: React.FC = () => {
   const [showWaveform, setShowWaveform] = useState(false);
   const [showColorScale, setShowColorScale] = useState(false);
 
+  // Performance & Debug FPS / Dropped Frames states
+  const [showDebugFps, setShowDebugFps] = useState(false);
+  const [currentFps, setCurrentFps] = useState<number>(30);
+  const [droppedFrames, setDroppedFrames] = useState<number>(0);
+  const [showProxyPrompt, setShowProxyPrompt] = useState(false);
+  const hasPromptedProxyRef = useRef(false);
+
   // Bottom Controls states
   const [previewQuality, setPreviewQuality] = useState<'full' | 'half' | 'quarter'>('full');
   const [zoomMode, setZoomMode] = useState<'fit' | number>('fit');
@@ -138,14 +145,50 @@ export const PlayerCanvas: React.FC = () => {
   const canvasWidth = Math.round(aspectConfig.w * qualityFactor);
   const canvasHeight = Math.round(aspectConfig.h * qualityFactor);
 
-  // Master Playback Timer Loop with Loop Playback support
+  // Master Playback Timer Loop with Live FPS, Dropped Frames tracking, and Auto-Proxy Suggestion
   useEffect(() => {
     let animId: number;
     let lastTimestamp = performance.now();
+    let frameTimes: number[] = [];
+    let localDropped = 0;
+    let lowFpsSeconds = 0;
+    let lastSecondCheck = performance.now();
 
     const loop = (timestamp: number) => {
       if (isPlaying) {
         const delta = (timestamp - lastTimestamp) / 1000;
+        const targetFps = fps || 30;
+        const expectedDelta = 1 / targetFps;
+
+        // Detect dropped frames if delta exceeds 1.5x expected interval
+        if (delta > expectedDelta * 1.5 && lastTimestamp > 0) {
+          const dropped = Math.floor((delta - expectedDelta) / expectedDelta);
+          localDropped += dropped;
+          setDroppedFrames(localDropped);
+        }
+
+        frameTimes.push(timestamp);
+        if (frameTimes.length > 30) frameTimes.shift();
+        if (frameTimes.length >= 2) {
+          const dur = (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000;
+          const measuredFps = dur > 0 ? Math.round(((frameTimes.length - 1) / dur) * 10) / 10 : targetFps;
+          setCurrentFps(measuredFps);
+
+          // If low FPS (< 24) on 1080p+ for 3 consecutive seconds, auto suggest Proxy
+          if (timestamp - lastSecondCheck >= 1000) {
+            lastSecondCheck = timestamp;
+            if (measuredFps < 24 && !isProxyEnabled) {
+              lowFpsSeconds++;
+              if (lowFpsSeconds >= 3 && !hasPromptedProxyRef.current) {
+                hasPromptedProxyRef.current = true;
+                setShowProxyPrompt(true);
+              }
+            } else {
+              lowFpsSeconds = 0;
+            }
+          }
+        }
+
         const nextTime = currentTime + delta;
         if (nextTime >= duration) {
           if (loopPlayback && duration > 0) {
@@ -164,7 +207,7 @@ export const PlayerCanvas: React.FC = () => {
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, duration, currentTime, setCurrentTime, setIsPlaying, loopPlayback]);
+  }, [isPlaying, duration, currentTime, setCurrentTime, setIsPlaying, loopPlayback, fps, isProxyEnabled]);
 
   // Synchronize audio playback with currentTime and isPlaying
   useEffect(() => {
@@ -642,6 +685,18 @@ export const PlayerCanvas: React.FC = () => {
                   </span>
                   {showColorScale && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
                 </button>
+
+                {/* 8. Debug FPS & Dropped frames counter */}
+                <button
+                  onClick={() => setShowDebugFps(!showDebugFps)}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Debug FPS & Drop frames</span>
+                  </span>
+                  {showDebugFps && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
               </div>
             )}
           </div>
@@ -704,6 +759,52 @@ export const PlayerCanvas: React.FC = () => {
             height={canvasHeight}
             className="w-full h-full object-contain pointer-events-auto"
           />
+
+          {/* Live Debug FPS & Dropped Frames HUD */}
+          {showDebugFps && (
+            <div className="absolute top-2.5 right-2.5 z-30 px-2 py-1 rounded bg-black/85 backdrop-blur border border-white/20 text-[10px] font-mono flex items-center gap-2 pointer-events-none select-none shadow-lg">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  currentFps >= 28 ? 'bg-emerald-400' : currentFps >= 20 ? 'bg-amber-400' : 'bg-rose-500'
+                } animate-pulse`}
+              />
+              <span className="text-white font-bold">{currentFps.toFixed(1)} FPS</span>
+              <span className="text-[#555]">|</span>
+              <span className={droppedFrames > 0 ? 'text-amber-300 font-semibold' : 'text-[#888]'}>
+                Drops: {droppedFrames}
+              </span>
+              <span className="text-[#555]">|</span>
+              <span className={isProxyEnabled ? 'text-[#1FC8DB] font-bold' : 'text-[#777]'}>
+                {isProxyEnabled ? 'Proxy: ON (480p)' : 'Proxy: OFF'}
+              </span>
+            </div>
+          )}
+
+          {/* Auto-suggest Proxy banner when FPS drops during 1080p playback */}
+          {showProxyPrompt && !isProxyEnabled && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[#161B26]/95 border border-amber-500/50 rounded-lg px-3.5 py-2 flex items-center gap-3 text-xs text-amber-200 shadow-2xl backdrop-blur animate-in fade-in">
+              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                FPS sụt giảm (<strong>{currentFps.toFixed(0)} FPS</strong>, {droppedFrames} drops). Bật Proxy (480p) để xem trước mượt mà?
+              </span>
+              <button
+                onClick={() => {
+                  toggleProxy();
+                  setShowProxyPrompt(false);
+                  showToast('Đã bật chế độ Proxy (480p) xem trước siêu mượt!', 'success');
+                }}
+                className="px-2.5 py-1 rounded bg-[#1FC8DB] text-slate-950 font-bold hover:brightness-110 cursor-pointer transition-all"
+              >
+                Bật Proxy
+              </button>
+              <button
+                onClick={() => setShowProxyPrompt(false)}
+                className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* Grid 3x3 Overlay (Rule of Thirds) */}
           {showGrid && (

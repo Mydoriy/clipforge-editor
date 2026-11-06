@@ -11,7 +11,28 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@xenova') || id.includes('transformers') || id.includes('onnxruntime')) {
+            return 'transformers';
+          }
+          if (id.includes('@ffmpeg')) {
+            return 'ffmpeg';
+          }
+          if (id.includes('konva') || id.includes('react-konva')) {
+            return 'konva';
+          }
+          if (id.includes('lucide-react')) {
+            return 'lucide-icons';
+          }
+          if (id.includes('mp4-muxer')) {
+            return 'mp4-muxer';
+          }
+        }
+      }
+    }
   }
 });
-

@@ -1,14 +1,23 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
-import { Modals } from './components/Modals';
 import { Toasts } from './components/Toasts';
-import { Home } from './pages/Home';
-import { Editor } from './pages/Editor';
-import { DesignStudio } from './pages/DesignStudio';
-import { SectionPage } from './pages/SectionPage';
 import { EditPilot } from './components/EditPilot';
+
+// Code-split pages and modals to satisfy initial bundle budget (<300KB gzip)
+const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
+const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Editor })));
+const DesignStudio = lazy(() => import('./pages/DesignStudio').then((m) => ({ default: m.DesignStudio })));
+const SectionPage = lazy(() => import('./pages/SectionPage').then((m) => ({ default: m.SectionPage })));
+const Modals = lazy(() => import('./components/Modals').then((m) => ({ default: m.Modals })));
+
+const PageLoader: React.FC = () => (
+  <div className="flex-1 flex items-center justify-center bg-[#0B0F19] text-[#1FC8DB] text-xs font-medium">
+    <div className="w-5 h-5 border-2 border-[#1FC8DB] border-t-transparent rounded-full animate-spin mr-2.5" />
+    <span>Đang tải ClipForge...</span>
+  </div>
+);
 
 const MainLayout: React.FC = () => {
   return (
@@ -16,10 +25,14 @@ const MainLayout: React.FC = () => {
       <Header />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
-        <Outlet />
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
       </div>
       <EditPilot />
-      <Modals />
+      <Suspense fallback={null}>
+        <Modals />
+      </Suspense>
       <Toasts />
     </div>
   );
@@ -28,45 +41,51 @@ const MainLayout: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Main Dashboard & Subpages with Sidebar Layout */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/templates" element={<SectionPage />} />
-          <Route path="/video-studio" element={<SectionPage />} />
-          <Route path="/ai-tools" element={<SectionPage />} />
-          <Route path="/marketing" element={<SectionPage />} />
-          <Route path="/library" element={<SectionPage />} />
-          <Route path="/cloud-storage" element={<SectionPage />} />
-        </Route>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Main Dashboard & Subpages with Sidebar Layout */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/templates" element={<SectionPage />} />
+            <Route path="/video-studio" element={<SectionPage />} />
+            <Route path="/ai-tools" element={<SectionPage />} />
+            <Route path="/marketing" element={<SectionPage />} />
+            <Route path="/library" element={<SectionPage />} />
+            <Route path="/cloud-storage" element={<SectionPage />} />
+          </Route>
 
-        {/* Fullscreen Video Editor */}
-        <Route
-          path="/editor/:id"
-          element={
-            <>
-              <Editor />
-              <Modals />
-              <Toasts />
-            </>
-          }
-        />
+          {/* Fullscreen Video Editor */}
+          <Route
+            path="/editor/:id"
+            element={
+              <>
+                <Editor />
+                <Suspense fallback={null}>
+                  <Modals />
+                </Suspense>
+                <Toasts />
+              </>
+            }
+          />
 
-        {/* Fullscreen Design Studio */}
-        <Route
-          path="/design"
-          element={
-            <>
-              <DesignStudio />
-              <Modals />
-              <Toasts />
-            </>
-          }
-        />
+          {/* Fullscreen Design Studio */}
+          <Route
+            path="/design"
+            element={
+              <>
+                <DesignStudio />
+                <Suspense fallback={null}>
+                  <Modals />
+                </Suspense>
+                <Toasts />
+              </>
+            }
+          />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };

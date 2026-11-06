@@ -132,3 +132,4 @@ export async function validateCapprojFile(file: File): Promise<ValidationResult>
     };
   }
 }
+
