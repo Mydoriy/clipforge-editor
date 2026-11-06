@@ -120,6 +120,13 @@ interface EditorState {
   deleteClip: (id: string) => void;
   splitClip: (id: string, atTime: number) => void;
 
+  // EditPilot Drawer & Chat
+  editPilotOpen: boolean;
+  setEditPilotOpen: (open: boolean) => void;
+  toggleEditPilot: () => void;
+  chatHistory: Record<string, Array<{ id: string; role: 'user' | 'assistant'; text: string; time: string }>>;
+  addChatMessage: (projectId: string, role: 'user' | 'assistant', text: string) => void;
+
   // History
   undoStack: TimelineClip[][];
   redoStack: TimelineClip[][];
@@ -134,6 +141,24 @@ export const useEditorStore = create<EditorState>()(
       setLanguage: (lang) => {
         localStorage.setItem('clipforge_lang', lang);
         set({ language: lang });
+      },
+
+      editPilotOpen: false,
+      setEditPilotOpen: (open) => set({ editPilotOpen: open }),
+      toggleEditPilot: () => set((state) => ({ editPilotOpen: !state.editPilotOpen })),
+      chatHistory: {},
+      addChatMessage: (projectId, role, text) => {
+        const id = 'msg-' + Date.now();
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        set((state) => {
+          const currentList = state.chatHistory[projectId] || [];
+          return {
+            chatHistory: {
+              ...state.chatHistory,
+              [projectId]: [...currentList, { id, role, text, time }]
+            }
+          };
+        });
       },
 
       user: null,
@@ -376,7 +401,8 @@ export const useEditorStore = create<EditorState>()(
         projectTitle: state.projectTitle,
         user: state.user,
         isPro: state.isPro,
-        settings: state.settings
+        settings: state.settings,
+        chatHistory: state.chatHistory
       })
     }
   )

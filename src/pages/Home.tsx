@@ -18,12 +18,21 @@ import {
   Palette,
   Megaphone,
   Scissors,
-  Film
+  Film,
+  ArrowRight
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { language, openModal, showToast, setCurrentProjectId, setProjectTitle } = useEditorStore();
+  const {
+    language,
+    openModal,
+    showToast,
+    setCurrentProjectId,
+    setProjectTitle,
+    setEditPilotOpen,
+    addChatMessage
+  } = useEditorStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [promptText, setPromptText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +99,7 @@ export const Home: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/15 via-transparent to-transparent pointer-events-none" />
 
         <button
-          onClick={handleCreateProject}
+          onClick={() => openModal('newProject')}
           className="relative z-10 flex items-center gap-3 px-8 py-3.5 rounded-[14px] bg-[#0B0F19]/90 hover:bg-[#0B0F19] text-[#E5E7EB] hover:text-white font-bold text-sm shadow-2xl border border-cyan-400/30 hover:border-cyan-400 hover-lift active:scale-95 transition-all"
         >
           <div className="w-6 h-6 rounded-lg bg-[#22D3EE] text-slate-950 flex items-center justify-center font-black">
@@ -104,15 +113,24 @@ export const Home: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* EditPilot Prompt Search Card (4 cols) */}
         <div className="lg:col-span-4 p-5 rounded-[16px] bg-[#111827] border border-[#1F2937] flex flex-col justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-2 text-[#22D3EE]">
-            <Sparkles className="w-4 h-4 fill-[#22D3EE]" />
-            <span className="font-extrabold text-xs uppercase tracking-wider text-[#22D3EE]">EditPilot</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#22D3EE]">
+              <Sparkles className="w-4 h-4 fill-[#22D3EE]" />
+              <span className="font-extrabold text-xs uppercase tracking-wider text-[#22D3EE]">EditPilot</span>
+            </div>
+            <button
+              onClick={() => setEditPilotOpen(true)}
+              className="text-[10px] text-[#22D3EE] font-bold hover:underline"
+            >
+              Mở chat drawer →
+            </button>
           </div>
 
           <h4 className="font-semibold text-[#E5E7EB] text-sm italic">
             {t.editPilotPlaceholder}
           </h4>
 
+          {/* Ô nhập + Nút gửi (mũi tên) */}
           <div className="relative flex items-center">
             <input
               type="text"
@@ -120,24 +138,51 @@ export const Home: React.FC = () => {
               onChange={(e) => setPromptText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && promptText.trim()) {
-                  showToast(`EditPilot đang xử lý: "${promptText}"`, 'info');
+                  setEditPilotOpen(true);
                   handleCreateProject();
                 }
               }}
-              placeholder="Mô tả ý tưởng video bạn muốn dựng..."
-              className="w-full bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-4 py-2.5 text-xs text-[#E5E7EB] placeholder-[#9CA3AF] outline-none transition-colors"
+              placeholder="VD: Cắt 5 giây đầu, tăng tốc 2x, thêm chữ..."
+              className="w-full bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl pl-4 pr-11 py-2.5 text-xs text-[#E5E7EB] placeholder-[#9CA3AF] outline-none transition-colors"
             />
             <button
               onClick={() => {
                 if (promptText.trim()) {
-                  showToast(`EditPilot đang phân tích kịch bản...`, 'info');
+                  setEditPilotOpen(true);
                   handleCreateProject();
+                } else {
+                  setEditPilotOpen(true);
                 }
               }}
-              className="absolute right-2 px-3 py-1.5 rounded-lg bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow hover-lift transition-all"
+              className="absolute right-2 p-2 rounded-lg bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold shadow hover-lift transition-all"
+              title="Gửi lệnh cho EditPilot"
             >
-              {t.askAi}
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
+          </div>
+
+          {/* Gợi ý nhanh (Chips) dưới ô nhập */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {[
+              'Cắt 5 giây đầu',
+              'Tăng tốc 2x',
+              'Thêm chữ Xin chào',
+              'Làm sáng video',
+              'Tắt tiếng',
+              'Xuất video'
+            ].map((chip, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setPromptText(chip);
+                  setEditPilotOpen(true);
+                  handleCreateProject();
+                }}
+                className="px-2 py-0.5 rounded-lg bg-[#0B0F19] hover:bg-[#1F2937] text-[#22D3EE] text-[10px] font-semibold border border-[#1F2937] hover-lift transition-all"
+              >
+                + {chip}
+              </button>
+            ))}
           </div>
         </div>
 

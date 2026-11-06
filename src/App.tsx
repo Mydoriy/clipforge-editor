@@ -8,6 +8,7 @@ import { Home } from './pages/Home';
 import { Editor } from './pages/Editor';
 import { DesignStudio } from './pages/DesignStudio';
 import { SectionPage } from './pages/SectionPage';
+import { EditPilot } from './components/EditPilot';
 
 const MainLayout: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const MainLayout: React.FC = () => {
         <Sidebar />
         <Outlet />
       </div>
+      <EditPilot />
       <Modals />
       <Toasts />
     </div>

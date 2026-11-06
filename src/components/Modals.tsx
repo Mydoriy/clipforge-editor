@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { exportTimelineVideo } from '../utils/videoExporter';
@@ -41,12 +42,20 @@ export const Modals: React.FC = () => {
     isPro,
     setIsPro,
     settings,
-    updateSettings
+    updateSettings,
+    setCurrentProjectId,
+    setProjectTitle
   } = useEditorStore();
 
+  const navigate = useNavigate();
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportStatus, setExportStatus] = useState<string>('');
   const [promptInput, setPromptInput] = useState('');
+
+  // New Project Modal State
+  const [newProjName, setNewProjName] = useState('0917 - New Project');
+  const [newProjAspect, setNewProjAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5' | '3:4'>('9:16');
+  const [newProjRes, setNewProjRes] = useState<'1080p' | '720p' | '4k'>('1080p');
   
   // Auth state
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
@@ -104,6 +113,137 @@ export const Modals: React.FC = () => {
         >
           <X className="w-5 h-5" />
         </button>
+
+        {/* MODAL NEW PROJECT (CREATE PROJECT) */}
+        {activeModal === 'newProject' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center gap-2.5 text-[#22D3EE] pb-3 border-b border-[#1F2937]">
+              <Film className="w-5 h-5" />
+              <h3 className="text-base font-bold text-white">Tạo dự án mới (New Project)</h3>
+            </div>
+
+            {/* Tên Project */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Tên dự án:</span>
+              <input
+                type="text"
+                value={newProjName}
+                onChange={(e) => setNewProjName(e.target.value)}
+                placeholder="VD: 0917 - Video TikTok..."
+                className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-[#E5E7EB] outline-none"
+              />
+            </div>
+
+            {/* Chọn Tỉ Lệ (9:16 Mặc định, 16:9, 1:1, 4:5, 3:4) */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Tỉ lệ khung hình (Aspect Ratio):</span>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { id: '9:16', label: '9:16', sub: 'TikTok/Reels' },
+                  { id: '16:9', label: '16:9', sub: 'YouTube/TV' },
+                  { id: '1:1', label: '1:1', sub: 'Square' },
+                  { id: '4:5', label: '4:5', sub: 'Insta Post' },
+                  { id: '3:4', label: '3:4', sub: 'Portrait' }
+                ].map((aspect) => (
+                  <button
+                    key={aspect.id}
+                    type="button"
+                    onClick={() => setNewProjAspect(aspect.id as any)}
+                    className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all hover-lift ${
+                      newProjAspect === aspect.id
+                        ? 'bg-[#22D3EE]/15 border-[#22D3EE] text-[#22D3EE] font-bold shadow-sm'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{aspect.label}</span>
+                    <span className="text-[8px] truncate">{aspect.sub}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chọn Độ Phân Giải */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Độ phân giải:</span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: '1080p', label: '1080p Full HD (Khuyên dùng)' },
+                  { id: '720p', label: '720p HD (Nhanh)' },
+                  { id: '4k', label: '4K Ultra HD (Pro)' }
+                ].map((res) => (
+                  <button
+                    key={res.id}
+                    type="button"
+                    onClick={() => setNewProjRes(res.id as any)}
+                    className={`py-2 px-2.5 rounded-xl border text-center text-xs transition-all ${
+                      newProjRes === res.id
+                        ? 'bg-[#22D3EE]/15 border-[#22D3EE] text-[#22D3EE] font-bold'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
+                    }`}
+                  >
+                    {res.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Nút Create */}
+            <div className="pt-3 border-t border-[#1F2937]">
+              <button
+                type="button"
+                onClick={async () => {
+                  const id = 'proj-' + Date.now();
+                  const title = newProjName.trim() || '0917 - New Project';
+
+                  let width = 1080;
+                  let height = 1920;
+                  if (newProjAspect === '16:9') {
+                    width = 1920;
+                    height = 1080;
+                  } else if (newProjAspect === '1:1') {
+                    width = 1080;
+                    height = 1080;
+                  } else if (newProjAspect === '4:5') {
+                    width = 1080;
+                    height = 1350;
+                  } else if (newProjAspect === '3:4') {
+                    width = 1080;
+                    height = 1440;
+                  }
+
+                  const newProj = {
+                    id,
+                    title,
+                    width,
+                    height,
+                    fps: 30,
+                    duration: 15,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    isDeleted: false,
+                    thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80',
+                    tracksData: {
+                      clips: [
+                        { id: 'c1', track: 'video', name: `${title} Main Video`, start: 0, duration: 15, type: 'video' },
+                        { id: 'c2', track: 'text', name: 'Tiêu đề mở đầu', start: 0, duration: 4, type: 'text', text: '🔥 BẮT ĐẦU DỰNG VIDEO' }
+                      ]
+                    }
+                  };
+
+                  await db.projects.add(newProj);
+                  setCurrentProjectId(id);
+                  setProjectTitle(title);
+                  closeModal();
+                  showToast(`Đã tạo dự án ${title} (${newProjAspect})!`, 'success');
+                  navigate(`/editor/${id}`);
+                }}
+                className="w-full py-3 rounded-xl bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/25 hover-lift transition-all"
+              >
+                Create / Tạo dự án ngay
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 0. AUTH MODAL (SIGN IN / SIGN UP) - KHÔNG BẮT BUỘC */}
         {activeModal === 'auth' && (
@@ -601,7 +741,9 @@ export const Modals: React.FC = () => {
                   type="checkbox"
                   checked={settings.autosave}
                   onChange={(e) => {
-                    updateSettings({ autosave: e.target.checked });
+                    updateSettings,
+    setCurrentProjectId,
+    setProjectTitle({ autosave: e.target.checked });
                     showToast(e.target.checked ? 'Đã bật Autosave' : 'Đã tắt Autosave');
                   }}
                   className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
