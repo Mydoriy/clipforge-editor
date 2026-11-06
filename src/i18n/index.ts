@@ -54,6 +54,15 @@ export const translations = {
     deletePermanent: 'Xóa vĩnh viễn',
     noProjects: 'Chưa có dự án nào. Bấm "+ Tạo dự án mới" để bắt đầu!',
     durationUnit: 'giây',
+    openProject: 'Mở dự án',
+    rename: 'Đổi tên',
+    exportProjectFile: 'Xuất file .capproj',
+    moveToTrash: 'Chuyển vào thùng rác',
+    editPilotTitle: 'Bạn muốn biên tập video như thế nào hôm nay?',
+    chip1: 'Cắt 3 giây đầu',
+    chip2: 'Tăng tốc 1.5x',
+    chip3: 'Thêm phụ đề tự động',
+    chip4: 'Làm sáng video 9:16',
     
     // Editor Header
     menu: 'Menu',
@@ -175,6 +184,15 @@ export const translations = {
     deletePermanent: 'Delete permanently',
     noProjects: 'No projects yet. Click "+ Create project" to start!',
     durationUnit: 'sec',
+    openProject: 'Open project',
+    rename: 'Rename',
+    exportProjectFile: 'Export .capproj',
+    moveToTrash: 'Move to trash',
+    editPilotTitle: 'How can I help you edit today?',
+    chip1: 'Trim first 3s',
+    chip2: 'Speed 1.5x',
+    chip3: 'Auto captions',
+    chip4: 'Brighten 9:16 video',
     
     // Editor Header
     menu: 'Menu',

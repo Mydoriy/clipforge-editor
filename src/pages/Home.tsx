@@ -234,12 +234,7 @@ export const Home: React.FC = () => {
 
           {/* Quick suggestions */}
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {[
-              'Cắt 3 giây đầu',
-              'Tăng tốc 1.5x',
-              'Thêm phụ đề tự động',
-              'Làm sáng video 9:16'
-            ].map((chip) => (
+            {[t.chip1, t.chip2, t.chip3, t.chip4].map((chip) => (
               <button
                 key={chip}
                 type="button"
@@ -584,7 +579,7 @@ export const Home: React.FC = () => {
                               className="px-3 py-1.5 hover:bg-cyan-500/20 hover:text-[#22D3EE] flex items-center gap-2 text-left"
                             >
                               <Film className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>Mở dự án (Open)</span>
+                              <span>{t.openProject}</span>
                             </button>
 
                             <button
@@ -592,7 +587,7 @@ export const Home: React.FC = () => {
                               className="px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2 text-left"
                             >
                               <Edit2 className="w-3.5 h-3.5 text-amber-400" />
-                              <span>Đổi tên (Rename)</span>
+                              <span>{t.rename}</span>
                             </button>
 
                             <button
@@ -600,7 +595,7 @@ export const Home: React.FC = () => {
                               className="px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2 text-left"
                             >
                               <Copy className="w-3.5 h-3.5 text-purple-400" />
-                              <span>Nhân bản (Duplicate)</span>
+                              <span>{t.duplicate}</span>
                             </button>
 
                             <button
@@ -608,7 +603,7 @@ export const Home: React.FC = () => {
                               className="px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2 text-left"
                             >
                               <Download className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Xuất file .capproj</span>
+                              <span>{t.exportProjectFile}</span>
                             </button>
 
                             <div className="border-t border-[#1F2937] my-0.5" />
@@ -618,7 +613,7 @@ export const Home: React.FC = () => {
                               className="px-3 py-1.5 hover:bg-rose-950/60 text-rose-400 hover:text-rose-300 flex items-center gap-2 text-left"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>Vào thùng rác</span>
+                              <span>{t.moveToTrash}</span>
                             </button>
                           </div>
                         )}
@@ -708,28 +703,28 @@ export const Home: React.FC = () => {
                   <button
                     onClick={(e) => handleStartRename(proj, e)}
                     className="p-1.5 rounded-lg hover:bg-slate-800 text-[#9CA3AF] hover:text-amber-400 transition-colors"
-                    title="Đổi tên"
+                    title={t.rename}
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={(e) => handleDuplicateProject(proj, e)}
                     className="p-1.5 rounded-lg hover:bg-slate-800 text-[#9CA3AF] hover:text-purple-400 transition-colors"
-                    title="Nhân bản"
+                    title={t.duplicate}
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={(e) => handleExportProjectFile(proj, e)}
                     className="p-1.5 rounded-lg hover:bg-slate-800 text-[#9CA3AF] hover:text-emerald-400 transition-colors"
-                    title="Xuất file .capproj"
+                    title={t.exportProjectFile}
                   >
                     <Download className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={(e) => handleDeleteProject(proj, e)}
                     className="p-1.5 rounded-lg hover:bg-rose-950 text-[#9CA3AF] hover:text-rose-400 transition-colors"
-                    title="Xóa vào thùng rác"
+                    title={t.moveToTrash}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

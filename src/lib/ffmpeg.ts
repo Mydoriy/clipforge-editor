@@ -18,3 +18,4 @@ export async function trimVideoClip(file: Blob, start: number, duration: number)
 export async function changeVideoSpeed(file: Blob, speed: number): Promise<Blob> {
   return ffmpegService.changeSpeed(file, speed);
 }
+
