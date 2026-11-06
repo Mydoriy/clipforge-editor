@@ -225,3 +225,4 @@ export const Timeline: React.FC = () => {
     </div>
   );
 };
+

@@ -508,3 +508,4 @@ export const CategoryPanel: React.FC = () => {
     </div>
   );
 };
+

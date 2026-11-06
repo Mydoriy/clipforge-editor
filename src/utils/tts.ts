@@ -24,3 +24,4 @@ export function speakText(text: string, lang: 'vi-VN' | 'en-US' = 'vi-VN'): Prom
     window.speechSynthesis.speak(utterance);
   });
 }
+

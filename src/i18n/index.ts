@@ -196,3 +196,4 @@ export const translations = {
     aiExecuting: 'Executing action...'
   }
 };
+

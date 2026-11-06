@@ -40,3 +40,4 @@ export const Toasts: React.FC = () => {
     </div>
   );
 };
+

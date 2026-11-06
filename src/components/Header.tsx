@@ -232,3 +232,4 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     </header>
   );
 };
+

@@ -272,3 +272,4 @@ export const DesignStudio: React.FC = () => {
     </div>
   );
 };
+
