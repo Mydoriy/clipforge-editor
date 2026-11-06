@@ -16,5 +16,8 @@
     "vercel"
   ],
   "author": "ClipForge",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "vercel": "^65.12.1"
+  }
 }

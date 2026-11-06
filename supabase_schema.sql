@@ -54,3 +54,4 @@ BEGIN
             FOR ALL USING (true) WITH CHECK (true);
     END IF;
 END $$;
+
