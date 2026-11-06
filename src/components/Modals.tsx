@@ -103,6 +103,7 @@ export const Modals: React.FC = () => {
   const abortSignalRef = useRef<{ aborted: boolean }>({ aborted: false });
   const [promptInput, setPromptInput] = useState('');
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimateResult | null>(null);
+  const [sentryConsent, setSentryConsent] = useState<boolean>(() => typeof window !== 'undefined' && localStorage.getItem('clipforge_sentry_consent') === 'true');
 
   useEffect(() => {
     if (activeModal === 'cloud' || activeModal === 'projectSync' || activeModal === 'storage') {
@@ -110,8 +111,8 @@ export const Modals: React.FC = () => {
     }
   }, [activeModal]);
 
-  const snapshots = useLiveQuery(
-    () => (currentProjectId ? db.snapshots.where('projectId').equals(currentProjectId).reverse().sortBy('timestamp') : Promise.resolve([])),
+  const snapshots = useLiveQuery<SnapshotEntity[]>(
+    () => (currentProjectId ? db.snapshots.where('projectId').equals(currentProjectId).reverse().sortBy('timestamp') : (Promise.resolve([]) as any)),
     [currentProjectId]
   ) || [];
 
@@ -200,7 +201,7 @@ export const Modals: React.FC = () => {
   // Handlers for Share modal
   const handleDownloadCurrentProjectCapproj = async () => {
     try {
-      let projData = null;
+      let projData: any = null;
       if (currentProjectId) {
         projData = await db.projects.get(currentProjectId);
       }
@@ -2240,6 +2241,25 @@ export const Modals: React.FC = () => {
                 <span className="text-[10px] text-[#9CA3AF]">
                   Khóa được lưu trực tiếp trên thiết bị của bạn, không gửi lên bất kỳ máy chủ nào.
                 </span>
+              </div>
+
+              {/* Sentry Crash Telemetry Opt-in */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
+                <div>
+                  <span className="font-semibold block">Báo cáo sự cố ẩn danh (Sentry Telemetry)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Chỉ gửi log lỗi sự cố kèm thông số trình duyệt khi bạn đồng ý, hoàn toàn ẩn danh</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={sentryConsent}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSentryConsent(checked);
+                    localStorage.setItem('clipforge_sentry_consent', checked ? 'true' : 'false');
+                    showToast(checked ? 'Đã bật thu thập sự cố Sentry ẩn danh' : 'Đã tắt thu thập sự cố Sentry', 'info');
+                  }}
+                  className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
+                />
               </div>
 
               {/* Xóa toàn bộ dữ liệu (Danger Zone) */}

@@ -107,7 +107,7 @@ export async function acquireProjectLock(
 
   return {
     isReadOnly: false,
-    release: () => {}
+    release: () => { }
   };
 }
 

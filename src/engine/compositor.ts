@@ -31,12 +31,12 @@ export class FrameCompositor {
 
   // Pre-load or retrieve video element synced to time with LRU cache eviction
   public getVideoElement(src: string): HTMLVideoElement {
-    let video = this.videoCache.get(src);
-    if (video) {
+    const cached = this.videoCache.get(src);
+    if (cached) {
       // Re-insert to mark as recently used
       this.videoCache.delete(src);
-      this.videoCache.set(src, video);
-      return video;
+      this.videoCache.set(src, cached);
+      return cached;
     }
 
     // Evict oldest video element if exceeding max capacity
@@ -57,6 +57,7 @@ export class FrameCompositor {
       }
     }
 
+    let video: HTMLVideoElement;
     if (typeof document !== 'undefined') {
       video = document.createElement('video');
       video.src = src;
@@ -73,11 +74,11 @@ export class FrameCompositor {
 
   // Pre-load or retrieve image element with LRU cache eviction
   public getImageElement(src: string): HTMLImageElement {
-    let img = this.imageCache.get(src);
-    if (img) {
+    const cached = this.imageCache.get(src);
+    if (cached) {
       this.imageCache.delete(src);
-      this.imageCache.set(src, img);
-      return img;
+      this.imageCache.set(src, cached);
+      return cached;
     }
 
     // Evict oldest image element if exceeding max capacity
@@ -96,6 +97,7 @@ export class FrameCompositor {
       }
     }
 
+    let img: HTMLImageElement;
     if (typeof Image !== 'undefined') {
       img = new Image();
       img.src = src;

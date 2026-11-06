@@ -175,7 +175,7 @@ export class MasterAudioEngine {
           }
 
           // Volume computation with fade-in and fade-out
-          const isMuted = mutedTracks?.has(clip.track);
+          const isMuted = !!(clip.track && mutedTracks?.has(clip.track));
           if (isMuted) {
             audio.volume = 0;
           } else {

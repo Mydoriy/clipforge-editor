@@ -5,6 +5,7 @@ import { db, createProjectSnapshot } from '../lib/db';
 import { syncClipsToTracks, extractClipsFromTracks, createDefaultTracks, type Timeline } from '../types/project';
 import { Header } from '../components/Header';
 import { CategoryPanel, PlayerCanvas, Inspector, Timeline as TimelineComponent } from '../editor';
+import { PanelErrorBoundary } from '../components/PanelErrorBoundary';
 import { EditPilot } from '../components/EditPilot';
 import { Mascot } from '../components/Mascot';
 import { sharedCompositor } from '../engine/compositor';
@@ -739,7 +740,9 @@ export const Editor: React.FC = () => {
             className="flex flex-col overflow-hidden shrink-0"
             style={{ width: `${panelLeftWidth}%` }}
           >
-            <CategoryPanel />
+            <PanelErrorBoundary panelName="Thanh công cụ & Media (Category Panel)">
+              <CategoryPanel />
+            </PanelErrorBoundary>
           </div>
 
           {/* Splitter Col 1: Left vs Player */}
@@ -756,7 +759,9 @@ export const Editor: React.FC = () => {
 
           {/* Center Panel: 9:16 Canvas Player */}
           <div className="flex-1 flex flex-col overflow-hidden relative bg-[#141414]">
-            <PlayerCanvas />
+            <PanelErrorBoundary panelName="Khung xem trước (Player Canvas)">
+              <PlayerCanvas />
+            </PanelErrorBoundary>
 
             {/* Toggle Details Drawer button when screen < 1100px */}
             {isCompactDetails && (
@@ -790,7 +795,9 @@ export const Editor: React.FC = () => {
                 className="flex flex-col overflow-hidden shrink-0"
                 style={{ width: `${panelRightWidth}%` }}
               >
-                <Inspector />
+                <PanelErrorBoundary panelName="Bảng thuộc tính (Inspector)">
+                  <Inspector />
+                </PanelErrorBoundary>
               </div>
             </>
           )}
@@ -811,7 +818,9 @@ export const Editor: React.FC = () => {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <Inspector />
+                <PanelErrorBoundary panelName="Bảng thuộc tính (Inspector)">
+                  <Inspector />
+                </PanelErrorBoundary>
               </div>
             </div>
           )}
@@ -837,7 +846,9 @@ export const Editor: React.FC = () => {
               className="flex-1 flex flex-col overflow-hidden bg-[#141414]"
               style={{ height: `calc(${100 - panelTopHeight}% - 5px)` }}
             >
-              <TimelineComponent />
+              <PanelErrorBoundary panelName="Dòng thời gian (Timeline)">
+                <TimelineComponent />
+              </PanelErrorBoundary>
             </div>
           </>
         )}

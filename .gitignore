@@ -13,7 +13,10 @@ node_modules/
 .claude-plugin/
 .codex-plugin/
 .agents/
-.github/
+.github/*
+!.github/workflows/
+.github/workflows/*
+!.github/workflows/ci.yml
 .DS_Store
 Thumbs.db
 

@@ -420,9 +420,8 @@ export const Home: React.FC = () => {
                 type="button"
                 onClick={() => handleToggleViewMode('grid')}
                 title="Chế độ xem lưới (Grid)"
-                className={`p-1.5 rounded-lg text-xs transition-colors ${
-                  viewMode === 'grid' ? 'bg-[#22D3EE] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`p-1.5 rounded-lg text-xs transition-colors ${viewMode === 'grid' ? 'bg-[#22D3EE] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
               </button>
@@ -430,9 +429,8 @@ export const Home: React.FC = () => {
                 type="button"
                 onClick={() => handleToggleViewMode('list')}
                 title="Chế độ xem danh sách (List)"
-                className={`p-1.5 rounded-lg text-xs transition-colors ${
-                  viewMode === 'list' ? 'bg-[#22D3EE] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`p-1.5 rounded-lg text-xs transition-colors ${viewMode === 'list' ? 'bg-[#22D3EE] text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <List className="w-3.5 h-3.5" />
               </button>

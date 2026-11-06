@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
   const handleExportCapproj = async () => {
     setMenuOpen(false);
     try {
-      let projData = null;
+      let projData: any = null;
       if (currentProjectId) {
         projData = await db.projects.get(currentProjectId);
       }

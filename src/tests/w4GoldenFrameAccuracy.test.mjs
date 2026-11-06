@@ -166,3 +166,4 @@ test('W4: Complex editing operations: Reverse, Freeze frame, Speed curve, and Ne
   const isLeafActive = localTimeChild >= leaf.start && localTimeChild <= leaf.start + leaf.duration;
   assert.strictEqual(isLeafActive, true);
 });
+
