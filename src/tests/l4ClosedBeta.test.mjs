@@ -126,3 +126,4 @@ test('L4.4: BETA_REPORT.md exists, analyzes 20 testers across 5 tasks, and re-ru
   // Re-verify L0 checklist
   assert.ok(report.includes('L0'), 'Must re-verify L0 quality checklist');
 });
+

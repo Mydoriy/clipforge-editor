@@ -103,3 +103,4 @@ Sau khi hoàn tất sửa lỗi P1 và cải tiến P2, toàn bộ bộ kiểm t
 Phiên bản Beta Kín **ClipForge Desktop Web v1.0.0** đã chứng minh tính ổn định vượt bậc của kiến trúc **Local-First WebCodecs**. Ứng dụng đáp ứng trọn vẹn cả 3 tiêu chí: **Không cần đăng nhập**, **Bảo mật dữ liệu tuyệt đối (video không tải lên server)**, và **Hoạt động trơn tru trên máy tính cấu hình phổ thông**.
 
 Sản phẩm đã **ĐỦ ĐIỀU KIỆN AN TOÀN** để chuyển sang giai đoạn phát hành rộng rãi ra công chúng.
+

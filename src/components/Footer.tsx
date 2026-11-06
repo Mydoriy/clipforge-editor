@@ -22,6 +22,9 @@ export const Footer: React.FC = () => {
 
           {/* Navigation Links */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px]">
+            <Link to="/help" className="hover:text-[#1FC8DB] transition-colors">
+              Trợ giúp & FAQ (Help)
+            </Link>
             <Link to="/terms" className="hover:text-[#1FC8DB] transition-colors">
               Điều khoản dịch vụ (Terms)
             </Link>

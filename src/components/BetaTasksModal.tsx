@@ -210,3 +210,4 @@ export const BetaTasksModal: React.FC<Props> = ({ onClose, onOpenFeedback }) => 
     </div>
   );
 };
+

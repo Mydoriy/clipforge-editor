@@ -39,6 +39,7 @@ import {
   Gem,
   HelpCircle,
   Info,
+  Activity,
   Maximize2,
   History,
   WifiOff
@@ -554,6 +555,28 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                 {/* Submenu: HELP */}
                 {activeMenuTab === 'help' && (
                   <div className="flex flex-col py-1">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate('/help');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <HelpCircle className="w-3.5 h-3.5 text-[#1FC8DB]" /> Trợ giúp & Khắc phục sự cố (Help)
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('systemCheck');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Activity className="w-3.5 h-3.5 text-cyan-400" /> Kiểm tra hệ thống & WebCodecs
+                      </span>
+                    </button>
                     <button
                       onClick={() => {
                         setMenuOpen(false);

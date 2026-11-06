@@ -131,3 +131,4 @@ export function getBetaTasksProgress(): { completed: number; total: number; perc
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   return { completed, total, percentage };
 }
+

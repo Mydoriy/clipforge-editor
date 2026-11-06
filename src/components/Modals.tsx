@@ -37,6 +37,7 @@ import { isIosSafari, isStandaloneMode, installPwaApp, applyPwaUpdate } from '..
 import { trackEvent, getTelemetryConsent, setTelemetryConsent } from '../utils/telemetry';
 import { getFeatureFlags, setFeatureFlag, type FeatureFlags } from '../utils/featureFlags';
 import { getBetaTasksProgress } from '../utils/betaTasks';
+import { wipeAllLocalData, deleteCloudAccountAndData } from '../utils/dataPrivacy';
 import {
   X,
   Crown,
@@ -3009,29 +3010,69 @@ export const Modals: React.FC = () => {
                 </div>
               </div>
 
-              {/* Xóa toàn bộ dữ liệu (Danger Zone) */}
-              <div className="flex flex-col gap-2 pt-3 border-t border-rose-500/30">
-                <span className="font-bold text-rose-400">Vùng nguy hiểm (Danger Zone):</span>
+              {/* Xóa toàn bộ dữ liệu (Danger Zone & Data Privacy) */}
+              <div className="flex flex-col gap-2.5 pt-3 border-t border-rose-500/30">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-rose-400 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    <span>Quyền riêng tư & Vùng nguy hiểm (Data Privacy):</span>
+                  </span>
+                  <span className="text-[10px] text-[#9CA3AF]">Xóa vĩnh viễn dữ liệu</span>
+                </div>
+
+                {/* 1-Click Complete Local Wipe (Factory Reset) */}
                 <button
                   type="button"
                   onClick={async () => {
                     if (
                       window.confirm(
-                        'Bạn có chắc chắn muốn xóa toàn bộ dự án và tệp trong IndexedDB? Hành động này không thể hoàn tác!'
+                        'Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu cục bộ (Factory Reset)?\n\n' +
+                          'Hành động này sẽ xóa vĩnh viễn mọi dự án, tệp media, bản nháp tự động trong IndexedDB, OPFS, Cache và Web Storage trên trình duyệt này.\n' +
+                          'Hành động không thể hoàn tác!'
                       )
                     ) {
-                      await db.projects.clear();
-                      await db.media.clear();
-                      await db.trash.clear();
-                      localStorage.clear();
-                      showToast('Đã xóa toàn bộ dữ liệu. Đang tải lại...', 'warning');
-                      setTimeout(() => window.location.reload(), 800);
+                      const res = await wipeAllLocalData();
+                      if (res.success) {
+                        showToast('Đã xóa sạch toàn bộ dữ liệu cục bộ. Đang tải lại...', 'warning');
+                        setTimeout(() => window.location.reload(), 800);
+                      } else {
+                        showToast('Không thể xóa toàn bộ dữ liệu cục bộ: ' + (res.error || 'Lỗi không xác định'), 'error');
+                      }
                     }
                   }}
-                  className="w-full py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-500/50 text-rose-300 font-bold text-xs hover-lift transition-all"
+                  className="w-full py-2.5 px-3 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-500/50 text-rose-300 font-bold text-xs hover-lift transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Xóa toàn bộ dữ liệu ứng dụng (IndexedDB)
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Xóa toàn bộ dữ liệu cục bộ (Factory Reset)</span>
                 </button>
+
+                {/* Real Cloud Account & Data Wipe (if Supabase configured & user logged in) */}
+                {isSupabaseConfigured && user && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          'CẢNH BÁO QUAN TRỌNG: Bạn có chắc chắn muốn XÓA TÀI KHOẢN VÀ TOÀN BỘ DỮ LIỆU CLOUD?\n\n' +
+                            'Toàn bộ dự án đã đồng bộ và các tệp video tải lên Supabase Storage của bạn sẽ bị XÓA VĨNH VIỄN, sau đó phiên đăng nhập sẽ kết thúc.\n' +
+                            'Hành động không thể hoàn tác!'
+                        )
+                      ) {
+                        const res = await deleteCloudAccountAndData(user.id);
+                        if (res.success) {
+                          showToast(`Đã xóa ${res.projectsDeleted} dự án cloud và đăng xuất thành công!`, 'success');
+                          closeModal();
+                        } else {
+                          showToast(res.error || 'Lỗi khi xóa dữ liệu cloud trên Supabase', 'error');
+                        }
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-500/40 text-red-400 font-semibold text-xs hover-lift transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Cloud className="w-3.5 h-3.5" />
+                    <span>Xóa tài khoản và dữ liệu Cloud (Supabase)</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

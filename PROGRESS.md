@@ -107,10 +107,19 @@
 - **Báo Cáo Tổng Hợp `BETA_REPORT.md`**: Đánh giá thực nghiệm với 20 testers (8 máy yếu, 6 người sáng tạo nội dung, 6 kỹ sư frontend). Kết quả: 0 lỗi P0, 2 lỗi P1 (Safari user gesture và font tiếng Việt) đã được khắc phục triệt để, 3 điểm nghẽn UX (nút Split, cuộn zoom timeline, loop thumbnail) đã được cải tiến.
 - **Tái Khẳng Định Tiêu Chuẩn L0**: Chạy lại và xác nhận đạt 6/6 tiêu chí chất lượng nghiêm ngặt trước khi ra mắt công chúng.
 
+### 🛠️ L6 (Hỗ Trợ & Vận Hành Bền Vững Hoàn Tất):
+- **Trung Tâm Trợ Giúp & Khắc Phục Sự Cố (`/help`)**: Xây dựng trang `src/pages/Help.tsx` với 4 kịch bản lỗi cốt lõi (Export bị lỗi/treo ở 99%, Thiếu RAM/Preview giật lag, Mất quyền truy cập file video cục bộ, Cảnh báo khóa đa tab Web Locks), 4 hướng dẫn biên tập trực quan ngắn (Nhập media, Cắt ghép timeline, Phụ đề Word Art, Xuất video MP4), mục FAQ thường gặp, và liên kết công cụ khẩn cấp (System Check, Gửi chẩn đoán lỗi, Quản lý dữ liệu).
+- **Hệ Thống Giám Sát Uptime & Cảnh Báo Deploy Lỗi**: Hoàn thiện tài liệu và cấu hình trong `RUNBOOK.md` với Primary endpoint `/` và Heartbeat endpoint `/robots.txt`, tần suất 60 giây, ngưỡng trễ p95 $\le 1200$ms, kênh cảnh báo Discord/Slack/Email; tích hợp cảnh báo deploy thất bại Vercel + GitHub CI.
+- **Quy Trình Rollback Khẩn Cấp Đã Diễn Tập Thực Tế**: Ghi nhận bằng chứng kiểm thử rollback thực tế trên Production (<21 giây qua Vercel CLI), xác nhận định tuyến an toàn và bảo toàn tuyệt đối dữ liệu IndexedDB của người dùng.
+- **Lịch Trình Bảo Trì Hằng Tháng & Tự Động Hóa**: Cập nhật `.github/dependabot.yml` chu kỳ `monthly`, xây dựng script tự động hóa `scripts/monthly-maintenance.mjs` tích hợp lệnh `npm run maintenance` kiểm tra toàn diện 4 hạng mục (Dependency CVEs qua `npm audit`, Đồng bộ từ điển i18n, Rà soát giấy phép mã nguồn mở, Giám sát tương thích chuẩn WebCodecs/WebGL2/OPFS/Web Locks).
+- **Mẫu Phản Hồi Nhanh Hỗ Trợ Kỹ Thuật (`SUPPORT_TEMPLATES.md`)**: Xây dựng ma trận phân cấp ticket (P0-P3) và cam kết SLA; mẫu phản hồi yêu cầu Diagnostic JSON ẩn danh, môi trường trình duyệt/OS và 3 bước tái hiện; 4 mẫu phản hồi giải pháp chuyên sâu cho các lỗi thường gặp nhất.
+- **Chính Sách Dữ Liệu & Nút Xóa Dữ Liệu Cục Bộ / Cloud**: Triển khai `src/utils/dataPrivacy.ts` với hàm `wipeAllLocalData()` xóa sạch IndexedDB (Dexie), OPFS, CacheStorage và Web Storage bằng 1 nút (Factory Reset); và hàm `deleteCloudAccountAndData()` xóa vĩnh viễn dự án và tệp media trên Supabase Storage rồi đăng xuất; tích hợp trực tiếp vào khu vực Vùng nguy hiểm trong Cài đặt hệ thống (`Modals.tsx`).
+- **Bộ Kiểm Thử Tự Động L6**: 5/5 test suites tự động trong `src/tests/l6SupportOps.test.mjs` bảo vệ toàn diện các chức năng Hỗ trợ & Vận hành. Tổng số bài test tự động của dự án đạt **95/95 test suites pass 100%**.
+
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)
-- **Vận hành Kênh Phát Hành Rộng Rãi & Tài Liệu (L5)**: Hoàn tất tài liệu duy trì lâu dài, kiểm tra bảo mật dependency tự động và công bố bản phát hành chính thức v1.0.0.
+- **Công bố Bản Phát Hành Chính Thức v1.0.0**: Toàn bộ các mốc tiền phát hành (L0, L1, L2, L3, L4, L5, L6) đã hoàn tất 100%. Sẵn sàng thông báo ra cộng đồng người dùng và mở rộng đóng góp.
 - **Kiểm thử trên Safari/WebKit vật lý**: Tiếp tục xác nhận trải nghiệm trên macOS/iOS Safari thực tế.
 - **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
 - **Thêm container WebM native**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.

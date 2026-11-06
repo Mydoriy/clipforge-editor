@@ -13,6 +13,7 @@ const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Edi
 const DesignStudio = lazy(() => import('./pages/DesignStudio').then((m) => ({ default: m.DesignStudio })));
 const SectionPage = lazy(() => import('./pages/SectionPage').then((m) => ({ default: m.SectionPage })));
 const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })));
+const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })));
 const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })));
 const TelemetryDashboard = lazy(() => import('./pages/TelemetryDashboard').then((m) => ({ default: m.TelemetryDashboard })));
 const Modals = lazy(() => import('./components/Modals').then((m) => ({ default: m.Modals })));
@@ -61,6 +62,7 @@ export const App: React.FC = () => {
             <Route path="/cloud-storage" element={<SectionPage />} />
             <Route path="/privacy" element={<Privacy initialTab="privacy" />} />
             <Route path="/terms" element={<Privacy initialTab="terms" />} />
+            <Route path="/help" element={<Help />} />
           </Route>
 
           {/* Fullscreen Video Editor */}

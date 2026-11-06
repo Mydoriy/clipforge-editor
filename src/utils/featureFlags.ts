@@ -57,3 +57,4 @@ export function resetFeatureFlags(): void {
 export function isFeatureEnabled(flag: keyof FeatureFlags): boolean {
   return getFeatureFlags()[flag] ?? false;
 }
+
