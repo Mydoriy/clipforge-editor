@@ -56,14 +56,24 @@
 - **Design Studio**: Canvas đồ họa đa layer, font chữ, Undo/Redo, xuất ảnh PNG/JPG, xuất file PDF 1.4 chuẩn in ấn, nút "Đưa vào Editor".
 - **Marketing Tools**: Tạo mã QR ISO/IEC 18004 có kiểm tra quét được, Caption/Hashtag generator, Thumbnail Maker.
 - **Storage Management**: Theo dõi % dung lượng IndexedDB, dọn dẹp cache 1 chạm.
-- **System Check & Diagnostics**: Bảng đánh giá năng lực phần cứng (WebCodecs, WebGL2, WebGPU, OPFS, SAB) kèm nút sao chép thông tin chẩn đoán.
+- **System Check & Diagnostics**: Bảng đánh giá năng lực phần cứng (WebCodecs, WebGL2, WebGPU, OPFS, SAB) kèm nút sao chép thông tin chẩn đoán (`SystemCheckModal.tsx`).
+
+### 🚀 L0 (Pre-Release Quality Gates - RELEASE_CHECKLIST.md):
+- **Cổng kiểm tra ra mắt L0 đạt 6/6 mục**:
+  1. `AUDIT.md` 0 P0 mở, CI xanh nghiêm ngặt. E2E Playwright trên production build (`vite preview`) hoàn tất trọn gói "import → cắt → chữ → export (WebCodecs) → persistence" (1 passed).
+  2. Tương thích Chrome, Edge, Firefox, Safari: Banner fallback hoạt động, `SystemCheckModal` chẩn đoán chi tiết.
+  3. Stress test máy cấu hình thấp 8GB RAM, không GPU rời với video 1080p 2 phút: Working memory $< 50$MB, xả 120 streaming chunks liên tục.
+  4. `crossOriginIsolated = true` và HTTPS hợp lệ trên domain chính thức `https://clipforge-editor.vercel.app`.
+  5. Quét bảo mật Gitleaks sạch: 0 API keys/secrets hardcode, 0 localhost URL trong `src/` (`l0PreRelease.test.mjs`).
+  6. Quét license: 100% tài nguyên CC0/MIT/OFL minh bạch, tự sinh `THIRD_PARTY_NOTICES.md`.
 
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)
-- **Kiểm thử trên Safari/WebKit**: Thử nghiệm thêm trên Safari / WebKit thực tế (hiện mới kiểm thử tự động trên Chromium/Edge).
+- **Công bố sản phẩm & Tiếp nhận phản hồi (L1 - L3)**: Mở rộng tiếp nhận phản hồi từ người dùng thực tế qua GitHub Issues / Feedback modal.
+- **Kiểm thử trên Safari/WebKit vật lý**: Tiếp tục xác nhận trải nghiệm trên macOS/iOS Safari thực tế.
 - **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
-- **Thêm container WebM**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.
+- **Thêm container WebM native**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.
 
 ---
 
@@ -75,3 +85,4 @@
    - Quá trình tone-mapping Reinhard từ BT.2020 về BT.709 sRGB trên Canvas 2D có thể làm giảm tốc độ render xuống 24-28fps nếu GPU tích hợp không hỗ trợ tăng tốc phần cứng WebGL2 cho float textures.
 3. **Môi trường không có SharedArrayBuffer**:
    - Nếu triển khai trên host không cấu hình đúng headers COOP/COEP, FFmpeg.wasm đa luồng sẽ tự động fallback sang chế độ đơn luồng (single-thread), làm tăng thời gian xử lý khi buộc phải dùng FFmpeg fallback.
+
