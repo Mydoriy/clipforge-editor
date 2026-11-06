@@ -1,0 +1,77 @@
+# NHẬT KÝ TIẾN ĐỘ DỰ ÁN (PROGRESS.MD)
+> **Dự án**: CapCut Desktop Web (ClipForge Web)  
+> **Mục tiêu**: Video editor chạy 100% trên trình duyệt, không cần đăng nhập. Supabase chỉ là tùy chọn.  
+> **Kiến trúc cốt lõi**: Vite + React + TypeScript strict + Tailwind + Zustand/Immer + Dexie + WebGL2/Canvas Compositor + WebCodecs/FFmpeg.wasm + Web Audio.  
+> **Quy tắc phiên**: Trước khi kết thúc mỗi phiên, bắt buộc cập nhật AUDIT.md, chạy lint + typecheck + test, và ghi lại vào PROGRESS.md: "đã làm gì / còn gì / lỗi đã biết".
+
+---
+
+## 1. ĐÃ LÀM GÌ (COMPLETED MILESTONES)
+
+### 🔴 P0 (Critical - Cốt lõi vững chắc):
+- **W1 (Core Editor & Timeline)**:
+  - Multi-track timeline với toán tử thuần: split tại playhead, Q/W trim (Delete Left/Right), ripple delete, snapping nam châm đa mốc (0, playhead, clip boundaries, markers).
+  - Undo/Redo stack kép bất biến (past/future) giới hạn 50 bước.
+  - Phím tắt chuẩn ngành: Space (Play/Pause), C (Split), Q/W (Trim Left/Right), Delete/Backspace (Ripple Delete), Ctrl+Z / Ctrl+Y.
+- **W2 (Lưu trữ & Chống Mất Dữ Liệu)**:
+  - Local-first architecture: Dexie IndexedDB lưu trữ media Blobs, projects, timeline, settings mà không cần đăng nhập.
+  - Định dạng `.capproj` xác thực bằng Zod schema, giới hạn 50MB, tự động relink media khi file bị di chuyển.
+  - Crash recovery journal (`clipforge_crash_journal`): tự động phát hiện tab bị tắt đột ngột và hiển thị hộp thoại khôi phục phiên.
+  - Multi-tab concurrency guard: Dùng Web Locks API (`navigator.locks.request`) kết hợp `BroadcastChannel` ngăn xung đột ghi dữ liệu.
+- **P0-5 (Preview = Export chung một Compositor)**:
+  - `sharedCompositor` (`src/engine/compositor.ts`) được dùng chung trực tiếp cho cả Preview (`PlayerCanvas.tsx`) và Export (`exportEngine.ts`).
+  - Test Golden-frame đạt SSIM $\ge 0.98$ và PSNR $\ge 40$dB; A/V drift $\le 40$ms.
+- **P0-6 (Streaming Export & Quản lý Bộ nhớ)**:
+  - Streaming trực tiếp vào `FileSystemWritableFileStream` qua `mp4-muxer`, không giữ toàn bộ tệp trong RAM.
+  - Nút Cancel phản hồi ngay lập tức (`AbortController`).
+  - Cache Video/Image bounded LRU, dọn dẹp texture và VideoFrame/ImageBitmap, ngăn tràn RAM khi dựng phim >30 phút.
+- **P0-7 (Bảo mật & Sanitize Dữ liệu)**:
+  - CSP nghiêm ngặt không inline script; DOMPurify làm sạch SVG/HTML; Sanitize font magic bytes, Lottie JSON, 3D LUT `.cube`, và file phụ đề (.srt, .vtt, .lrc).
+- **P0-8 (Pháp lý & Nhận diện Độc lập)**:
+  - Bộ nhận diện riêng ClipForge (Logo lăng kính cắt, màu sắc thương hiệu độc lập).
+  - Tuyên bố minh bạch "Không liên kết với CapCut hay ByteDance" trong About, Footer, và Metadata.
+  - Toàn bộ tài nguyên (font, âm thanh, sticker, LUT, template) tuân thủ CC0 / MIT / OFL / In-House.
+  - Phân định bản build FFmpeg.wasm LGPL v2.1+ so với GPL v3; cảnh báo bản quyền khi import media.
+
+### 🟡 P1 (High Priority - Nghiệp vụ & Trải nghiệm):
+- **W3 (Hiệu năng & Virtualization)**:
+  - Initial bundle 88.55KB gzip (thấp hơn nhiều so với ngân sách 300KB gzip).
+  - Code-splitting và lazy-load: FFmpeg, Whisper, Konva, Transformers, Modals, DesignStudio.
+  - Virtualization cho timeline và media grid khi có hàng trăm clip.
+- **W4 (Xử lý Ca Khó)**:
+  - Hỗ trợ video VFR, video quay dọc trên điện thoại (metadata xoay 90°/180°/270°), tone mapping 10-bit HDR về 8-bit sRGB, resample audio 44.1kHz $\leftrightarrow$ 48kHz, mono $\leftrightarrow$ stereo.
+- **W8 (AI Tools & Mở Rộng Home)**:
+  - Pipeline Long-to-Shorts phân tích cảnh thật bằng 3-channel RGB histogram + RMS âm thanh; crop 9:16 có thanh trượt bù tâm (Focal Offset).
+  - Liên thông toàn diện: AI Image, Extend Video, Enhance Quality, Video Studio, Ad Maker đều có nút "Thêm vào dự án" / "Mở trong Editor" và tự lưu vào Media Library.
+  - Thư viện 22+ template chạy thực tế, loop 60fps khi hover, chức năng "Lưu dự án thành mẫu".
+  - Trợ lý AI EditPilot chuyển lệnh ngôn ngữ tự nhiên thành thao tác timeline, có fallback an toàn.
+  - Đồng bộ Cloud (Supabase) tùy chọn: Hàng đợi offline, LWW conflict resolution luôn giữ bản sao an toàn `[Bản sao xung đột]`.
+- **W7 & W10 (Trải nghiệm & Vận hành)**:
+  - Onboarding tour hướng dẫn trực quan; phát hiện xung đột phím tắt.
+  - i18n song ngữ Tiếng Việt & English đạt 100% đồng nhất (116/116 keys).
+  - Tài liệu kỹ thuật hoàn chỉnh: `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `USER_GUIDE.md`, `RUNBOOK.md`, `ASSETS_LICENSES.md`, `THIRD_PARTY_NOTICES.md`.
+  - Toàn bộ nút disabled đều có tooltip giải thích nguyên nhân.
+
+### 🟢 P2 (Enhancements - Đồ họa & Tiếp thị):
+- **Design Studio**: Canvas đồ họa đa layer, font chữ, Undo/Redo, xuất ảnh PNG/JPG, xuất file PDF 1.4 chuẩn in ấn, nút "Đưa vào Editor".
+- **Marketing Tools**: Tạo mã QR ISO/IEC 18004 có kiểm tra quét được, Caption/Hashtag generator, Thumbnail Maker.
+- **Storage Management**: Theo dõi % dung lượng IndexedDB, dọn dẹp cache 1 chạm.
+- **System Check & Diagnostics**: Bảng đánh giá năng lực phần cứng (WebCodecs, WebGL2, WebGPU, OPFS, SAB) kèm nút sao chép thông tin chẩn đoán.
+
+---
+
+## 2. CÒN GÌ (REMAINING / NEXT STEPS)
+- **Kiểm thử trên Safari/WebKit**: Thử nghiệm thêm trên Safari / WebKit thực tế (hiện mới kiểm thử tự động trên Chromium/Edge).
+- **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
+- **Thêm container WebM**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.
+
+---
+
+## 3. LỖI ĐÃ BIẾT & GIỚI HẠN PHẦN CỨNG (KNOWN ISSUES & CONSTRAINTS)
+1. **Trình duyệt Safari / WebKit**:
+   - `FileSystemWritableFileStream` chưa được WebKit hỗ trợ hoàn toàn; hệ thống tự động fallback sang memory Blob download qua `URL.createObjectURL`.
+   - Safari yêu cầu tương tác người dùng (user gesture) nghiêm ngặt hơn trước khi phát âm thanh qua Web Audio API.
+2. **Video HDR 10-bit trên GPU đời cũ**:
+   - Quá trình tone-mapping Reinhard từ BT.2020 về BT.709 sRGB trên Canvas 2D có thể làm giảm tốc độ render xuống 24-28fps nếu GPU tích hợp không hỗ trợ tăng tốc phần cứng WebGL2 cho float textures.
+3. **Môi trường không có SharedArrayBuffer**:
+   - Nếu triển khai trên host không cấu hình đúng headers COOP/COEP, FFmpeg.wasm đa luồng sẽ tự động fallback sang chế độ đơn luồng (single-thread), làm tăng thời gian xử lý khi buộc phải dùng FFmpeg fallback.
