@@ -22,6 +22,14 @@ export interface TimelineClip {
   particleType?: string;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  isPro?: boolean;
+}
+
 export interface ToastState {
   id: string;
   message: string;
@@ -33,6 +41,16 @@ interface EditorState {
   language: Language;
   setLanguage: (lang: Language) => void;
   
+  // Auth state
+  user: UserProfile | null;
+  signIn: (name: string, email: string) => void;
+  signOut: () => void;
+
+  // Responsive Sidebar
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
+
   // Modals & UI overlays
   activeModal: string | null;
   openModal: (modal: string) => void;
@@ -90,6 +108,24 @@ export const useEditorStore = create<EditorState>()(
         localStorage.setItem('clipforge_lang', lang);
         set({ language: lang });
       },
+
+      user: null,
+      signIn: (name, email) => {
+        set({
+          user: {
+            id: 'usr-' + Date.now(),
+            name,
+            email,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+            isPro: true
+          }
+        });
+      },
+      signOut: () => set({ user: null }),
+
+      sidebarOpen: true,
+      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
       activeModal: null,
       openModal: (modal) => set({ activeModal: modal }),
@@ -255,7 +291,8 @@ export const useEditorStore = create<EditorState>()(
       partialize: (state) => ({
         language: state.language,
         safeZoneEnabled: state.safeZoneEnabled,
-        projectTitle: state.projectTitle
+        projectTitle: state.projectTitle,
+        user: state.user
       })
     }
   )

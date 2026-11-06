@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Modals } from './components/Modals';
@@ -7,14 +7,15 @@ import { Toasts } from './components/Toasts';
 import { Home } from './pages/Home';
 import { Editor } from './pages/Editor';
 import { DesignStudio } from './pages/DesignStudio';
+import { SectionPage } from './pages/SectionPage';
 
-const HomeLayout: React.FC = () => {
+const MainLayout: React.FC = () => {
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#0c0e14]">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#0B0F19]">
       <Header />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
-        <Home />
+        <Outlet />
       </div>
       <Modals />
       <Toasts />
@@ -26,7 +27,18 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomeLayout />} />
+        {/* Main Dashboard & Subpages with Sidebar Layout */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/templates" element={<SectionPage />} />
+          <Route path="/video-studio" element={<SectionPage />} />
+          <Route path="/ai-tools" element={<SectionPage />} />
+          <Route path="/marketing" element={<SectionPage />} />
+          <Route path="/library" element={<SectionPage />} />
+          <Route path="/cloud-storage" element={<SectionPage />} />
+        </Route>
+
+        {/* Fullscreen Video Editor */}
         <Route
           path="/editor/:id"
           element={
@@ -37,6 +49,8 @@ export const App: React.FC = () => {
             </>
           }
         />
+
+        {/* Fullscreen Design Studio */}
         <Route
           path="/design"
           element={
@@ -47,6 +61,8 @@ export const App: React.FC = () => {
             </>
           }
         />
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
@@ -54,4 +70,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

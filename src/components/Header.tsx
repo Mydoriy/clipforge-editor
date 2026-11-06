@@ -4,6 +4,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { isSupabaseConfigured } from '../utils/supabase';
 import {
+  Menu as MenuIcon,
   Crown,
   Share2,
   Download,
@@ -28,7 +29,8 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     openModal,
     projectTitle,
     setProjectTitle,
-    showToast
+    showToast,
+    toggleSidebar
   } = useEditorStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,7 +52,16 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
   return (
     <header className="h-14 bg-[#0E1320] border-b border-[#1F2937] px-5 flex items-center justify-between select-none z-30 shrink-0">
       {/* Left: Logo + Menu */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {!isEditor && (
+          <button
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] hover-lift md:hidden"
+            title="Thu gọn / Mở sidebar"
+          >
+            <MenuIcon className="w-4 h-4" />
+          </button>
+        )}
         <Logo size="md" />
 
         {isEditor && (

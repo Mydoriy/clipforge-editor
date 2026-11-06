@@ -35,12 +35,15 @@ export const Modals: React.FC = () => {
     showToast,
     addClip,
     updateClip,
-    setClips
+    setClips,
+    signIn
   } = useEditorStore();
 
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportStatus, setExportStatus] = useState<string>('');
   const [promptInput, setPromptInput] = useState('');
+  const [authName, setAuthName] = useState('Mydoriy');
+  const [authEmail, setAuthEmail] = useState('mydoriy@gmail.com');
   const t = translations[language];
 
   // Dexie live queries for trash & media library
@@ -88,6 +91,66 @@ export const Modals: React.FC = () => {
         >
           <X className="w-5 h-5" />
         </button>
+
+        {/* 0. AUTH MODAL */}
+        {activeModal === 'auth' && (
+          <div className="flex flex-col gap-4 text-center items-center">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#22D3EE] to-sky-500 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20">
+              <Sparkles className="w-6 h-6 stroke-[2.5]" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-white">Đăng nhập CapCut Web</h3>
+              <p className="text-xs text-[#9CA3AF] mt-1">
+                Đăng nhập để đồng bộ dự án và nhận gói Pro trải nghiệm.
+              </p>
+            </div>
+
+            <div className="w-full flex flex-col gap-3 text-left text-xs">
+              <div className="flex flex-col gap-1">
+                <span className="text-[#9CA3AF] font-semibold">Tên hiển thị:</span>
+                <input
+                  type="text"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  placeholder="Nhập tên của bạn..."
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-[#E5E7EB] outline-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[#9CA3AF] font-semibold">Email:</span>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="name@example.com..."
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-[#E5E7EB] outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="w-full flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  signIn(authName || 'User', authEmail || 'user@capcut.web');
+                  showToast(`Chào mừng ${authName || 'User'}! Đã đăng nhập thành công.`, 'success');
+                  closeModal();
+                }}
+                className="w-full py-2.5 rounded-xl bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/25 hover-lift transition-all"
+              >
+                Đăng nhập ngay
+              </button>
+
+              <button
+                onClick={closeModal}
+                className="w-full py-2 rounded-xl bg-transparent hover:bg-[#1F2937] text-[#9CA3AF] text-xs font-medium transition-colors"
+              >
+                Tiếp tục chế độ Khách (Offline)
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 1. EXPORT MODAL */}
         {activeModal === 'export' && (
