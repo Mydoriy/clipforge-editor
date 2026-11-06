@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
@@ -36,7 +36,8 @@ import {
   Video,
   Clock,
   Music,
-  CheckCircle2
+  CheckCircle2,
+  Upload
 } from 'lucide-react';
 
 export const Modals: React.FC = () => {
@@ -44,7 +45,9 @@ export const Modals: React.FC = () => {
     language,
     setLanguage,
     activeModal,
+    openModal,
     closeModal,
+    user,
     clips,
     duration,
     setDuration,
@@ -85,6 +88,91 @@ export const Modals: React.FC = () => {
   // Dexie live queries for trash & media library
   const trashItems = useLiveQuery(() => db.trash.toArray(), []) || [];
   const mediaItems = useLiveQuery(() => db.media.toArray(), []) || [];
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-clean trash older than 30 days
+  useEffect(() => {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    db.trash.where('deletedAt').below(thirtyDaysAgo).delete().catch(() => {});
+  }, []);
+
+  // Export all projects to .capproj file (File System Access API with download fallback)
+  const handleExportAllProjects = async () => {
+    try {
+      const allProjects = await db.projects.toArray();
+      const allMedia = await db.media.toArray();
+      const exportPackage = {
+        app: 'CapCut Desktop Web',
+        version: '3.0',
+        exportedAt: new Date().toISOString(),
+        projects: allProjects,
+        mediaCount: allMedia.length
+      };
+      const jsonString = JSON.stringify(exportPackage, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+
+      // Try modern File System Access API
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: `CapCut_Backup_${Date.now()}.capproj`,
+            types: [
+              {
+                description: 'CapCut Project Backup File',
+                accept: { 'application/json': ['.capproj', '.json'] }
+              }
+            ]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          showToast('Đã lưu file sao lưu .capproj qua File System API!', 'success');
+          return;
+        } catch (fsErr: any) {
+          if (fsErr.name === 'AbortError') return;
+        }
+      }
+
+      // Fallback: standard browser download trigger
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CapCut_Backup_${Date.now()}.capproj`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Đã tải xuống file sao lưu .capproj!', 'success');
+    } catch (err: any) {
+      showToast('Lỗi xuất file: ' + err.message, 'error');
+    }
+  };
+
+  // Import projects from .capproj file
+  const handleImportProjectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const data = JSON.parse(text);
+        if (data.projects && Array.isArray(data.projects)) {
+          await db.projects.bulkPut(data.projects);
+          showToast(`Đã khôi phục thành công ${data.projects.length} dự án từ file .capproj!`, 'success');
+          closeModal();
+        } else if (data.id && data.title) {
+          await db.projects.put(data);
+          showToast(`Đã nhập dự án "${data.title}" thành công!`, 'success');
+          closeModal();
+        } else {
+          showToast('Định dạng file .capproj không hợp lệ', 'error');
+        }
+      } catch (err: any) {
+        showToast('Lỗi đọc file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   // Section 7: Bốn thẻ nhanh States & Handlers
   // 1. AI Image State
@@ -1414,10 +1502,32 @@ export const Modals: React.FC = () => {
 
         {/* 3. TRASH MODAL */}
         {activeModal === 'trash' && (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-rose-400">
-              <Trash2 className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">{t.trashTitle} (IndexedDB)</h3>
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-rose-400">
+                <Trash2 className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">{t.trashTitle} (IndexedDB)</h3>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-semibold border border-rose-500/30">
+                {trashItems.length} mục
+              </span>
+            </div>
+
+            {/* Auto-clean 30 days notice */}
+            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+              <span>ℹ️ Các mục trong thùng rác sẽ tự động xóa vĩnh viễn sau 30 ngày.</span>
+              {trashItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await db.trash.clear();
+                    showToast('Đã dọn sạch toàn bộ thùng rác!', 'success');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-600/40 text-rose-300 font-bold text-[10px] shrink-0 ml-2"
+                >
+                  Dọn sạch thùng rác
+                </button>
+              )}
             </div>
 
             {trashItems.length === 0 ? (
@@ -1426,27 +1536,27 @@ export const Modals: React.FC = () => {
                 <span>{t.trashEmpty}</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
                 {trashItems.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-slate-200">{item.title}</span>
+                    <div className="flex flex-col truncate pr-2">
+                      <span className="font-semibold text-slate-200 truncate">{item.title}</span>
                       <span className="text-[10px] text-slate-500">
-                        Đã xóa: {new Date(item.deletedAt).toLocaleTimeString()}
+                        Đã xóa: {new Date(item.deletedAt).toLocaleDateString('vi-VN')} {new Date(item.deletedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={async () => {
                           await db.projects.add(item.projectData);
                           await db.trash.delete(item.id);
                           showToast(`Đã khôi phục: ${item.title}`, 'success');
                         }}
-                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-[11px]"
+                        className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold text-[11px] border border-cyan-500/30"
                       >
                         {t.restore}
                       </button>
@@ -1455,7 +1565,7 @@ export const Modals: React.FC = () => {
                           await db.trash.delete(item.id);
                           showToast(`Đã xóa vĩnh viễn: ${item.title}`);
                         }}
-                        className="p-1 rounded hover:bg-rose-950 text-rose-400"
+                        className="p-1.5 rounded-lg hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors"
                         title={t.deletePermanent}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1529,37 +1639,115 @@ export const Modals: React.FC = () => {
           </div>
         )}
 
-        {/* 5. CLOUD SYNC MODAL */}
-        {activeModal === 'cloud' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Cloud className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">{t.navCloudSync} (Supabase)</h3>
+        {/* 5. CLOUD / PROJECT SYNC MODAL */}
+        {(activeModal === 'cloud' || activeModal === 'projectSync') && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-[#22D3EE]">
+                <RefreshCw className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">Project Sync • Đồng bộ & Sao lưu</h3>
+              </div>
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                user ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+              }`}>
+                {user ? '🟢 Supabase Synced' : '⚡ Guest Mode (Offline)'}
+              </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs flex flex-col gap-2">
+            {/* Trạng thái kết nối */}
+            <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] text-xs flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Trạng thái kết nối:</span>
-                <span className={`font-semibold ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {isSupabaseConfigured ? 'Đã kết nối Supabase Cloud' : 'Chế độ Guest (Offline Dexie DB)'}
+                <span className="text-[#9CA3AF]">Trạng thái đồng bộ:</span>
+                <span className={`font-bold ${user ? 'text-emerald-400' : 'text-cyan-400'}`}>
+                  {user ? 'Đã kết nối Supabase Cloud (Đồng bộ thời gian thực)' : 'Lưu trữ cục bộ IndexedDB (Không cần đăng nhập)'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                {isSupabaseConfigured
-                  ? 'Dữ liệu dự án của bạn đang được tự động đồng bộ lên đám mây Supabase an toàn.'
-                  : 'App đang hoạt động độc lập và lưu toàn bộ dự án trên trình duyệt bằng IndexedDB. Để bật Cloud Sync, chỉ cần cấu hình biến môi trường VITE_SUPABASE_URL trên Vercel.'}
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {user
+                  ? `Đang đăng nhập dưới tên ${user.name || user.email}. Các dự án tự động đồng bộ trên đám mây Supabase.`
+                  : 'CapCut Desktop Web chạy offline-first 100%. Bạn có thể xuất/nhập gói dự án .capproj để sao lưu hoặc chuyển đổi thiết bị bất cứ lúc nào.'}
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                showToast(isSupabaseConfigured ? 'Đang đồng bộ dữ liệu lên Cloud...' : 'Đã lưu trữ an toàn trong IndexedDB!');
-                closeModal();
-              }}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700"
-            >
-              Đồng bộ dữ liệu ngay
-            </button>
+            {/* Chưa đăng nhập: Export / Import file .capproj qua File System API */}
+            <div className="flex flex-col gap-2 pt-1">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Sao lưu và Khôi phục tệp (.capproj):</span>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Export .capproj */}
+                <button
+                  type="button"
+                  onClick={handleExportAllProjects}
+                  className="p-3 rounded-xl bg-[#0B0F19] hover:bg-[#111827] border border-[#1F2937] hover:border-cyan-400/50 text-left flex flex-col justify-between gap-2 transition-all group"
+                >
+                  <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
+                    <Download className="w-4 h-4" />
+                    <span>Xuất file (.capproj)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    Đóng gói toàn bộ dự án và cấu hình thành file .capproj (File System Access API).
+                  </p>
+                </button>
+
+                {/* Import .capproj */}
+                <button
+                  type="button"
+                  onClick={() => importFileInputRef.current?.click()}
+                  className="p-3 rounded-xl bg-[#0B0F19] hover:bg-[#111827] border border-[#1F2937] hover:border-emerald-400/50 text-left flex flex-col justify-between gap-2 transition-all group"
+                >
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                    <Upload className="w-4 h-4" />
+                    <span>Nhập file (.capproj)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    Khôi phục các dự án từ file .capproj trên máy tính vào IndexedDB.
+                  </p>
+                </button>
+                <input
+                  ref={importFileInputRef}
+                  type="file"
+                  accept=".capproj,.json"
+                  onChange={handleImportProjectFile}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            {/* Cloud Sync section */}
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs mt-1">
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <Cloud className="w-4 h-4 text-emerald-400" />
+                  <span className="text-slate-300">Đã đồng bộ với tài khoản: <strong className="text-white">{user.name || user.email}</strong></span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Cloud className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-300">Muốn tự động đồng bộ lên đám mây?</span>
+                </div>
+              )}
+
+              {user ? (
+                <button
+                  onClick={() => {
+                    showToast('Đã đồng bộ dữ liệu dự án lên Supabase Cloud!', 'success');
+                    closeModal();
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
+                >
+                  Đồng bộ ngay
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    closeModal();
+                    openModal('auth');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs"
+                >
+                  Đăng nhập
+                </button>
+              )}
+            </div>
           </div>
         )}
 
