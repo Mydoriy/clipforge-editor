@@ -300,3 +300,4 @@ export const SectionPage: React.FC = () => {
     </div>
   );
 };
+

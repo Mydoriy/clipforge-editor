@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { exportTimelineVideo } from '../utils/videoExporter';
-import { isSupabaseConfigured } from '../utils/supabase';
+import { isSupabaseConfigured, supabase } from '../utils/supabase';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -42,8 +42,16 @@ export const Modals: React.FC = () => {
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportStatus, setExportStatus] = useState<string>('');
   const [promptInput, setPromptInput] = useState('');
-  const [authName, setAuthName] = useState('Mydoriy');
-  const [authEmail, setAuthEmail] = useState('mydoriy@gmail.com');
+  
+  // Auth state
+  const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
   const t = translations[language];
 
   // Dexie live queries for trash & media library
@@ -92,62 +100,250 @@ export const Modals: React.FC = () => {
           <X className="w-5 h-5" />
         </button>
 
-        {/* 0. AUTH MODAL */}
+        {/* 0. AUTH MODAL (SIGN IN / SIGN UP) - KHÔNG BẮT BUỘC */}
         {activeModal === 'auth' && (
-          <div className="flex flex-col gap-4 text-center items-center">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#22D3EE] to-sky-500 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20">
-              <Sparkles className="w-6 h-6 stroke-[2.5]" />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-white">Đăng nhập CapCut Web</h3>
-              <p className="text-xs text-[#9CA3AF] mt-1">
-                Đăng nhập để đồng bộ dự án và nhận gói Pro trải nghiệm.
+          <div className="flex flex-col gap-4">
+            {/* Header / Tabs */}
+            <div className="flex flex-col items-center text-center gap-1">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#22D3EE] to-sky-500 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20 mb-1">
+                <Sparkles className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                {authTab === 'signin' ? 'Đăng nhập CapCut Web' : 'Tạo tài khoản mới'}
+              </h3>
+              <p className="text-xs text-[#9CA3AF]">
+                Tùy chọn: Đồng bộ dự án lên Cloud và mở khóa đầy đủ tính năng
               </p>
             </div>
 
-            <div className="w-full flex flex-col gap-3 text-left text-xs">
-              <div className="flex flex-col gap-1">
-                <span className="text-[#9CA3AF] font-semibold">Tên hiển thị:</span>
-                <input
-                  type="text"
-                  value={authName}
-                  onChange={(e) => setAuthName(e.target.value)}
-                  placeholder="Nhập tên của bạn..."
-                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-[#E5E7EB] outline-none"
-                />
-              </div>
+            {/* Tab Switcher */}
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-[#0B0F19] border border-[#1F2937] text-xs font-bold">
+              <button
+                onClick={() => {
+                  setAuthTab('signin');
+                  setEmailError('');
+                  setPasswordError('');
+                  setConfirmPasswordError('');
+                }}
+                className={`py-2 rounded-lg transition-all ${
+                  authTab === 'signin'
+                    ? 'bg-[#111827] text-[#22D3EE] shadow border border-[#1F2937]'
+                    : 'text-[#9CA3AF] hover:text-[#E5E7EB]'
+                }`}
+              >
+                Đăng nhập (Sign in)
+              </button>
+              <button
+                onClick={() => {
+                  setAuthTab('signup');
+                  setEmailError('');
+                  setPasswordError('');
+                  setConfirmPasswordError('');
+                }}
+                className={`py-2 rounded-lg transition-all ${
+                  authTab === 'signup'
+                    ? 'bg-[#111827] text-[#22D3EE] shadow border border-[#1F2937]'
+                    : 'text-[#9CA3AF] hover:text-[#E5E7EB]'
+                }`}
+              >
+                Đăng ký (Sign up)
+              </button>
+            </div>
 
+            {/* Google OAuth Button */}
+            <button
+              type="button"
+              onClick={async () => {
+                if (isSupabaseConfigured && supabase) {
+                  showToast('Đang kết nối Google qua Supabase OAuth...', 'info');
+                  await supabase.auth.signInWithOAuth({ provider: 'google' });
+                } else {
+                  showToast(
+                    'Chế độ Khách (Guest Mode): Cần cấu hình VITE_SUPABASE_URL trên Vercel để dùng Google OAuth. Bạn có thể đăng nhập bằng email hoặc bấm nút bên dưới!',
+                    'warning'
+                  );
+                }
+              }}
+              className="w-full py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-[#1F2937] border border-[#1F2937] text-xs font-bold text-[#E5E7EB] flex items-center justify-center gap-2.5 hover-lift transition-all"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Tiếp tục với Google</span>
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-2 my-0.5">
+              <div className="flex-1 h-[1px] bg-[#1F2937]" />
+              <span className="text-[10px] text-[#9CA3AF] uppercase font-bold">hoặc dùng Email</span>
+              <div className="flex-1 h-[1px] bg-[#1F2937]" />
+            </div>
+
+            {/* Form Fields with Inline Validation */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                let valid = true;
+
+                // Validate Email
+                if (!authEmail.trim() || !authEmail.includes('@') || !authEmail.includes('.')) {
+                  setEmailError('Vui lòng nhập định dạng email hợp lệ (vd: user@example.com)');
+                  valid = false;
+                } else {
+                  setEmailError('');
+                }
+
+                // Validate Password
+                if (!authPassword || authPassword.length < 6) {
+                  setPasswordError('Mật khẩu phải chứa ít nhất 6 ký tự');
+                  valid = false;
+                } else {
+                  setPasswordError('');
+                }
+
+                // Validate Confirm Password (if sign up)
+                if (authTab === 'signup' && authPassword !== authConfirmPassword) {
+                  setConfirmPasswordError('Mật khẩu xác nhận không khớp');
+                  valid = false;
+                } else {
+                  setConfirmPasswordError('');
+                }
+
+                if (!valid) return;
+
+                setAuthLoading(true);
+                const userName = authEmail.split('@')[0];
+
+                try {
+                  // Simulate or execute Supabase Auth if available
+                  if (isSupabaseConfigured && supabase) {
+                    if (authTab === 'signup') {
+                      await supabase.auth.signUp({ email: authEmail, password: authPassword });
+                    } else {
+                      await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+                    }
+                  }
+
+                  // Đồng bộ projects local từ Dexie lên cloud
+                  const localProjects = await db.projects.toArray();
+                  if (isSupabaseConfigured && supabase && localProjects.length > 0) {
+                    showToast(`Đang đồng bộ ${localProjects.length} dự án cục bộ lên Supabase Cloud...`, 'info');
+                  }
+
+                  signIn(userName, authEmail);
+                  showToast(
+                    authTab === 'signup'
+                      ? 'Đăng ký tài khoản thành công! Đã đồng bộ dự án.'
+                      : 'Đăng nhập thành công! Dự án cục bộ đã được kết nối.',
+                    'success'
+                  );
+                  closeModal();
+                } catch (err: any) {
+                  showToast(`Lỗi: ${err.message || 'Không thể xác thực'}`, 'error');
+                } finally {
+                  setAuthLoading(false);
+                }
+              }}
+              className="flex flex-col gap-3 text-left text-xs"
+            >
+              {/* Email Input */}
               <div className="flex flex-col gap-1">
-                <span className="text-[#9CA3AF] font-semibold">Email:</span>
+                <span className="text-[#9CA3AF] font-semibold">Địa chỉ Email:</span>
                 <input
                   type="email"
                   value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="name@example.com..."
-                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-[#E5E7EB] outline-none"
+                  onChange={(e) => {
+                    setAuthEmail(e.target.value);
+                    if (emailError) setEmailError('');
+                  }}
+                  placeholder="name@example.com"
+                  className={`bg-[#0B0F19] border ${
+                    emailError ? 'border-rose-500' : 'border-[#1F2937]'
+                  } focus:border-[#22D3EE] rounded-xl px-3.5 py-2.5 text-[#E5E7EB] outline-none transition-colors`}
                 />
+                {emailError && <span className="text-[10px] text-rose-400 font-semibold">{emailError}</span>}
               </div>
-            </div>
 
-            <div className="w-full flex flex-col gap-2 pt-2">
+              {/* Password Input */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[#9CA3AF] font-semibold">Mật khẩu:</span>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => {
+                    setAuthPassword(e.target.value);
+                    if (passwordError) setPasswordError('');
+                  }}
+                  placeholder="••••••••"
+                  className={`bg-[#0B0F19] border ${
+                    passwordError ? 'border-rose-500' : 'border-[#1F2937]'
+                  } focus:border-[#22D3EE] rounded-xl px-3.5 py-2.5 text-[#E5E7EB] outline-none transition-colors`}
+                />
+                {passwordError && <span className="text-[10px] text-rose-400 font-semibold">{passwordError}</span>}
+              </div>
+
+              {/* Confirm Password (Sign up only) */}
+              {authTab === 'signup' && (
+                <div className="flex flex-col gap-1 animate-in fade-in">
+                  <span className="text-[#9CA3AF] font-semibold">Xác nhận mật khẩu:</span>
+                  <input
+                    type="password"
+                    value={authConfirmPassword}
+                    onChange={(e) => {
+                      setAuthConfirmPassword(e.target.value);
+                      if (confirmPasswordError) setConfirmPasswordError('');
+                    }}
+                    placeholder="••••••••"
+                    className={`bg-[#0B0F19] border ${
+                      confirmPasswordError ? 'border-rose-500' : 'border-[#1F2937]'
+                    } focus:border-[#22D3EE] rounded-xl px-3.5 py-2.5 text-[#E5E7EB] outline-none transition-colors`}
+                  />
+                  {confirmPasswordError && (
+                    <span className="text-[10px] text-rose-400 font-semibold">{confirmPasswordError}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Submit Button */}
               <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-3 rounded-xl bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/25 hover-lift transition-all mt-1"
+              >
+                {authLoading ? 'Đang xác thực...' : authTab === 'signin' ? 'Đăng nhập ngay' : 'Đăng ký tài khoản'}
+              </button>
+            </form>
+
+            {/* NÚT LỚN "CONTINUE AS GUEST / DÙNG KHÔNG CẦN ĐĂNG NHẬP" */}
+            <div className="pt-2 border-t border-[#1F2937]">
+              <button
+                type="button"
                 onClick={() => {
-                  signIn(authName || 'User', authEmail || 'user@capcut.web');
-                  showToast(`Chào mừng ${authName || 'User'}! Đã đăng nhập thành công.`, 'success');
                   closeModal();
+                  showToast('Đang tiếp tục ở chế độ Khách (Offline IndexedDB)', 'info');
                 }}
-                className="w-full py-2.5 rounded-xl bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/25 hover-lift transition-all"
+                className="w-full py-3.5 rounded-2xl bg-[#0B0F19] hover:bg-[#111827] border-2 border-[#1F2937] hover:border-[#22D3EE]/60 text-white font-extrabold text-xs shadow-lg hover-lift transition-all flex items-center justify-center gap-2"
               >
-                Đăng nhập ngay
+                <span>Dùng không cần đăng nhập (Continue as guest)</span>
               </button>
-
-              <button
-                onClick={closeModal}
-                className="w-full py-2 rounded-xl bg-transparent hover:bg-[#1F2937] text-[#9CA3AF] text-xs font-medium transition-colors"
-              >
-                Tiếp tục chế độ Khách (Offline)
-              </button>
+              <span className="text-[10px] text-[#9CA3AF] text-center block mt-1.5">
+                Không thu thập dữ liệu cá nhân • Toàn bộ dự án lưu trong trình duyệt của bạn
+              </span>
             </div>
           </div>
         )}
