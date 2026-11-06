@@ -41,6 +41,7 @@ export interface AppSettings {
   defaultAspect: '9:16' | '16:9' | '1:1';
   autosave: boolean;
   aiApiKey: string;
+  aiProxyUrl?: string;
   showMascot?: boolean;
   customShortcuts?: Record<string, string>;
 }
@@ -286,6 +287,7 @@ export const useEditorStore = create<EditorState>()(
         defaultAspect: '9:16',
         autosave: true,
         aiApiKey: localStorage.getItem('clipforge_ai_key') || '',
+        aiProxyUrl: localStorage.getItem('clipforge_ai_proxy') || '',
         showMascot: true
       },
       updateSettings: (updates) => {
@@ -293,6 +295,9 @@ export const useEditorStore = create<EditorState>()(
           const newSettings = { ...state.settings, ...updates };
           if (updates.aiApiKey !== undefined) {
             localStorage.setItem('clipforge_ai_key', updates.aiApiKey);
+          }
+          if (updates.aiProxyUrl !== undefined) {
+            localStorage.setItem('clipforge_ai_proxy', updates.aiProxyUrl);
           }
           return { settings: newSettings };
         });

@@ -95,6 +95,7 @@ import {
   downloadSubtitleFile,
   type SubtitleItem
 } from '../utils/subtitles';
+import { validateFontBuffer, sanitizeLottieJson, sanitizeSvg } from '../utils/sanitizer';
 
 export const CategoryPanel: React.FC = () => {
   const {
@@ -1057,15 +1058,28 @@ export const CategoryPanel: React.FC = () => {
     try {
       const mediaId = 'media-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
       const mediaType = isVideo ? 'video' : isAudio ? 'audio' : 'image';
-      const fileUrl = URL.createObjectURL(file);
+      let cleanFile: Blob = file;
+
+      // Sanitize SVG if user uploaded SVG image
+      if (file.type === 'image/svg+xml' || ext === 'svg') {
+        try {
+          const rawSvg = await file.text();
+          const safeSvg = sanitizeSvg(rawSvg);
+          cleanFile = new Blob([safeSvg], { type: 'image/svg+xml' });
+        } catch (e) {
+          console.warn('SVG sanitization error:', e);
+        }
+      }
+
+      const fileUrl = URL.createObjectURL(cleanFile);
 
       // Save to Dexie IndexedDB with QuotaExceededError protection
       const saveRes = await safeAddMedia({
         id: mediaId,
         name: file.name,
         type: mediaType,
-        blob: file,
-        size: file.size,
+        blob: cleanFile,
+        size: cleanFile.size,
         createdAt: Date.now(),
         favorite: false,
         folderId: activeSpace
@@ -3872,14 +3886,19 @@ export const CategoryPanel: React.FC = () => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         try {
-                          const fontName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9]/g, '_');
                           const buffer = await file.arrayBuffer();
+                          const fontValidation = validateFontBuffer(buffer);
+                          if (!fontValidation.valid) {
+                            showToast(fontValidation.error || 'Phông chữ không an toàn hoặc không hợp lệ!', 'error');
+                            return;
+                          }
+                          const fontName = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9]/g, '_');
                           const fontFace = new FontFace(fontName, buffer);
                           await fontFace.load();
                           document.fonts.add(fontFace);
                           setCustomFonts((prev) => [...prev, fontName]);
                           setSelectedFont(fontName);
-                          showToast(`Đã kích hoạt phông chữ "${fontName}" thành công!`, 'success');
+                          showToast(`Đã kích hoạt phông chữ "${fontName}" (${fontValidation.format.toUpperCase()}) thành công!`, 'success');
                         } catch (err: any) {
                           showToast(`Không thể đọc phông chữ: ${err?.message}`, 'error');
                         }
@@ -4104,19 +4123,35 @@ export const CategoryPanel: React.FC = () => {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      const url = URL.createObjectURL(file);
-                      addClip({
-                        track: 'sticker',
-                        name: file.name,
-                        start: currentTime,
-                        duration: 5,
-                        type: 'sticker',
-                        src: url,
-                        scale: 1.2,
-                        x: 0,
-                        y: 0
-                      });
-                      showToast(`Đã thêm sticker động "${file.name}"!`, 'success');
+                      try {
+                        let finalUrl = '';
+                        if (file.name.endsWith('.json') || file.type.includes('json')) {
+                          const jsonText = await file.text();
+                          const lottieCheck = sanitizeLottieJson(jsonText);
+                          if (!lottieCheck.valid) {
+                            showToast(lottieCheck.error || 'Tệp Lottie JSON không an toàn hoặc không hợp lệ!', 'error');
+                            return;
+                          }
+                          const safeBlob = new Blob([JSON.stringify(lottieCheck.data)], { type: 'application/json' });
+                          finalUrl = URL.createObjectURL(safeBlob);
+                        } else {
+                          finalUrl = URL.createObjectURL(file);
+                        }
+                        addClip({
+                          track: 'sticker',
+                          name: file.name,
+                          start: currentTime,
+                          duration: 5,
+                          type: 'sticker',
+                          src: finalUrl,
+                          scale: 1.2,
+                          x: 0,
+                          y: 0
+                        });
+                        showToast(`Đã thêm sticker động an toàn "${file.name}"!`, 'success');
+                      } catch (err: any) {
+                        showToast(`Lỗi xử lý sticker: ${err.message}`, 'error');
+                      }
                     }}
                     className="hidden"
                   />

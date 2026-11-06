@@ -505,7 +505,27 @@ Return strictly JSON with no markdown formatting.`;
 
         let rawActions: any[] = [];
 
-        if (apiKey.startsWith('AIza')) {
+        if (settings.aiProxyUrl && settings.aiProxyUrl.trim()) {
+          // Custom Serverless Proxy Endpoint
+          const res = await fetch(settings.aiProxyUrl.trim(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+            },
+            body: JSON.stringify({
+              prompt: promptText,
+              systemPrompt,
+              timelineContext,
+              apiKey: apiKey || undefined
+            })
+          });
+          const data = await res.json();
+          const rawText = data?.actions
+            ? JSON.stringify(data.actions)
+            : data?.content || data?.choices?.[0]?.message?.content || data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+          rawActions = Array.isArray(data?.actions) ? data.actions : JSON.parse(rawText.replace(/```json/g, '').replace(/```/g, '').trim());
+        } else if (apiKey.startsWith('AIza')) {
           // Gemini API
           const res = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,

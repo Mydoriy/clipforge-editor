@@ -1,4 +1,5 @@
 // Subtitle Import / Export and Timecode Utilities (SRT, VTT, LRC)
+import { sanitizeSubtitles } from './sanitizer.ts';
 
 export interface SubtitleItem {
   id?: string;
@@ -56,8 +57,9 @@ export function parseTimestampToSeconds(ts: string): number {
 
 // Parse .SRT file text
 export function parseSrt(content: string): SubtitleItem[] {
+  const safeContent = sanitizeSubtitles(content);
   const items: SubtitleItem[] = [];
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalized = safeContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const blocks = normalized.split(/\n\s*\n/);
 
   for (const block of blocks) {
@@ -84,8 +86,9 @@ export function parseSrt(content: string): SubtitleItem[] {
 
 // Parse .VTT file text
 export function parseVtt(content: string): SubtitleItem[] {
+  const safeContent = sanitizeSubtitles(content);
   const items: SubtitleItem[] = [];
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalized = safeContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = normalized.split('\n');
 
   let i = 0;
@@ -114,8 +117,9 @@ export function parseVtt(content: string): SubtitleItem[] {
 
 // Parse .LRC file text
 export function parseLrc(content: string): SubtitleItem[] {
+  const safeContent = sanitizeSubtitles(content);
   const items: SubtitleItem[] = [];
-  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const lines = safeContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const regex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/;
 
   for (const line of lines) {

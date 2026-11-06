@@ -14,6 +14,7 @@ import { matchShortcut } from '../utils/shortcuts';
 import { acquireProjectLock, type ProjectLockHandle } from '../utils/projectLock';
 import { saveCrashCheckpoint, markCleanExit, checkUnsavedCrashCheckpoint, clearCrashCheckpoint, type CrashCheckpoint } from '../utils/crashRecovery';
 import { Sliders, Eye, AlertTriangle, Info, X, Lock, RotateCcw } from 'lucide-react';
+import { sanitizeSvg } from '../utils/sanitizer';
 
 export const Editor: React.FC = () => {
   const {
@@ -192,7 +193,16 @@ export const Editor: React.FC = () => {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const blobUrl = URL.createObjectURL(file);
+      let cleanFile: Blob = file;
+      if (file.type === 'image/svg+xml' || file.name.endsWith('.svg')) {
+        try {
+          const raw = await file.text();
+          cleanFile = new Blob([sanitizeSvg(raw)], { type: 'image/svg+xml' });
+        } catch (e) {
+          console.warn('SVG sanitize error:', e);
+        }
+      }
+      const blobUrl = URL.createObjectURL(cleanFile);
       const isVideo = file.type.startsWith('video');
       const isAudio = file.type.startsWith('audio');
       const isImage = file.type.startsWith('image');
@@ -203,8 +213,8 @@ export const Editor: React.FC = () => {
           id: mediaId,
           name: file.name,
           type: isVideo ? 'video' : isAudio ? 'audio' : 'image',
-          blob: file,
-          size: file.size,
+          blob: cleanFile,
+          size: cleanFile.size,
           createdAt: Date.now()
         });
       } catch (err) {

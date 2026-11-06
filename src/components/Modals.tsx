@@ -47,7 +47,9 @@ import {
   FileText,
   Image as ImageIcon,
   SlidersHorizontal,
-  HardDrive
+  HardDrive,
+  ExternalLink,
+  Shield
 } from 'lucide-react';
 
 export const Modals: React.FC = () => {
@@ -2228,9 +2230,12 @@ export const Modals: React.FC = () => {
                 />
               </div>
 
-              {/* Nhập API Key tùy chọn cho AI */}
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-[#1F2937]">
-                <span className="font-semibold">Khóa API AI tùy chọn (OpenAI / Gemini):</span>
+              {/* Nhập API Key tùy chọn cho AI & Proxy riêng */}
+              <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937]">
+                <div>
+                  <span className="font-semibold block">Khóa API AI cá nhân (OpenAI / Gemini):</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Dùng cho trợ lý dựng EditPilot & tự động hóa</span>
+                </div>
                 <input
                   type="password"
                   value={settings.aiApiKey}
@@ -2238,9 +2243,33 @@ export const Modals: React.FC = () => {
                   placeholder="sk-... hoặc AIza... (Lưu cục bộ an toàn)"
                   className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-[#E5E7EB] outline-none"
                 />
-                <span className="text-[10px] text-[#9CA3AF]">
-                  Khóa được lưu trực tiếp trên thiết bị của bạn, không gửi lên bất kỳ máy chủ nào.
-                </span>
+
+                {/* Cảnh báo bảo mật quyền riêng tư */}
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300 leading-relaxed flex flex-col gap-1">
+                  <span className="font-bold flex items-center gap-1">
+                    🔒 Quyền riêng tư & Bảo mật API Key:
+                  </span>
+                  <span>
+                    Khóa chỉ lưu tại bộ nhớ trình duyệt (localStorage), không log, không commit và không gửi về máy chủ ClipForge. Tuy nhiên, localStorage không phải két sắt an toàn tuyệt đối trước các extension trình duyệt lạ. Bạn nên giới hạn ngân sách key hoặc sử dụng Proxy Serverless riêng dưới đây.
+                  </span>
+                </div>
+
+                {/* Tùy chọn Proxy Serverless riêng */}
+                <div className="flex flex-col gap-1 pt-1">
+                  <span className="font-semibold text-[11px] text-[#E5E7EB]">
+                    Địa chỉ Proxy Serverless riêng (Tùy chọn):
+                  </span>
+                  <input
+                    type="url"
+                    value={settings.aiProxyUrl || ''}
+                    onChange={(e) => updateSettings({ aiProxyUrl: e.target.value })}
+                    placeholder="https://my-proxy.vercel.app/api/ai (Chuyển tiếp AI an toàn)"
+                    className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-[#E5E7EB] outline-none"
+                  />
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Nếu thiết lập, mọi yêu cầu từ EditPilot sẽ gửi qua proxy serverless cá nhân của bạn thay vì gọi trực tiếp.
+                  </span>
+                </div>
               </div>
 
               {/* Sentry Crash Telemetry Opt-in */}
@@ -2260,6 +2289,24 @@ export const Modals: React.FC = () => {
                   }}
                   className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
                 />
+              </div>
+
+              {/* Trang Privacy link */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
+                <div>
+                  <span className="font-semibold block">Chính sách Bảo mật & Quyền riêng tư</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Tìm hiểu cách ClipForge bảo vệ 100% dữ liệu trên máy bạn</span>
+                </div>
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold text-xs transition-colors flex items-center gap-1.5"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Xem chi tiết</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
 
               {/* Xóa toàn bộ dữ liệu (Danger Zone) */}

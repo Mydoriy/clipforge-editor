@@ -29,3 +29,4 @@ test.describe('ClipForge E2E Acceptance Flow', () => {
     await expect(page.locator('text=1080P').first()).toBeVisible();
   });
 });
+

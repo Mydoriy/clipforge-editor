@@ -10,6 +10,7 @@ const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })
 const Editor = lazy(() => import('./pages/Editor').then((m) => ({ default: m.Editor })));
 const DesignStudio = lazy(() => import('./pages/DesignStudio').then((m) => ({ default: m.DesignStudio })));
 const SectionPage = lazy(() => import('./pages/SectionPage').then((m) => ({ default: m.SectionPage })));
+const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })));
 const Modals = lazy(() => import('./components/Modals').then((m) => ({ default: m.Modals })));
 
 const PageLoader: React.FC = () => (
@@ -52,6 +53,7 @@ export const App: React.FC = () => {
             <Route path="/marketing" element={<SectionPage />} />
             <Route path="/library" element={<SectionPage />} />
             <Route path="/cloud-storage" element={<SectionPage />} />
+            <Route path="/privacy" element={<Privacy />} />
           </Route>
 
           {/* Fullscreen Video Editor */}

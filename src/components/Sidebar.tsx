@@ -15,7 +15,8 @@ import {
   User,
   LogOut,
   ChevronDown,
-  LogIn
+  LogIn,
+  Shield
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -266,6 +267,20 @@ export const Sidebar: React.FC = () => {
           >
             <Cloud className="w-4 h-4 text-[#22D3EE]" />
             <span>Cloud storage (Supabase)</span>
+          </NavLink>
+
+          <NavLink
+            to="/privacy"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
+                isActive
+                  ? 'bg-[#111827] text-emerald-400 border border-[#1F2937]'
+                  : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+              }`
+            }
+          >
+            <Shield className="w-4 h-4 text-emerald-400" />
+            <span>Bảo mật & Quyền riêng tư</span>
           </NavLink>
         </div>
       </div>

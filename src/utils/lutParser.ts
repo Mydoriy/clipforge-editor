@@ -15,39 +15,11 @@ export interface FilterPreset {
   cssFilter: (intensity: number) => string;
 }
 
-// Parse Adobe / DaVinci Resolve .cube 3D LUT files
+import { sanitizeCubeLut } from './sanitizer.ts';
+
+// Parse Adobe / DaVinci Resolve .cube 3D LUT files with security validation
 export function parseCubeLut(text: string): Lut3DData {
-  const lines = text.split('\n');
-  let title = 'Custom LUT';
-  let size = 0;
-  const rawData: number[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    if (trimmed.startsWith('TITLE')) {
-      title = trimmed.replace(/^TITLE\s*"?([^"]*)"?$/i, '$1').trim();
-    } else if (trimmed.startsWith('LUT_3D_SIZE')) {
-      const match = trimmed.match(/LUT_3D_SIZE\s+(\d+)/i);
-      if (match) size = parseInt(match[1], 10);
-    } else {
-      const parts = trimmed.split(/\s+/).map(Number);
-      if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-        rawData.push(parts[0], parts[1], parts[2]);
-      }
-    }
-  }
-
-  if (size === 0) {
-    size = Math.round(Math.cbrt(rawData.length / 3)) || 17;
-  }
-
-  return {
-    title,
-    size,
-    data: new Float32Array(rawData)
-  };
+  return sanitizeCubeLut(text);
 }
 
 // 30+ Filters Divided into 7 Requested Categories
