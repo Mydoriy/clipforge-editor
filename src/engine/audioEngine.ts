@@ -158,8 +158,14 @@ export class MasterAudioEngine {
             this.audioElements.set(clip.id, audio);
           }
 
-          const targetTime = (currentTime - clip.start) * (clip.speed || 1) + (clip.inPoint || 0);
-          if (Math.abs(audio.currentTime - targetTime) > 0.25) {
+          let targetTime = (currentTime - clip.start) * (clip.speed || 1) + (clip.inPoint || 0);
+          if (clip.reverse) {
+            const endPoint = clip.outPoint || ((clip.inPoint || 0) + clip.duration);
+            targetTime = Math.max(clip.inPoint || 0, endPoint - (currentTime - clip.start) * (clip.speed || 1));
+          }
+
+          // A/V sync threshold: keep drift strictly <= 40ms
+          if (Math.abs(audio.currentTime - targetTime) > 0.04) {
             audio.currentTime = targetTime;
           }
 

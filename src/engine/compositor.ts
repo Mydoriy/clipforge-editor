@@ -241,12 +241,30 @@ export class FrameCompositor {
     // Opacity
     let clipAlpha = clip.opacity ?? 1;
 
-    // Position, Scale & Rotation
+    // Position, Scale & Rotation (including smartphone EXIF / orientation metadata)
     let posX = canvasW / 2 + (clip.x || 0) * scaleFactor;
     let posY = canvasH / 2 + (clip.y || 0) * scaleFactor;
     let clipScale = (clip.scale || 1);
-    let clipRotation = clip.rotation || 0;
+    let clipRotation = (clip.rotation || 0) + ((clip as any).mediaRotation || 0);
     let clipScaleX = 1;
+
+    // 3.6 NESTED COMPOUND CLIPS RENDERER
+    if (clip.compoundClips && clip.compoundClips.length > 0) {
+      const localTime = Math.max(0, (currentTime - clip.start) * (clip.speed || 1));
+      for (const child of clip.compoundClips) {
+        if (localTime >= child.start && localTime <= child.start + child.duration) {
+          if (child.track === 'video' || child.type === 'image' || child.type === 'video' || child.compoundClips) {
+            this.renderVisualClip(ctx, child, localTime, canvasW, canvasH, scaleFactor, options);
+          } else if (child.track === 'text' || child.type === 'text') {
+            this.renderTextClip(ctx, child, localTime, canvasW, canvasH, scaleFactor);
+          } else if (child.track === 'sticker' || child.type === 'sticker') {
+            this.renderStickerClip(ctx, child, localTime, canvasW, canvasH, scaleFactor);
+          }
+        }
+      }
+      ctx.restore();
+      return;
+    }
 
     // 3.6 TRANSITION IN ENGINE
     const transType = clip.transitionType || clip.transitionIn?.type;
@@ -322,22 +340,50 @@ export class FrameCompositor {
     const sourceSrc = (options.isProxy && clip.proxySrc) ? clip.proxySrc : clip.src;
 
     if (sourceSrc) {
-      if (clip.type === 'image' || sourceSrc.startsWith('data:image') || sourceSrc.endsWith('.png') || sourceSrc.endsWith('.jpg') || sourceSrc.endsWith('.jpeg')) {
+      const isTransparent = sourceSrc.endsWith('.png') || sourceSrc.endsWith('.webp') || sourceSrc.includes('alpha') || clip.type === 'image';
+
+      if (clip.type === 'image' || sourceSrc.startsWith('data:image') || sourceSrc.endsWith('.png') || sourceSrc.endsWith('.jpg') || sourceSrc.endsWith('.jpeg') || sourceSrc.endsWith('.webp')) {
         const img = this.getImageElement(sourceSrc);
         if (img.complete && img.naturalWidth > 0) {
-          this.drawSourceWithFit(ctx, img, canvasW, canvasH);
+          this.drawSourceWithFit(ctx, img, canvasW, canvasH, isTransparent);
         } else {
           this.drawFallbackCard(ctx, clip, canvasW, canvasH, scaleFactor);
         }
       } else {
         const video = this.getVideoElement(sourceSrc);
         const inPoint = clip.inPoint || 0;
-        const relTime = inPoint + Math.max(0, (currentTime - clip.start) * (clip.speed || 1));
-        if (Math.abs(video.currentTime - relTime) > 0.08) {
+        let relTime: number;
+
+        if (clip.freezeFrame || (clip as any).isFreeze) {
+          // Freeze frame: lock to fixed timestamp
+          relTime = (clip as any).freezeTime ?? inPoint;
+        } else if (clip.reverse) {
+          // Reverse: play backwards from outPoint/end down to inPoint
+          const elapsed = Math.max(0, (currentTime - clip.start) * (clip.speed || 1));
+          const endPoint = clip.outPoint || (inPoint + clip.duration);
+          relTime = Math.max(inPoint, endPoint - elapsed);
+        } else if ((clip as any).speedCurve) {
+          // Speed curve / ramping
+          const progress = Math.min(1, Math.max(0, (currentTime - clip.start) / clip.duration));
+          let curveProgress = progress;
+          const curve = (clip as any).speedCurve;
+          if (curve === 'ease-in') {
+            curveProgress = Math.pow(progress, 2);
+          } else if (curve === 'ease-out') {
+            curveProgress = 1 - Math.pow(1 - progress, 2);
+          } else if (curve === 'ease-in-out') {
+            curveProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          }
+          relTime = inPoint + curveProgress * clip.duration * (clip.speed || 1);
+        } else {
+          relTime = inPoint + Math.max(0, (currentTime - clip.start) * (clip.speed || 1));
+        }
+
+        if (Math.abs(video.currentTime - relTime) > 0.04) {
           video.currentTime = relTime;
         }
         if (video.readyState >= 2) {
-          this.drawSourceWithFit(ctx, video, canvasW, canvasH);
+          this.drawSourceWithFit(ctx, video, canvasW, canvasH, isTransparent);
         } else {
           this.drawFallbackCard(ctx, clip, canvasW, canvasH, scaleFactor);
         }
@@ -558,18 +604,22 @@ export class FrameCompositor {
     ctx.restore();
   }
 
-  // Draw media with Blur Fill (16:9 to 9:16) or Cover
+  // Draw media with Blur Fill (e.g. 16:9 on 9:16 or 1:1) or clean fit
   private drawSourceWithFit(
     ctx: CanvasRenderingContext2D,
     source: HTMLImageElement | HTMLVideoElement,
     canvasW: number,
-    canvasH: number
+    canvasH: number,
+    isTransparent: boolean = false
   ): void {
     const sw = (source as any).videoWidth || (source as any).naturalWidth || (source as any).width || 1280;
     const sh = (source as any).videoHeight || (source as any).naturalHeight || (source as any).height || 720;
 
-    // Blur Fill for 16:9 videos on vertical 9:16 canvas
-    if (sw > sh) {
+    const sourceAspect = sw / sh;
+    const canvasAspect = canvasW / canvasH;
+
+    // Blur Fill for aspect-ratio mismatches (e.g. 16:9 on 9:16 or 1:1 square on 9:16)
+    if (!isTransparent && Math.abs(sourceAspect - canvasAspect) > 0.05) {
       ctx.save();
       ctx.filter = 'blur(28px) brightness(0.6)';
       const bgScale = Math.max(canvasW / sw, canvasH / sh) * 1.15;
@@ -583,7 +633,10 @@ export class FrameCompositor {
       const fh = sh * fitScale;
       ctx.drawImage(source, -fw / 2, -fh / 2, fw, fh);
     } else {
-      ctx.drawImage(source, -canvasW / 2, -canvasH / 2, canvasW, canvasH);
+      const fitScale = Math.min(canvasW / sw, canvasH / sh);
+      const fw = sw * fitScale;
+      const fh = sh * fitScale;
+      ctx.drawImage(source, -fw / 2, -fh / 2, fw, fh);
     }
   }
 
