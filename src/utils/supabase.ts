@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const env = (typeof import.meta !== 'undefined' ? (import.meta as any).env : null) || (globalThis as any).process?.env || {};
+const supabaseUrl = env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
 
 // Security Verification: Client must NEVER use service_role key
 function isSafeAnonKey(key: string): boolean {
@@ -12,7 +13,9 @@ function isSafeAnonKey(key: string): boolean {
     if (parts.length === 3) {
       const payload = JSON.parse(atob(parts[1]));
       if (payload.role === 'service_role') {
-        console.error('CRITICAL SECURITY ALERT: service_role key detected in client environment! Refusing to initialize Supabase client.');
+        console.error(
+          'CRITICAL SECURITY ALERT: service_role key detected in client environment! Refusing to initialize Supabase client.'
+        );
         return false;
       }
     }

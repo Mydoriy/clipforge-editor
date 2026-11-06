@@ -43,3 +43,4 @@ if (hasErrors) {
   console.log(`✅ i18n parity check passed! All ${vnKeys.length} keys in VN match EN with 100% completeness.`);
   process.exit(0);
 }
+

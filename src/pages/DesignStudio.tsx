@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Stage, Layer, Rect, Circle, Text as KonvaText, Image as KonvaImage } from 'react-konva';
 import { Header } from '../components/Header';
 import { useEditorStore } from '../store/useEditorStore';
+import { db, type ProjectEntity } from '../db';
+import { exportCanvasAsPdf } from '../utils/pdfExport';
 import {
   Type,
   Square,
@@ -24,7 +26,9 @@ import {
   ChevronUp,
   ChevronDown,
   ArrowLeft,
-  Sliders
+  Sliders,
+  Film,
+  FileText
 } from 'lucide-react';
 
 interface CanvasItem {
@@ -34,6 +38,7 @@ interface CanvasItem {
   y: number;
   fill: string;
   text?: string;
+  fontFamily?: string;
   width?: number;
   height?: number;
   radius?: number;
@@ -44,7 +49,7 @@ interface CanvasItem {
 
 export const DesignStudio: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast } = useEditorStore();
+  const { showToast, addClip, currentProjectId, setCurrentProjectId, setProjectTitle } = useEditorStore();
   const stageRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,7 +106,7 @@ export const DesignStudio: React.FC = () => {
   ]);
 
   const [selectedId, setSelectedId] = useState<string | null>('item-1');
-  const [exportFormat, setExportFormat] = useState<'png' | 'jpg'>('png');
+  const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'pdf'>('png');
 
   // Undo / Redo History Stack
   const [history, setHistory] = useState<CanvasItem[][]>([items]);
@@ -145,7 +150,16 @@ export const DesignStudio: React.FC = () => {
     } else if (type === 'circle') {
       newItem = { id, type: 'circle', x: 180, y: 260, radius: 55, fill: '#7C3AED', visible: true };
     } else {
-      newItem = { id, type: 'sticker', x: 160, y: 240, text: extra || '🔥', fill: '#ffffff', fontSize: 48, visible: true };
+      newItem = {
+        id,
+        type: 'sticker',
+        x: 160,
+        y: 240,
+        text: extra || '🔥',
+        fill: '#ffffff',
+        fontSize: 48,
+        visible: true
+      };
     }
 
     pushState([...items, newItem]);
@@ -192,8 +206,10 @@ export const DesignStudio: React.FC = () => {
     if (!selectedId) return;
     const newItems = items.map((item) => {
       if (item.id !== selectedId) return item;
-      const w = item.width || (item.radius ? item.radius * 2 : (item.text ? item.text.length * (item.fontSize || 20) * 0.55 : 100));
-      const h = item.height || (item.radius ? item.radius * 2 : (item.fontSize || 24));
+      const w =
+        item.width ||
+        (item.radius ? item.radius * 2 : item.text ? item.text.length * (item.fontSize || 20) * 0.55 : 100);
+      const h = item.height || (item.radius ? item.radius * 2 : item.fontSize || 24);
       let { x, y } = item;
       if (type === 'left') x = 24;
       else if (type === 'center-x') x = Math.round((stageDims.width - w) / 2);
@@ -239,9 +255,16 @@ export const DesignStudio: React.FC = () => {
     }
   };
 
-  // Export Canvas Image (PNG / JPG)
-  const handleExportImage = () => {
-    if (stageRef.current) {
+  // Export Canvas Image (PNG / JPG / PDF)
+  const handleExportImage = async () => {
+    if (!stageRef.current) return;
+    try {
+      if (exportFormat === 'pdf') {
+        const canvas = stageRef.current.toCanvas({ pixelRatio: 2 });
+        await exportCanvasAsPdf(canvas, `CapCut_Design_${format.replace(':', '_')}_${Date.now()}.pdf`);
+        showToast(`Đã xuất ${stageDims.label} (PDF chuẩn in ấn)!`, 'success');
+        return;
+      }
       const mime = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png';
       const uri = stageRef.current.toDataURL({ mimeType: mime, quality: 0.95, pixelRatio: 2 });
       const a = document.createElement('a');
@@ -249,6 +272,62 @@ export const DesignStudio: React.FC = () => {
       a.download = `CapCut_Design_${format.replace(':', '_')}_${Date.now()}.${exportFormat}`;
       a.click();
       showToast(`Đã xuất ${stageDims.label} (${exportFormat.toUpperCase()})!`, 'success');
+    } catch (err: any) {
+      showToast('Lỗi xuất tệp: ' + err.message, 'error');
+    }
+  };
+
+  // Send Canvas to Editor as Media Clip & Save to Library
+  const handleSendToEditor = async () => {
+    if (!stageRef.current) return;
+    try {
+      const uri = stageRef.current.toDataURL({ mimeType: 'image/png', pixelRatio: 2 });
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      const mediaId = crypto.randomUUID();
+      await db.media.add({
+        id: mediaId,
+        name: `Design_${format.replace(':', '_')}_${Date.now()}.png`,
+        type: 'image',
+        blob,
+        size: blob.size,
+        createdAt: Date.now()
+      });
+
+      let targetId = currentProjectId;
+      if (!targetId) {
+        targetId = 'proj-design-' + Date.now();
+        const newProj: ProjectEntity = {
+          id: targetId,
+          title: `Thiết kế Canvas (${format})`,
+          width: 1080,
+          height: 1920,
+          duration: 15,
+          fps: 30,
+          thumbnail: uri,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isDeleted: false
+        };
+        await db.projects.add(newProj);
+        setCurrentProjectId(targetId);
+        setProjectTitle(newProj.title);
+      }
+
+      addClip({
+        track: 'video',
+        name: `Canvas (${format})`,
+        src: uri,
+        type: 'image',
+        start: 0,
+        duration: 5,
+        filter: 'cinematic'
+      });
+
+      showToast('Đã lưu Canvas vào Thư viện và chuyển sang Editor!', 'success');
+      navigate(`/editor/${targetId}`);
+    } catch (err: any) {
+      showToast('Lỗi đưa canvas vào Editor: ' + err.message, 'error');
     }
   };
 
@@ -330,14 +409,30 @@ export const DesignStudio: React.FC = () => {
             >
               JPG
             </button>
+            <button
+              onClick={() => setExportFormat('pdf')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                exportFormat === 'pdf' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
+              }`}
+            >
+              PDF
+            </button>
           </div>
 
           <button
             onClick={handleExportImage}
-            className="py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20"
+            className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             <span>Xuất {exportFormat.toUpperCase()}</span>
+          </button>
+
+          <button
+            onClick={handleSendToEditor}
+            className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:opacity-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-teal-500/20"
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>Đưa vào Editor</span>
           </button>
         </div>
       </div>
@@ -454,7 +549,11 @@ export const DesignStudio: React.FC = () => {
             <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937] bg-[#111827] p-3 rounded-xl border">
               <span className="text-[11px] font-bold text-cyan-400 flex items-center justify-between">
                 <span>Chỉnh sửa: {selectedItem.type.toUpperCase()}</span>
-                <button onClick={handleDeleteSelected} title="Xóa đối tượng" className="text-rose-400 hover:text-rose-300">
+                <button
+                  onClick={handleDeleteSelected}
+                  title="Xóa đối tượng"
+                  className="text-rose-400 hover:text-rose-300"
+                >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </span>
@@ -477,7 +576,9 @@ export const DesignStudio: React.FC = () => {
                     <div className="flex gap-1">
                       <button
                         onClick={() => {
-                          const newItems = items.map((i) => (i.id === selectedId ? { ...i, fontSize: Math.max(12, (i.fontSize || 24) - 2) } : i));
+                          const newItems = items.map((i) =>
+                            i.id === selectedId ? { ...i, fontSize: Math.max(12, (i.fontSize || 24) - 2) } : i
+                          );
                           pushState(newItems);
                         }}
                         className="px-2 py-0.5 rounded bg-slate-800 text-white font-bold"
@@ -486,7 +587,9 @@ export const DesignStudio: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          const newItems = items.map((i) => (i.id === selectedId ? { ...i, fontSize: Math.min(72, (i.fontSize || 24) + 2) } : i));
+                          const newItems = items.map((i) =>
+                            i.id === selectedId ? { ...i, fontSize: Math.min(72, (i.fontSize || 24) + 2) } : i
+                          );
                           pushState(newItems);
                         }}
                         className="px-2 py-0.5 rounded bg-slate-800 text-white font-bold"
@@ -494,6 +597,26 @@ export const DesignStudio: React.FC = () => {
                         +
                       </button>
                     </div>
+                  </div>
+                  <div className="flex flex-col gap-1 pt-1">
+                    <span className="text-[10px] text-slate-400">Phông chữ (Font Family):</span>
+                    <select
+                      value={selectedItem.fontFamily || 'Inter, sans-serif'}
+                      onChange={(e) => {
+                        const newItems = items.map((i) =>
+                          i.id === selectedId ? { ...i, fontFamily: e.target.value } : i
+                        );
+                        pushState(newItems);
+                      }}
+                      className="bg-[#0B0F19] border border-[#1F2937] focus:border-cyan-400 rounded-lg px-2 py-1 text-xs text-white outline-none cursor-pointer"
+                    >
+                      <option value="Inter, sans-serif">Inter</option>
+                      <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
+                      <option value="Roboto, sans-serif">Roboto</option>
+                      <option value="Montserrat, sans-serif">Montserrat</option>
+                      <option value="'Dancing Script', cursive">Dancing Script</option>
+                      <option value="Oswald, sans-serif">Oswald</option>
+                    </select>
                   </div>
                 </div>
               )}
@@ -544,7 +667,11 @@ export const DesignStudio: React.FC = () => {
                       }}
                       className="text-slate-400 hover:text-white"
                     >
-                      {item.visible !== false ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-rose-400" />}
+                      {item.visible !== false ? (
+                        <Eye className="w-3.5 h-3.5" />
+                      ) : (
+                        <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+                      )}
                     </button>
                     <span className="truncate">{item.text || item.type.toUpperCase()}</span>
                   </div>
@@ -674,7 +801,7 @@ export const DesignStudio: React.FC = () => {
                       y={item.y}
                       text={item.text || ''}
                       fontSize={item.fontSize || 24}
-                      fontFamily="Inter, sans-serif"
+                      fontFamily={item.fontFamily || 'Inter, sans-serif'}
                       fontStyle="bold"
                       fill={item.fill}
                       draggable

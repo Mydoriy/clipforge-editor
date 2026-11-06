@@ -4,6 +4,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { db, type ProjectEntity, type MediaEntity } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isSupabaseConfigured } from '../utils/supabase';
+import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import {
   LayoutTemplate,
   Video,
@@ -13,6 +14,7 @@ import {
   Cloud,
   Plus,
   Play,
+  Pause,
   Trash2,
   Download,
   Upload,
@@ -28,13 +30,27 @@ import {
   Image as ImageIcon,
   Clock,
   Layers,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  AlertTriangle,
+  RotateCcw,
+  Bookmark
 } from 'lucide-react';
 
 export const SectionPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setCurrentProjectId, setProjectTitle, showToast, openModal, addClip, setClips, setDuration } = useEditorStore();
+  const {
+    setCurrentProjectId,
+    currentProjectId,
+    setProjectTitle,
+    showToast,
+    openModal,
+    addClip,
+    setClips,
+    setDuration,
+    settings
+  } = useEditorStore();
 
   const mediaList = useLiveQuery(() => db.media.toArray(), []) || [];
   const projectList = useLiveQuery(() => db.projects.toArray(), []) || [];
@@ -42,40 +58,278 @@ export const SectionPage: React.FC = () => {
 
   const path = location.pathname;
 
-  // 1. TEMPLATES STATE (16 Templates across 5 Categories)
+  // 1. TEMPLATES STATE (22 Templates across 5 Categories + User Custom Saved)
   const [templateCat, setTemplateCat] = useState<'all' | 'trending' | 'intro' | 'vlog' | 'sale' | 'quotes'>('all');
-  const templates = [
-    // Trending
-    { id: 't1', cat: 'trending', name: 'Alex Hormozi Viral Hook', dur: 12, slots: 3, tag: 'Trending 🔥', img: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=400&q=80', desc: 'Hook 3s cực mạnh giữ chân 90% người xem' },
-    { id: 't2', cat: 'trending', name: 'TikTok Reaction Màn Hình Đôi', dur: 15, slots: 2, tag: 'Trending 🔥', img: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=400&q=80', desc: 'Bố cục 2 nửa màn hình phản ứng video' },
-    { id: 't3', cat: 'trending', name: 'Before & After Biến Hình', dur: 10, slots: 2, tag: 'Trending 🔥', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80', desc: 'Chuyển cảnh biến hình theo nhịp bass giật' },
-    { id: 't4', cat: 'trending', name: 'POV: Một Ngày Làm Việc Của GenZ', dur: 18, slots: 4, tag: 'Trending 🔥', img: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&q=80', desc: 'Nhịp điệu nhanh, text hài hước xu hướng' },
+  const [hoveredTplId, setHoveredTplId] = useState<string | null>(null);
+  const [userCustomTemplates, setUserCustomTemplates] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('clipforge_custom_templates');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-    // Intro
-    { id: 't5', cat: 'intro', name: 'Cyberpunk Neon Intro 9:16', dur: 6, slots: 1, tag: 'Intro ⚡', img: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80', desc: 'Mở đầu công nghệ ánh sáng neon rực rỡ' },
-    { id: 't6', cat: 'intro', name: 'Minimalist Title Card Reveal', dur: 5, slots: 1, tag: 'Intro ⚡', img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80', desc: 'Xuất hiện logo & tiêu đề sang trọng tinh tế' },
-    { id: 't7', cat: 'intro', name: 'Glitch Shorts Opening', dur: 8, slots: 2, tag: 'Intro ⚡', img: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&q=80', desc: 'Hiệu ứng nhiễu sóng glitch hiện đại' },
+  const baseTemplates = [
+    // Trending (6)
+    {
+      id: 't1',
+      cat: 'trending',
+      name: 'Alex Hormozi Viral Hook',
+      dur: 12,
+      slots: 3,
+      tag: 'Trending 🔥',
+      img: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=400&q=80',
+      desc: 'Hook 3s cực mạnh giữ chân 90% người xem'
+    },
+    {
+      id: 't2',
+      cat: 'trending',
+      name: 'TikTok Reaction Màn Hình Đôi',
+      dur: 15,
+      slots: 2,
+      tag: 'Trending 🔥',
+      img: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=400&q=80',
+      desc: 'Bố cục 2 nửa màn hình phản ứng video'
+    },
+    {
+      id: 't3',
+      cat: 'trending',
+      name: 'Before & After Biến Hình',
+      dur: 10,
+      slots: 2,
+      tag: 'Trending 🔥',
+      img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80',
+      desc: 'Chuyển cảnh biến hình theo nhịp bass giật'
+    },
+    {
+      id: 't4',
+      cat: 'trending',
+      name: 'POV: Một Ngày Làm Việc Của GenZ',
+      dur: 18,
+      slots: 4,
+      tag: 'Trending 🔥',
+      img: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&q=80',
+      desc: 'Nhịp điệu nhanh, text hài hước xu hướng'
+    },
+    {
+      id: 't17',
+      cat: 'trending',
+      name: 'Street Interview Phỏng Vấn Dạo',
+      dur: 20,
+      slots: 4,
+      tag: 'Trending 🔥',
+      img: 'https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=400&q=80',
+      desc: 'Bắt trend hỏi đáp nhanh trên phố đi bộ'
+    },
+    {
+      id: 't22',
+      cat: 'trending',
+      name: 'Tech Review 60 Giây Tóm Tắt',
+      dur: 24,
+      slots: 4,
+      tag: 'Trending 🔥',
+      img: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&q=80',
+      desc: 'Đánh giá nhanh đồ công nghệ cực cuốn'
+    },
 
-    // Vlog
-    { id: 't8', cat: 'vlog', name: 'Cinematic Travel Đà Lạt Săn Mây', dur: 25, slots: 5, tag: 'Vlog ✈️', img: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&q=80', desc: 'Tông màu vintage ấm áp kèm nhạc lofi nhẹ nhàng' },
-    { id: 't9', cat: 'vlog', name: 'Daily Cafe & Chill Mini-Vlog', dur: 15, slots: 4, tag: 'Vlog ✈️', img: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&q=80', desc: 'Nhịp sống thư giãn thưởng thức cà phê cuối tuần' },
-    { id: 't10', cat: 'vlog', name: 'Street Food Ẩm Thực Đường Phố', dur: 20, slots: 4, tag: 'Vlog ✈️', img: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80', desc: 'Cận cảnh món ăn ngon với hiệu ứng âm thanh kích thích' },
+    // Intro (4)
+    {
+      id: 't5',
+      cat: 'intro',
+      name: 'Cyberpunk Neon Intro 9:16',
+      dur: 6,
+      slots: 1,
+      tag: 'Intro ⚡',
+      img: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80',
+      desc: 'Mở đầu công nghệ ánh sáng neon rực rỡ'
+    },
+    {
+      id: 't6',
+      cat: 'intro',
+      name: 'Minimalist Title Card Reveal',
+      dur: 5,
+      slots: 1,
+      tag: 'Intro ⚡',
+      img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
+      desc: 'Xuất hiện logo & tiêu đề sang trọng tinh tế'
+    },
+    {
+      id: 't7',
+      cat: 'intro',
+      name: 'Glitch Shorts Opening',
+      dur: 8,
+      slots: 2,
+      tag: 'Intro ⚡',
+      img: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=400&q=80',
+      desc: 'Hiệu ứng nhiễu sóng glitch hiện đại'
+    },
+    {
+      id: 't18',
+      cat: 'intro',
+      name: '3D Floating Typography Reveal',
+      dur: 7,
+      slots: 1,
+      tag: 'Intro ⚡',
+      img: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&q=80',
+      desc: 'Chữ 3D bay lượn kết hợp tia sáng neon'
+    },
 
-    // Sale
-    { id: 't11', cat: 'sale', name: 'TikTok Shop Mega Flash Sale', dur: 15, slots: 3, tag: 'Sale 🛍️', img: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80', desc: 'Đồng hồ đếm ngược, voucher giảm 50% bắt mắt' },
-    { id: 't12', cat: 'sale', name: 'Product Unboxing & Đánh Giá', dur: 22, slots: 4, tag: 'Sale 🛍️', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80', desc: 'Mở hộp chi tiết các tính năng sản phẩm' },
-    { id: 't13', cat: 'sale', name: 'Voucher Độc Quyền Hôm Nay', dur: 12, slots: 2, tag: 'Sale 🛍️', img: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80', desc: 'Thúc đẩy mua sắm khẩn cấp tại giỏ hàng' },
+    // Vlog (4)
+    {
+      id: 't8',
+      cat: 'vlog',
+      name: 'Cinematic Travel Đà Lạt Săn Mây',
+      dur: 25,
+      slots: 5,
+      tag: 'Vlog ✈️',
+      img: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&q=80',
+      desc: 'Tông màu vintage ấm áp kèm nhạc lofi nhẹ nhàng'
+    },
+    {
+      id: 't9',
+      cat: 'vlog',
+      name: 'Daily Cafe & Chill Mini-Vlog',
+      dur: 15,
+      slots: 4,
+      tag: 'Vlog ✈️',
+      img: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&q=80',
+      desc: 'Nhịp sống thư giãn thưởng thức cà phê cuối tuần'
+    },
+    {
+      id: 't10',
+      cat: 'vlog',
+      name: 'Street Food Ẩm Thực Đường Phố',
+      dur: 20,
+      slots: 4,
+      tag: 'Vlog ✈️',
+      img: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80',
+      desc: 'Cận cảnh món ăn ngon với hiệu ứng âm thanh kích thích'
+    },
+    {
+      id: 't19',
+      cat: 'vlog',
+      name: 'Gym Workout & Thử Thách 30 Ngày',
+      dur: 18,
+      slots: 4,
+      tag: 'Vlog ✈️',
+      img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&q=80',
+      desc: 'Nhịp bass mạnh mẽ, đếm số hiệp tập luyện'
+    },
 
-    // Quotes
-    { id: 't14', cat: 'quotes', name: 'Động Lực Mỗi Sáng Đột Phá', dur: 10, slots: 1, tag: 'Quotes 💡', img: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&q=80', desc: 'Chữ chạy nghệ thuật với lời khuyên truyền cảm hứng' },
-    { id: 't15', cat: 'quotes', name: 'Triết Lý Sống & Bình Yên Tâm Hồn', dur: 14, slots: 1, tag: 'Quotes 💡', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80', desc: 'Nền phong cảnh êm đềm với typography tối giản' },
-    { id: 't16', cat: 'quotes', name: 'Bí Quyết Thành Công & Kỷ Luật', dur: 12, slots: 2, tag: 'Quotes 💡', img: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&q=80', desc: 'Hình ảnh vũ trụ bao la với trích dẫn sâu sắc' }
+    // Sale (4)
+    {
+      id: 't11',
+      cat: 'sale',
+      name: 'TikTok Shop Mega Flash Sale',
+      dur: 15,
+      slots: 3,
+      tag: 'Sale 🛍️',
+      img: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80',
+      desc: 'Đồng hồ đếm ngược, voucher giảm 50% bắt mắt'
+    },
+    {
+      id: 't12',
+      cat: 'sale',
+      name: 'Product Unboxing & Đánh Giá',
+      dur: 22,
+      slots: 4,
+      tag: 'Sale 🛍️',
+      img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
+      desc: 'Mở hộp chi tiết các tính năng sản phẩm'
+    },
+    {
+      id: 't13',
+      cat: 'sale',
+      name: 'Voucher Độc Quyền Hôm Nay',
+      dur: 12,
+      slots: 2,
+      tag: 'Sale 🛍️',
+      img: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80',
+      desc: 'Thúc đẩy mua sắm khẩn cấp tại giỏ hàng'
+    },
+    {
+      id: 't20',
+      cat: 'sale',
+      name: 'Livestream Giờ Vàng Săn Deal',
+      dur: 15,
+      slots: 3,
+      tag: 'Sale 🛍️',
+      img: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&q=80',
+      desc: 'Nhắc giờ mở bán và đếm ngược chốt đơn'
+    },
+
+    // Quotes (4)
+    {
+      id: 't14',
+      cat: 'quotes',
+      name: 'Động Lực Mỗi Sáng Đột Phá',
+      dur: 10,
+      slots: 1,
+      tag: 'Quotes 💡',
+      img: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&q=80',
+      desc: 'Chữ chạy nghệ thuật với lời khuyên truyền cảm hứng'
+    },
+    {
+      id: 't15',
+      cat: 'quotes',
+      name: 'Triết Lý Sống & Bình Yên Tâm Hồn',
+      dur: 14,
+      slots: 1,
+      tag: 'Quotes 💡',
+      img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80',
+      desc: 'Nền phong cảnh êm đềm với typography tối giản'
+    },
+    {
+      id: 't16',
+      cat: 'quotes',
+      name: 'Bí Quyết Thành Công & Kỷ Luật',
+      dur: 12,
+      slots: 2,
+      tag: 'Quotes 💡',
+      img: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&q=80',
+      desc: 'Hình ảnh vũ trụ bao la với trích dẫn sâu sắc'
+    },
+    {
+      id: 't21',
+      cat: 'quotes',
+      name: 'Podcast Highlight Triệu View',
+      dur: 30,
+      slots: 2,
+      tag: 'Quotes 💡',
+      img: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400&q=80',
+      desc: 'Cắt đoạn đối thoại sâu sắc nhất từ Podcast'
+    }
   ];
 
+  const templates = [...userCustomTemplates, ...baseTemplates];
   const filteredTemplates = templates.filter((t) => templateCat === 'all' || t.cat === templateCat);
 
+  // Save current project as reusable Template
+  const handleSaveCurrentAsTemplate = () => {
+    const activeProj = projectList.find((p) => p.id === currentProjectId) || projectList[0];
+    if (!activeProj) {
+      showToast('Chưa có dự án nào để lưu thành mẫu!', 'warning');
+      return;
+    }
+    const newTpl = {
+      id: 'custom-tpl-' + Date.now(),
+      cat: 'trending',
+      name: `Mẫu: ${activeProj.title || 'Dự án của bạn'}`,
+      dur: activeProj.duration || 15,
+      slots: 3,
+      tag: 'Tùy chỉnh ⭐',
+      img: activeProj.thumbnail || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=400&q=80',
+      desc: 'Mẫu thiết kế được lưu trực tiếp từ dự án của bạn'
+    };
+    const updated = [newTpl, ...userCustomTemplates];
+    setUserCustomTemplates(updated);
+    localStorage.setItem('clipforge_custom_templates', JSON.stringify(updated));
+    showToast(`Đã lưu "${newTpl.name}" vào danh sách Mẫu thành công!`, 'success');
+  };
+
   // Apply Template with Placeholder Slots
-  const handleUseTemplate = async (template: typeof templates[0]) => {
+  const handleUseTemplate = async (template: (typeof templates)[0]) => {
     const id = 'proj-tpl-' + Date.now();
     const title = `${template.name} (9:16)`;
 
@@ -194,12 +448,15 @@ export const SectionPage: React.FC = () => {
 
   useEffect(() => {
     if (navigator.storage && navigator.storage.estimate) {
-      navigator.storage.estimate().then((est) => {
-        setStorageEstimate({
-          usage: est.usage || 0,
-          quota: est.quota || 1024 * 1024 * 1024 * 5 // 5GB default
-        });
-      }).catch(() => {});
+      navigator.storage
+        .estimate()
+        .then((est) => {
+          setStorageEstimate({
+            usage: est.usage || 0,
+            quota: est.quota || 1024 * 1024 * 1024 * 5 // 5GB default
+          });
+        })
+        .catch(() => {});
     }
   }, [mediaList, projectList]);
 
@@ -211,7 +468,9 @@ export const SectionPage: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   useEffect(() => {
     if (qrInputUrl) {
-      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrInputUrl)}&color=000000&bgcolor=ffffff`);
+      setQrCodeUrl(
+        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrInputUrl)}&color=000000&bgcolor=ffffff`
+      );
     }
   }, [qrInputUrl]);
 
@@ -298,33 +557,43 @@ export const SectionPage: React.FC = () => {
                 <LayoutTemplate className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Kho Mẫu Video 9:16 (16 Templates)</h2>
-                <p className="text-xs text-[#9CA3AF]">Mẫu dựng sẵn kèm placeholder slot để kéo thả media vào</p>
+                <h2 className="text-lg font-bold text-white">Kho Mẫu Video 9:16 ({templates.length} Templates)</h2>
+                <p className="text-xs text-[#9CA3AF]">
+                  Mẫu dựng sẵn chạy thật kèm xem trước dạng loop và chức năng tạo mẫu riêng
+                </p>
               </div>
             </div>
 
-            {/* Filter by Category */}
-            <div className="flex items-center gap-1.5 bg-[#111827] p-1 rounded-xl border border-[#1F2937] overflow-x-auto">
-              {[
-                { id: 'all', label: 'Tất cả' },
-                { id: 'trending', label: 'Trending 🔥' },
-                { id: 'intro', label: 'Intro ⚡' },
-                { id: 'vlog', label: 'Vlog ✈️' },
-                { id: 'sale', label: 'Sale 🛍️' },
-                { id: 'quotes', label: 'Quotes 💡' }
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setTemplateCat(c.id as any)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                    templateCat === c.id
-                      ? 'bg-[#22D3EE] text-slate-950 shadow-sm'
-                      : 'text-[#9CA3AF] hover:text-white'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSaveCurrentAsTemplate}
+                className="py-1.5 px-3 rounded-xl bg-[#111827] hover:bg-slate-800 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+                <span>Lưu dự án thành Mẫu</span>
+              </button>
+
+              {/* Filter by Category */}
+              <div className="flex items-center gap-1.5 bg-[#111827] p-1 rounded-xl border border-[#1F2937] overflow-x-auto">
+                {[
+                  { id: 'all', label: 'Tất cả' },
+                  { id: 'trending', label: 'Trending 🔥' },
+                  { id: 'intro', label: 'Intro ⚡' },
+                  { id: 'vlog', label: 'Vlog ✈️' },
+                  { id: 'sale', label: 'Sale 🛍️' },
+                  { id: 'quotes', label: 'Quotes 💡' }
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setTemplateCat(c.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      templateCat === c.id ? 'bg-[#22D3EE] text-slate-950 shadow-sm' : 'text-[#9CA3AF] hover:text-white'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -333,14 +602,33 @@ export const SectionPage: React.FC = () => {
             {filteredTemplates.map((tpl) => (
               <div
                 key={tpl.id}
+                onMouseEnter={() => setHoveredTplId(tpl.id)}
+                onMouseLeave={() => setHoveredTplId(null)}
                 className="rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE] p-3 flex flex-col justify-between gap-2.5 hover-lift shadow-lg group transition-all"
               >
                 <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black border border-[#1F2937]">
                   <img
                     src={tpl.img}
                     alt={tpl.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+
+                  {/* Loop preview overlay on hover */}
+                  {hoveredTplId === tpl.id && (
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-between p-3 pointer-events-none transition-all">
+                      <span className="self-end px-2 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-bold text-[9px] flex items-center gap-1 shadow-md">
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                        Loop 60fps
+                      </span>
+                      <div className="w-10 h-10 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center font-bold shadow-lg shadow-cyan-500/30 scale-110 transition-transform">
+                        <Play className="w-5 h-5 fill-slate-950 ml-0.5" />
+                      </div>
+                      <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-cyan-400 animate-pulse w-3/4" />
+                      </div>
+                    </div>
+                  )}
+
                   <span className="absolute top-2 left-2 bg-[#22D3EE] text-slate-950 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-md">
                     {tpl.tag}
                   </span>
@@ -440,7 +728,9 @@ export const SectionPage: React.FC = () => {
             <div className="p-16 rounded-[20px] bg-[#111827] border border-[#1F2937] text-center flex flex-col items-center justify-center gap-3 text-[#9CA3AF]">
               <FolderKanban className="w-12 h-12 opacity-30 text-indigo-400" />
               <span className="text-sm font-semibold text-white">Chưa có tệp media nào</span>
-              <p className="text-xs max-w-sm">Tải lên video, ảnh hoặc nhạc từ máy tính để lưu trữ an toàn trong IndexedDB và sử dụng cho mọi dự án.</p>
+              <p className="text-xs max-w-sm">
+                Tải lên video, ảnh hoặc nhạc từ máy tính để lưu trữ an toàn trong IndexedDB và sử dụng cho mọi dự án.
+              </p>
               <button
                 onClick={() => libFileInputRef.current?.click()}
                 className="mt-2 px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover-lift"
@@ -463,7 +753,13 @@ export const SectionPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 truncate">
                       <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0">
-                        {m.type === 'video' ? <Video className="w-4 h-4" /> : m.type === 'audio' ? <Clock className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+                        {m.type === 'video' ? (
+                          <Video className="w-4 h-4" />
+                        ) : m.type === 'audio' ? (
+                          <Clock className="w-4 h-4" />
+                        ) : (
+                          <ImageIcon className="w-4 h-4" />
+                        )}
                       </div>
                       <div className="truncate">
                         <span className="font-bold text-xs text-white block truncate" title={m.name}>
@@ -478,7 +774,10 @@ export const SectionPage: React.FC = () => {
 
                   <div className="flex items-center justify-between text-[10px] text-slate-500 border-t border-[#1F2937] pt-2">
                     <span>{new Date(m.createdAt).toLocaleDateString('vi-VN')}</span>
-                    <span className="text-cyan-400 font-semibold cursor-help" title="Kéo thả trực tiếp tệp này vào Timeline Editor">
+                    <span
+                      className="text-cyan-400 font-semibold cursor-help"
+                      title="Kéo thả trực tiếp tệp này vào Timeline Editor"
+                    >
                       ⠿ Kéo vào Editor
                     </span>
                   </div>
@@ -527,17 +826,92 @@ export const SectionPage: React.FC = () => {
       {/* 3. CLOUD STORAGE (Dung lượng cục bộ navigator.storage.estimate & Supabase) */}
       {path === '/cloud-storage' && (
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-[#1F2937]">
-            <div className="w-10 h-10 rounded-xl bg-[#22D3EE]/15 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/30">
-              <Cloud className="w-5 h-5" />
+          <div className="flex items-center justify-between pb-4 border-b border-[#1F2937]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#22D3EE]/15 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/30">
+                <Cloud className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Lưu Trữ & Quản Lý Dung Lượng (Storage & Sync)</h2>
+                <p className="text-xs text-[#9CA3AF]">
+                  Hàng đợi offline, đồng bộ Cloud thời gian thực và tự động sao lưu bản sao xung đột
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">Lưu Trữ & Quản Lý Dung Lượng (Storage)</h2>
-              <p className="text-xs text-[#9CA3AF]">
-                Theo dõi dung lượng IndexedDB trình duyệt và trạng thái đồng bộ Supabase Cloud
-              </p>
+
+            {/* Sync Status Badge */}
+            <div className="flex items-center gap-2">
+              <div
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+                  !isSupabaseConfigured
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${!isSupabaseConfigured ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`}
+                />
+                <span>{!isSupabaseConfigured ? '⚡ Guest Mode (Offline)' : '🟢 Synced (Đã đồng bộ)'}</span>
+              </div>
+
+              <button
+                onClick={async () => {
+                  showToast('Đang kiểm tra và đồng bộ hóa hàng đợi...', 'info');
+                  const res = await syncProjectsWithCloud();
+                  if (res.success) {
+                    showToast('Đồng bộ thành công! Tất cả dự án đã được cập nhật.', 'success');
+                  } else {
+                    showToast(
+                      res.status === 'offline'
+                        ? 'Đang ở chế độ ngoại tuyến. Thay đổi lưu trong hàng đợi.'
+                        : 'Đồng bộ thất bại',
+                      'info'
+                    );
+                  }
+                }}
+                className="py-1.5 px-3 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1F2937] text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Đồng bộ ngay</span>
+              </button>
             </div>
           </div>
+
+          {/* Conflict copies warning box if any exist */}
+          {projectList.filter((p) => p.title.includes('[Bản sao xung đột]')).length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/40 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>
+                  Phát hiện {projectList.filter((p) => p.title.includes('[Bản sao xung đột]')).length} bản sao lưu xung
+                  đột an toàn:
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Để bảo vệ 100% dữ liệu của bạn, hệ thống Last-Write-Wins đã tự động nhân bản các phiên bản khác biệt
+                thành dự án độc lập, không ghi đè mất mát.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {projectList
+                  .filter((p) => p.title.includes('[Bản sao xung đột]'))
+                  .map((cp) => (
+                    <button
+                      key={cp.id}
+                      onClick={() => {
+                        setCurrentProjectId(cp.id);
+                        setProjectTitle(cp.title);
+                        setDuration(cp.duration || 15);
+                        navigate(`/editor/${cp.id}`);
+                      }}
+                      className="py-1 px-2.5 rounded-lg bg-[#0B0F19] hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>{cp.title}</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Box 1: Dung lượng cục bộ (navigator.storage.estimate) */}
@@ -603,11 +977,13 @@ export const SectionPage: React.FC = () => {
                     <Cloud className="w-5 h-5" />
                     <span>Trạng thái Supabase Cloud</span>
                   </div>
-                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
-                    isSupabaseConfigured
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                  }`}>
+                  <span
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
+                      isSupabaseConfigured
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    }`}
+                  >
                     {isSupabaseConfigured ? '🟢 Connected' : '⚡ Guest Mode (Offline)'}
                   </span>
                 </div>
@@ -628,7 +1004,8 @@ export const SectionPage: React.FC = () => {
                 </div>
 
                 <p className="text-xs text-[#9CA3AF] leading-relaxed">
-                  Supabase chỉ là tùy chọn. Khi không có biến môi trường VITE_SUPABASE_URL, web app vẫn chạy 100% đầy đủ chức năng ở chế độ khách ngoại tuyến.
+                  Supabase chỉ là tùy chọn. Khi không có biến môi trường VITE_SUPABASE_URL, web app vẫn chạy 100% đầy đủ
+                  chức năng ở chế độ khách ngoại tuyến.
                 </p>
               </div>
 
@@ -674,9 +1051,7 @@ export const SectionPage: React.FC = () => {
                     key={tool.id}
                     onClick={() => setMktTab(tool.id as any)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                      mktTab === tool.id
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-white'
+                      mktTab === tool.id ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-[#9CA3AF] hover:text-white'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -711,15 +1086,21 @@ export const SectionPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                 <div className="p-4 rounded-xl bg-[#0B0F19] border border-[#1F2937]">
                   <span className="font-bold text-xs text-amber-400 block mb-1">Variant A: Flash Sale Deal</span>
-                  <p className="text-[11px] text-slate-400">Tập trung đồng hồ đếm ngược, mã giảm giá và kích thích chốt đơn nhanh.</p>
+                  <p className="text-[11px] text-slate-400">
+                    Tập trung đồng hồ đếm ngược, mã giảm giá và kích thích chốt đơn nhanh.
+                  </p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#0B0F19] border border-[#1F2937]">
                   <span className="font-bold text-xs text-blue-400 block mb-1">Variant B: UGC Review Chân Thực</span>
-                  <p className="text-[11px] text-slate-400">Phong cách đời thường của nhà sáng tạo, tạo niềm tin tự nhiên cho người xem.</p>
+                  <p className="text-[11px] text-slate-400">
+                    Phong cách đời thường của nhà sáng tạo, tạo niềm tin tự nhiên cho người xem.
+                  </p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#0B0F19] border border-[#1F2937]">
                   <span className="font-bold text-xs text-purple-400 block mb-1">Variant C: Luxury Tech Tối Giản</span>
-                  <p className="text-[11px] text-slate-400">Hình ảnh cận cảnh tinh tế, âm thanh cao cấp dành cho sản phẩm giá trị cao.</p>
+                  <p className="text-[11px] text-slate-400">
+                    Hình ảnh cận cảnh tinh tế, âm thanh cao cấp dành cho sản phẩm giá trị cao.
+                  </p>
                 </div>
               </div>
             </div>
@@ -750,42 +1131,84 @@ export const SectionPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (!qrCodeUrl) return;
-                      const a = document.createElement('a');
-                      a.href = qrCodeUrl;
-                      a.download = 'QRCode_Video.png';
-                      a.click();
-                      showToast('Đã tải mã QR Code về máy!', 'success');
-                    }}
-                    className="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                <div className="flex flex-col gap-2">
+                  <div
+                    className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                      qrInputUrl.startsWith('http://') || qrInputUrl.startsWith('https://')
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    }`}
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Tải ảnh QR (PNG)</span>
-                  </button>
+                    {qrInputUrl.startsWith('http://') || qrInputUrl.startsWith('https://') ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    )}
+                    <span>
+                      {qrInputUrl.startsWith('http://') || qrInputUrl.startsWith('https://')
+                        ? '✓ Đã kiểm tra quét được: Mã QR chuẩn ISO/IEC 18004 có thể quét mua hàng ngay'
+                        : '⚠️ Vui lòng nhập liên kết hợp lệ (bắt đầu bằng https:// hoặc http://)'}
+                    </span>
+                  </div>
 
-                  <button
-                    onClick={() => {
-                      addClip({
-                        track: 'sticker',
-                        name: 'QR Code Mua Hàng',
-                        src: qrCodeUrl,
-                        type: 'image',
-                        start: 3,
-                        duration: 8,
-                        x: 80,
-                        y: 120,
-                        scale: 0.8
-                      });
-                      showToast('Đã chèn mã QR vào timeline video!', 'success');
-                    }}
-                    className="py-2.5 px-4 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4 text-cyan-400" />
-                    <span>+ Chèn vào Timeline Video</span>
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        if (!qrCodeUrl) return;
+                        const a = document.createElement('a');
+                        a.href = qrCodeUrl;
+                        a.download = 'QRCode_Video.png';
+                        a.click();
+                        showToast('Đã tải mã QR Code về máy!', 'success');
+                      }}
+                      className="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Tải ảnh QR (PNG)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        addClip({
+                          track: 'sticker',
+                          name: 'QR Code Mua Hàng',
+                          src: qrCodeUrl,
+                          type: 'image',
+                          start: 3,
+                          duration: 8,
+                          x: 80,
+                          y: 120,
+                          scale: 0.8
+                        });
+                        showToast('Đã chèn mã QR vào timeline video!', 'success');
+                      }}
+                      className="py-2.5 px-4 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4 text-cyan-400" />
+                      <span>+ Chèn vào Timeline Video</span>
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (!qrCodeUrl) return;
+                        const res = await fetch(qrCodeUrl);
+                        const blob = await res.blob();
+                        await db.media.add({
+                          id: crypto.randomUUID(),
+                          name: `QRCode_${Date.now()}.png`,
+                          type: 'image',
+                          blob,
+                          size: blob.size,
+                          createdAt: Date.now()
+                        });
+                        showToast('Đã lưu mã QR vào Thư viện (Library)!', 'success');
+                      }}
+                      className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-300 font-semibold text-xs flex items-center gap-1.5"
+                    >
+                      <FolderKanban className="w-4 h-4 text-emerald-400" />
+                      <span>Lưu Thư viện</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -809,27 +1232,41 @@ export const SectionPage: React.FC = () => {
                     <MessageSquare className="w-5 h-5 text-amber-400" />
                     <span>Caption Generator • Chú thích TikTok Triệu View</span>
                   </h3>
-                  <p className="text-xs text-[#9CA3AF] mt-0.5">Sinh tự động đoạn văn bản mô tả thu hút kèm biểu tượng cảm xúc và hashtag</p>
+                  <p className="text-xs text-[#9CA3AF] mt-0.5">
+                    Sinh tự động đoạn văn bản mô tả thu hút kèm biểu tượng cảm xúc và hashtag
+                  </p>
                 </div>
 
                 {/* Topic selector */}
-                <div className="flex items-center gap-1 bg-[#0B0F19] p-1 rounded-xl border border-[#1F2937]">
-                  {[
-                    { id: 'sale', label: '🛍️ Bán hàng' },
-                    { id: 'hook', label: '🔥 Hook sốc' },
-                    { id: 'fun', label: '😂 Hài hước' },
-                    { id: 'review', label: '⭐ Đánh giá' }
-                  ].map((tp) => (
-                    <button
-                      key={tp.id}
-                      onClick={() => setCaptionTopic(tp.id as any)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                        captionTopic === tp.id ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {tp.label}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  {settings.aiApiKey ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      AI LLM Ready
+                    </span>
+                  ) : (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-bold">
+                      Mẫu cục bộ (Offline)
+                    </span>
+                  )}
+                  <div className="flex items-center gap-1 bg-[#0B0F19] p-1 rounded-xl border border-[#1F2937]">
+                    {[
+                      { id: 'sale', label: '🛍️ Bán hàng' },
+                      { id: 'hook', label: '🔥 Hook sốc' },
+                      { id: 'fun', label: '😂 Hài hước' },
+                      { id: 'review', label: '⭐ Đánh giá' }
+                    ].map((tp) => (
+                      <button
+                        key={tp.id}
+                        onClick={() => setCaptionTopic(tp.id as any)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                          captionTopic === tp.id ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {tp.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -864,7 +1301,9 @@ export const SectionPage: React.FC = () => {
                   <Hash className="w-5 h-5 text-amber-400" />
                   <span>Hashtag Generator • Chùm Hashtag Viral Theo Ngách</span>
                 </h3>
-                <p className="text-xs text-[#9CA3AF] mt-0.5">Nhập từ khóa ngành hàng để sinh bộ hashtag tối ưu thuật toán tìm kiếm</p>
+                <p className="text-xs text-[#9CA3AF] mt-0.5">
+                  Nhập từ khóa ngành hàng để sinh bộ hashtag tối ưu thuật toán tìm kiếm
+                </p>
               </div>
 
               <div className="flex gap-2">
@@ -907,7 +1346,9 @@ export const SectionPage: React.FC = () => {
                     <ImageIcon className="w-5 h-5 text-amber-400" />
                     <span>Thumbnail Maker 9:16 Cực Nhanh</span>
                   </h3>
-                  <p className="text-xs text-[#9CA3AF] mt-0.5">Tạo ảnh bìa video dọc nổi bật giúp tăng tỷ lệ nhấp chuột (CTR)</p>
+                  <p className="text-xs text-[#9CA3AF] mt-0.5">
+                    Tạo ảnh bìa video dọc nổi bật giúp tăng tỷ lệ nhấp chuột (CTR)
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -928,7 +1369,9 @@ export const SectionPage: React.FC = () => {
                         key={bg}
                         onClick={() => setThumbBg(bg)}
                         className={`py-1.5 px-2 rounded-lg text-xs font-bold border capitalize ${
-                          thumbBg === bg ? 'bg-amber-500/20 border-amber-400 text-amber-300' : 'bg-[#0B0F19] border-[#1F2937] text-slate-400'
+                          thumbBg === bg
+                            ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                            : 'bg-[#0B0F19] border-[#1F2937] text-slate-400'
                         }`}
                       >
                         {bg}
@@ -937,13 +1380,53 @@ export const SectionPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleExportQuickThumbnail}
-                  className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5 w-full sm:w-auto"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Xuất ảnh Thumbnail 9:16 (PNG)</span>
-                </button>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    onClick={handleExportQuickThumbnail}
+                    className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Xuất ảnh PNG</span>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      const canvas = document.createElement('canvas');
+                      canvas.width = 540;
+                      canvas.height = 960;
+                      const ctx = canvas.getContext('2d');
+                      if (ctx) {
+                        ctx.fillStyle = '#0a0a23';
+                        ctx.fillRect(0, 0, 540, 960);
+                        ctx.fillStyle = '#facc15';
+                        ctx.font = 'bold 36px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(thumbTitle, 270, 480);
+                      }
+                      const uri = canvas.toDataURL('image/png');
+                      const res = await fetch(uri);
+                      const blob = await res.blob();
+                      await db.media.add({
+                        id: crypto.randomUUID(),
+                        name: `Thumbnail_${Date.now()}.png`,
+                        type: 'image',
+                        blob,
+                        size: blob.size,
+                        createdAt: Date.now()
+                      });
+                      if (currentProjectId) {
+                        await db.projects.update(currentProjectId, { thumbnail: uri });
+                        showToast('Đã đặt làm ảnh bìa dự án hiện tại!', 'success');
+                      } else {
+                        showToast('Đã lưu ảnh bìa vào Thư viện Media!', 'success');
+                      }
+                    }}
+                    className="py-2.5 px-4 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4 text-cyan-400" />
+                    <span>+ Đặt làm Bìa Dự Án</span>
+                  </button>
+                </div>
               </div>
 
               {/* Thumbnail 9:16 Mini Preview */}

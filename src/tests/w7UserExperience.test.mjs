@@ -50,3 +50,4 @@ test('W7: i18n Translation Completeness & Locale Formatters', () => {
   assert.ok(typeof formattedVn === 'string' && formattedVn.length > 0);
   assert.ok(typeof formattedEn === 'string' && formattedEn.length > 0);
 });
+

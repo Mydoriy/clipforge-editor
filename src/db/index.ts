@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { ProjectSettings, Timeline, MediaItem } from '../types/project';
+import type { ProjectSettings, Timeline, MediaItem } from '../types/project.ts';
 
-export * from '../types/project';
+export * from '../types/project.ts';
 
 export interface ProjectEntity {
   id: string;
@@ -78,23 +78,28 @@ class ClipForgeDatabase extends Dexie {
       trash: 'id, projectId, deletedAt'
     });
 
-    this.version(2).stores({
-      projects: 'id, title, isDeleted, updatedAt, createdAt',
-      media: 'id, projectId, type, createdAt',
-      trash: 'id, projectId, deletedAt',
-      snapshots: 'id, projectId, timestamp',
-      operationsLog: 'id, projectId, timestamp'
-    }).upgrade((tx) => {
-      return tx.table('projects').toCollection().modify((proj: any) => {
-        if (!proj.updatedAt) proj.updatedAt = proj.createdAt || Date.now();
-        if (proj.isDeleted === undefined) proj.isDeleted = false;
-        if (!proj.tracksData) proj.tracksData = { clips: [] };
-        if (!proj.duration) proj.duration = 15;
-        if (!proj.width) proj.width = 1080;
-        if (!proj.height) proj.height = 1920;
-        if (!proj.fps) proj.fps = 30;
+    this.version(2)
+      .stores({
+        projects: 'id, title, isDeleted, updatedAt, createdAt',
+        media: 'id, projectId, type, createdAt',
+        trash: 'id, projectId, deletedAt',
+        snapshots: 'id, projectId, timestamp',
+        operationsLog: 'id, projectId, timestamp'
+      })
+      .upgrade((tx) => {
+        return tx
+          .table('projects')
+          .toCollection()
+          .modify((proj: any) => {
+            if (!proj.updatedAt) proj.updatedAt = proj.createdAt || Date.now();
+            if (proj.isDeleted === undefined) proj.isDeleted = false;
+            if (!proj.tracksData) proj.tracksData = { clips: [] };
+            if (!proj.duration) proj.duration = 15;
+            if (!proj.width) proj.width = 1080;
+            if (!proj.height) proj.height = 1920;
+            if (!proj.fps) proj.fps = 30;
+          });
       });
-    });
   }
 }
 
@@ -152,10 +157,7 @@ export async function createProjectSnapshot(
 
   // Keep maximum 20 latest snapshots per project to conserve storage
   try {
-    const projectSnapshots = await db.snapshots
-      .where('projectId')
-      .equals(projectId)
-      .sortBy('timestamp');
+    const projectSnapshots = await db.snapshots.where('projectId').equals(projectId).sortBy('timestamp');
     if (projectSnapshots.length > 20) {
       const toDelete = projectSnapshots.slice(0, projectSnapshots.length - 20);
       for (const snap of toDelete) {
@@ -190,7 +192,15 @@ export async function seedDemoProjects() {
         tracksData: {
           clips: [
             { id: 'c1', track: 'video', name: 'Background Motion', start: 0, duration: 15, type: 'video' },
-            { id: 'c2', track: 'text', name: 'HOOK: Đừng lướt qua!', start: 0, duration: 4, type: 'text', text: 'ĐỪNG LƯỚT QUA! 🔥' },
+            {
+              id: 'c2',
+              track: 'text',
+              name: 'HOOK: Đừng lướt qua!',
+              start: 0,
+              duration: 4,
+              type: 'text',
+              text: 'ĐỪNG LƯỚT QUA! 🔥'
+            },
             { id: 'c3', track: 'audio', name: 'Trending Beat BGM', start: 0, duration: 15, type: 'audio' }
           ]
         }
@@ -208,12 +218,9 @@ export async function seedDemoProjects() {
         updatedAt: now - 86400000,
         isDeleted: false,
         tracksData: {
-          clips: [
-            { id: 'c1', track: 'video', name: 'Product Reveal', start: 0, duration: 30, type: 'video' }
-          ]
+          clips: [{ id: 'c1', track: 'video', name: 'Product Reveal', start: 0, duration: 30, type: 'video' }]
         }
       }
     ]);
   }
 }
-

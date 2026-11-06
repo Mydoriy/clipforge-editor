@@ -2,15 +2,34 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
-import { exportTimelineVideo, exportAudioOnly, exportCurrentFrameAsPng, exportCaptionsSrt } from '../utils/videoExporter';
+import {
+  exportTimelineVideo,
+  exportAudioOnly,
+  exportCurrentFrameAsPng,
+  exportCaptionsSrt
+} from '../utils/videoExporter';
 import { convertVideoToGif } from '../lib/ffmpeg';
 import { DEFAULT_SHORTCUTS, eventToKeyCombo, formatDisplayKey, detectShortcutConflict } from '../utils/shortcuts';
 import { isSupabaseConfigured, supabase } from '../utils/supabase';
-import { db, createDefaultProject, createProjectSnapshot, type ProjectEntity, type SnapshotEntity } from '../db';
+import {
+  db,
+  createDefaultProject,
+  createProjectSnapshot,
+  type ProjectEntity,
+  type SnapshotEntity,
+  type MediaEntity
+} from '../db';
 import { checkStorageQuota, type StorageEstimateResult } from '../lib/db';
 import { validateCapprojFile } from '../utils/capprojValidator';
 import { masterAudio } from '../engine/audioEngine';
 import { useLiveQuery } from 'dexie-react-hooks';
+import {
+  rankViralShorts,
+  renderShortThumbnail,
+  type ViralShortCandidate,
+  type BatchExportQueueItem
+} from '../engine/sceneDetector';
+import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import {
   X,
   Crown,
@@ -109,7 +128,9 @@ export const Modals: React.FC = () => {
   const abortSignalRef = useRef<{ aborted: boolean }>({ aborted: false });
   const [promptInput, setPromptInput] = useState('');
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimateResult | null>(null);
-  const [sentryConsent, setSentryConsent] = useState<boolean>(() => typeof window !== 'undefined' && localStorage.getItem('clipforge_sentry_consent') === 'true');
+  const [sentryConsent, setSentryConsent] = useState<boolean>(
+    () => typeof window !== 'undefined' && localStorage.getItem('clipforge_sentry_consent') === 'true'
+  );
   const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'perf'>('bug');
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackDesc, setFeedbackDesc] = useState('');
@@ -121,10 +142,14 @@ export const Modals: React.FC = () => {
     }
   }, [activeModal]);
 
-  const snapshots = useLiveQuery<SnapshotEntity[]>(
-    () => (currentProjectId ? db.snapshots.where('projectId').equals(currentProjectId).reverse().sortBy('timestamp') : (Promise.resolve([]) as any)),
-    [currentProjectId]
-  ) || [];
+  const snapshots =
+    useLiveQuery<SnapshotEntity[]>(
+      () =>
+        currentProjectId
+          ? db.snapshots.where('projectId').equals(currentProjectId).reverse().sortBy('timestamp')
+          : (Promise.resolve([]) as any),
+      [currentProjectId]
+    ) || [];
 
   // Probe codec support & init export file name
   useEffect(() => {
@@ -140,9 +165,11 @@ export const Modals: React.FC = () => {
           height: 1080,
           bitrate: 8000000,
           framerate: 30
-        }).then((res: any) => {
-          if (res?.supported) setSupportedCodecs((prev) => ({ ...prev, hevc: true }));
-        }).catch(() => {});
+        })
+          .then((res: any) => {
+            if (res?.supported) setSupportedCodecs((prev) => ({ ...prev, hevc: true }));
+          })
+          .catch(() => {});
 
         (window as any).VideoEncoder.isConfigSupported({
           codec: 'av01.0.08M.10',
@@ -150,9 +177,11 @@ export const Modals: React.FC = () => {
           height: 1080,
           bitrate: 8000000,
           framerate: 30
-        }).then((res: any) => {
-          if (res?.supported) setSupportedCodecs((prev) => ({ ...prev, av1: true }));
-        }).catch(() => {});
+        })
+          .then((res: any) => {
+            if (res?.supported) setSupportedCodecs((prev) => ({ ...prev, av1: true }));
+          })
+          .catch(() => {});
       }
     }
   }, [activeModal, projectTitle, duration]);
@@ -161,7 +190,7 @@ export const Modals: React.FC = () => {
   const [newProjName, setNewProjName] = useState('0917 - New Project');
   const [newProjAspect, setNewProjAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5' | '3:4'>('9:16');
   const [newProjRes, setNewProjRes] = useState<'1080p' | '720p' | '4k'>('1080p');
-  
+
   // Auth state
   const [authTab, setAuthTab] = useState<'signin' | 'signup'>('signin');
   const [authEmail, setAuthEmail] = useState('');
@@ -276,7 +305,11 @@ export const Modals: React.FC = () => {
   // Auto-clean trash older than 30 days
   useEffect(() => {
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    db.trash.where('deletedAt').below(thirtyDaysAgo).delete().catch(() => {});
+    db.trash
+      .where('deletedAt')
+      .below(thirtyDaysAgo)
+      .delete()
+      .catch(() => {});
   }, []);
 
   // Export all projects to .capproj file (File System Access API with download fallback)
@@ -356,7 +389,9 @@ export const Modals: React.FC = () => {
   // 1. AI Image State
   const [aiImgPrompt, setAiImgPrompt] = useState('Cyberpunk Tokyo night with rainy neon reflections 9:16');
   const [aiImgAspect, setAiImgAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5'>('9:16');
-  const [aiImgStyle, setAiImgStyle] = useState<'cyberpunk' | 'anime' | 'cinematic' | 'pastel' | 'neon3d' | 'retro'>('cyberpunk');
+  const [aiImgStyle, setAiImgStyle] = useState<'cyberpunk' | 'anime' | 'cinematic' | 'pastel' | 'neon3d' | 'retro'>(
+    'cyberpunk'
+  );
   const [aiImgPreview, setAiImgPreview] = useState<string | null>(null);
   const [aiImgLoading, setAiImgLoading] = useState(false);
 
@@ -381,13 +416,39 @@ export const Modals: React.FC = () => {
 
   // Section 8: AI-powered Creative Suite States
   // 1. Video Studio
-  const [vsScript, setVsScript] = useState('5 Bí quyết tạo video triệu view trên TikTok & Reels. Giữ chân người xem trong 3s đầu bằng một câu hỏi sốc. Đi thẳng vào giá trị cốt lõi, không vòng vo. Đưa ra ví dụ minh chứng thực tế. Kêu gọi hành động rõ ràng. Thử ngay hôm nay!');
+  const [vsScript, setVsScript] = useState(
+    '5 Bí quyết tạo video triệu view trên TikTok & Reels. Giữ chân người xem trong 3s đầu bằng một câu hỏi sốc. Đi thẳng vào giá trị cốt lõi, không vòng vo. Đưa ra ví dụ minh chứng thực tế. Kêu gọi hành động rõ ràng. Thử ngay hôm nay!'
+  );
   const [vsMusic, setVsMusic] = useState('trending-beat');
   const [vsScenes, setVsScenes] = useState([
-    { id: 1, title: 'Cảnh 1 (0-6s): Hook giữ chân', text: '5 Bí quyết tạo video triệu view trên TikTok!', bg: 'cyberpunk', duration: 6 },
-    { id: 2, title: 'Cảnh 2 (6-14s): Giá trị cốt lõi', text: 'Đi thẳng vào vấn đề trong 3 giây đầu tiên', bg: 'cinematic', duration: 8 },
-    { id: 3, title: 'Cảnh 3 (14-22s): Minh chứng thực tế', text: 'Công thức giữ chân 90% khán giả xem hết video', bg: 'neon3d', duration: 8 },
-    { id: 4, title: 'Cảnh 4 (22-30s): Kêu gọi hành động', text: 'Nhấn theo dõi và lưu video để thực hành nhé!', bg: 'anime', duration: 8 }
+    {
+      id: 1,
+      title: 'Cảnh 1 (0-6s): Hook giữ chân',
+      text: '5 Bí quyết tạo video triệu view trên TikTok!',
+      bg: 'cyberpunk',
+      duration: 6
+    },
+    {
+      id: 2,
+      title: 'Cảnh 2 (6-14s): Giá trị cốt lõi',
+      text: 'Đi thẳng vào vấn đề trong 3 giây đầu tiên',
+      bg: 'cinematic',
+      duration: 8
+    },
+    {
+      id: 3,
+      title: 'Cảnh 3 (14-22s): Minh chứng thực tế',
+      text: 'Công thức giữ chân 90% khán giả xem hết video',
+      bg: 'neon3d',
+      duration: 8
+    },
+    {
+      id: 4,
+      title: 'Cảnh 4 (22-30s): Kêu gọi hành động',
+      text: 'Nhấn theo dõi và lưu video để thực hành nhé!',
+      bg: 'anime',
+      duration: 8
+    }
   ]);
 
   // 2. AI Ad Maker
@@ -402,6 +463,52 @@ export const Modals: React.FC = () => {
   const [ltsDurationPreset, setLtsDurationPreset] = useState<number>(30);
   const [ltsDetectMode, setLtsDetectMode] = useState<'scene' | 'duration'>('scene');
   const [ltsSelectedShorts, setLtsSelectedShorts] = useState<number[]>([1, 2]);
+  const [ltsFocalOffset, setLtsFocalOffset] = useState<number>(0); // -50% to +50%
+  const [ltsExportQueue, setLtsExportQueue] = useState<BatchExportQueueItem[]>([]);
+  const [ltsIsExporting, setLtsIsExporting] = useState<boolean>(false);
+  const ltsAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Dynamic ranked viral shorts candidates from sceneDetector
+  const ltsCandidates: ViralShortCandidate[] = React.useMemo(() => {
+    return rankViralShorts(
+      300,
+      ltsDurationPreset,
+      [
+        { timestamp: 15, diff: 0.65 },
+        { timestamp: 45, diff: 0.42 },
+        { timestamp: 80, diff: 0.78 },
+        { timestamp: 120, diff: 0.55 },
+        { timestamp: 180, diff: 0.62 },
+        { timestamp: 240, diff: 0.49 }
+      ],
+      [
+        { timestamp: 20, energy: 0.95 },
+        { timestamp: 85, energy: 0.88 },
+        { timestamp: 125, energy: 0.91 },
+        { timestamp: 185, energy: 0.84 }
+      ]
+    );
+  }, [ltsDurationPreset, ltsDetectMode]);
+
+  // Helper to persist generated media assets into Library (db.media)
+  const saveDataUrlToLibrary = async (dataUrl: string, name: string, type: 'image' | 'video' | 'audio' = 'image') => {
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      await db.media.add({
+        id: crypto.randomUUID(),
+        name,
+        type,
+        blob,
+        size: blob.size,
+        createdAt: Date.now()
+      });
+      return true;
+    } catch (err) {
+      console.warn('Lỗi lưu vào Thư viện:', err);
+      return false;
+    }
+  };
 
   // Helper for available video clips
   const videoClips = clips.filter((c) => c.track === 'video' || c.track === 'effect');
@@ -411,9 +518,16 @@ export const Modals: React.FC = () => {
     const canvas = document.createElement('canvas');
     let w = 540;
     let h = 960;
-    if (aspect === '16:9') { w = 960; h = 540; }
-    else if (aspect === '1:1') { w = 600; h = 600; }
-    else if (aspect === '4:5') { w = 600; h = 750; }
+    if (aspect === '16:9') {
+      w = 960;
+      h = 540;
+    } else if (aspect === '1:1') {
+      w = 600;
+      h = 600;
+    } else if (aspect === '4:5') {
+      w = 600;
+      h = 750;
+    }
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
@@ -442,7 +556,8 @@ export const Modals: React.FC = () => {
       grad.addColorStop(0, '#0d0221');
       grad.addColorStop(0.5, '#090c29');
       grad.addColorStop(1, '#000000');
-    } else { // retro
+    } else {
+      // retro
       grad.addColorStop(0, '#2b0938');
       grad.addColorStop(0.5, '#5c1050');
       grad.addColorStop(1, '#0f051d');
@@ -467,13 +582,13 @@ export const Modals: React.FC = () => {
         ctx.lineTo(x, h);
         ctx.stroke();
       }
-      const sunGrad = ctx.createRadialGradient(w/2, horizon - 20, 10, w/2, horizon - 20, w * 0.26);
+      const sunGrad = ctx.createRadialGradient(w / 2, horizon - 20, 10, w / 2, horizon - 20, w * 0.26);
       sunGrad.addColorStop(0, '#f43f5e');
       sunGrad.addColorStop(0.6, '#ec4899');
       sunGrad.addColorStop(1, 'rgba(236, 72, 153, 0)');
       ctx.fillStyle = sunGrad;
       ctx.beginPath();
-      ctx.arc(w/2, horizon - 20, w * 0.26, 0, Math.PI * 2);
+      ctx.arc(w / 2, horizon - 20, w * 0.26, 0, Math.PI * 2);
       ctx.fill();
     } else if (style === 'anime') {
       ctx.fillStyle = 'rgba(255, 240, 210, 0.85)';
@@ -481,45 +596,53 @@ export const Modals: React.FC = () => {
       ctx.arc(w * 0.72, h * 0.26, w * 0.12, 0, Math.PI * 2);
       ctx.fill();
       for (let i = 0; i < 35; i++) {
-        const px = ((i * 137) % w);
-        const py = ((i * 257) % h);
+        const px = (i * 137) % w;
+        const py = (i * 257) % h;
         ctx.fillStyle = 'rgba(255, 182, 193, 0.75)';
         ctx.beginPath();
         ctx.ellipse(px, py, 6, 3, Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (style === 'cinematic') {
-      const flareGrad = ctx.createLinearGradient(0, h/2 - 4, w, h/2 + 4);
+      const flareGrad = ctx.createLinearGradient(0, h / 2 - 4, w, h / 2 + 4);
       flareGrad.addColorStop(0, 'rgba(34, 211, 238, 0)');
       flareGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.9)');
       flareGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
       ctx.fillStyle = flareGrad;
-      ctx.fillRect(0, h/2 - 3, w, 6);
+      ctx.fillRect(0, h / 2 - 3, w, 6);
 
-      const centerGlow = ctx.createRadialGradient(w/2, h/2, 2, w/2, h/2, w * 0.35);
+      const centerGlow = ctx.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w * 0.35);
       centerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
       centerGlow.addColorStop(0.3, 'rgba(34, 211, 238, 0.5)');
       centerGlow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = centerGlow;
       ctx.beginPath();
-      ctx.arc(w/2, h/2, w * 0.35, 0, Math.PI * 2);
+      ctx.arc(w / 2, h / 2, w * 0.35, 0, Math.PI * 2);
       ctx.fill();
     } else if (style === 'neon3d') {
       for (let r = 1; r <= 5; r++) {
         ctx.strokeStyle = r % 2 === 0 ? 'rgba(34, 211, 238, 0.75)' : 'rgba(168, 85, 247, 0.75)';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.ellipse(w/2, h/2 + r * 14, w * 0.32 - r * 12, h * 0.14 - r * 5, Math.PI / 6, 0, Math.PI * 2);
+        ctx.ellipse(w / 2, h / 2 + r * 14, w * 0.32 - r * 12, h * 0.14 - r * 5, Math.PI / 6, 0, Math.PI * 2);
         ctx.stroke();
       }
-    } else { // pastel
+    } else {
+      // pastel
       for (let i = 0; i < 6; i++) {
-        const orbGrad = ctx.createRadialGradient(w * (0.2 + i * 0.13), h * (0.3 + (i%2) * 0.3), 10, w * (0.2 + i * 0.13), h * (0.3 + (i%2) * 0.3), w * 0.28);
+        const orbGrad = ctx.createRadialGradient(
+          w * (0.2 + i * 0.13),
+          h * (0.3 + (i % 2) * 0.3),
+          10,
+          w * (0.2 + i * 0.13),
+          h * (0.3 + (i % 2) * 0.3),
+          w * 0.28
+        );
         orbGrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
         orbGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = orbGrad;
         ctx.beginPath();
-        ctx.arc(w * (0.2 + i * 0.13), h * (0.3 + (i%2) * 0.3), w * 0.28, 0, Math.PI * 2);
+        ctx.arc(w * (0.2 + i * 0.13), h * (0.3 + (i % 2) * 0.3), w * 0.28, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -565,8 +688,9 @@ export const Modals: React.FC = () => {
     }, 350);
   };
 
-  const handleAddAiImageToTimeline = () => {
+  const handleAddAiImageToTimeline = async () => {
     const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+    await saveDataUrlToLibrary(imgUrl, `AI_${aiImgStyle}_${Date.now()}.png`, 'image');
     addClip({
       track: 'video',
       name: `AI: ${aiImgPrompt.slice(0, 16) || aiImgStyle} (${aiImgAspect})`,
@@ -576,27 +700,52 @@ export const Modals: React.FC = () => {
       duration: 5,
       filter: aiImgStyle === 'cinematic' ? 'cinematic' : undefined
     });
-    showToast('Đã chèn ảnh AI vào timeline video!', 'success');
+    showToast('Đã lưu vào Thư viện & chèn ảnh AI vào timeline!', 'success');
     closeModal();
   };
 
-  const handleSaveAiImageToLibrary = async () => {
-    try {
-      const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
-      const res = await fetch(imgUrl);
-      const blob = await res.blob();
-      await db.media.add({
-        id: crypto.randomUUID(),
-        name: `AI_${aiImgStyle}_${Date.now()}.png`,
-        type: 'image',
-        blob: blob,
-        size: blob.size,
-        createdAt: Date.now()
-      });
-      showToast('Đã lưu ảnh AI vào Thư viện (Library)!', 'success');
-    } catch (err: any) {
-      showToast('Lỗi lưu ảnh: ' + err.message, 'error');
+  const handleOpenAiImageInEditor = async () => {
+    const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+    await saveDataUrlToLibrary(imgUrl, `AI_${aiImgStyle}_${Date.now()}.png`, 'image');
+    let projId = currentProjectId;
+    if (!projId) {
+      projId = 'proj-ai-' + Date.now();
+      const newProj: ProjectEntity = {
+        id: projId,
+        title: `AI Image (${aiImgAspect}) • ${aiImgStyle}`,
+        width: 1080,
+        height: 1920,
+        duration: 15,
+        fps: 30,
+        thumbnail: imgUrl,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDeleted: false
+      };
+      await db.projects.add(newProj);
+      setCurrentProjectId(projId);
+      setProjectTitle(newProj.title);
+      setDuration(15);
     }
+    addClip({
+      track: 'video',
+      name: `AI: ${aiImgPrompt.slice(0, 16) || aiImgStyle} (${aiImgAspect})`,
+      src: imgUrl,
+      type: 'image',
+      start: 0,
+      duration: 5,
+      filter: aiImgStyle === 'cinematic' ? 'cinematic' : undefined
+    });
+    showToast('Đã lưu vào Thư viện và mở trong Editor!', 'success');
+    closeModal();
+    navigate(`/editor/${projId}`);
+  };
+
+  const handleSaveAiImageToLibrary = async () => {
+    const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+    const ok = await saveDataUrlToLibrary(imgUrl, `AI_${aiImgStyle}_${Date.now()}.png`, 'image');
+    if (ok) showToast('Đã lưu ảnh AI vào Thư viện (Library)!', 'success');
+    else showToast('Lỗi lưu ảnh vào Thư viện', 'error');
   };
 
   const handleDownloadAiImage = () => {
@@ -609,29 +758,72 @@ export const Modals: React.FC = () => {
   };
 
   // Handler for Extend Video
-  const handleApplyExtendVideo = () => {
-    const selectedClip = videoClips.find(c => c.id === extendClipId) || videoClips[0];
+  const handleApplyExtendVideo = async () => {
+    const selectedClip = videoClips.find((c) => c.id === extendClipId) || videoClips[0];
     if (selectedClip) {
       const newDuration = selectedClip.duration + extendSecs;
       const updates: any = {
         duration: newDuration,
-        speed: extendMode === 'slowmo' ? 0.75 : (selectedClip.speed || 1)
+        speed: extendMode === 'slowmo' ? 0.75 : selectedClip.speed || 1
       };
       updateClip(selectedClip.id, updates);
       if (selectedClip.start + newDuration > duration) {
         setDuration(selectedClip.start + newDuration);
       }
-      showToast(`Đã kéo dài clip "${selectedClip.name}" thêm +${extendSecs}s (${extendMode === 'freeze' ? 'Giữ frame cuối' : extendMode === 'pingpong' ? 'Ping-pong' : 'Slow-mo'})!`, 'success');
+      showToast(
+        `Đã kéo dài clip "${selectedClip.name}" thêm +${extendSecs}s (${extendMode === 'freeze' ? 'Giữ frame cuối' : extendMode === 'pingpong' ? 'Ping-pong' : 'Slow-mo'})!`,
+        'success'
+      );
     } else {
       setDuration(duration + extendSecs);
       showToast(`Đã kéo dài thời lượng tổng thêm +${extendSecs}s (Tổng: ${duration + extendSecs}s)!`, 'success');
     }
+    const thumbUrl = createProceduralAiImage('9:16', 'cinematic', `Extended Video +${extendSecs}s`);
+    await saveDataUrlToLibrary(thumbUrl, `Extended_Video_${Date.now()}.png`, 'video');
     closeModal();
+  };
+
+  const handleOpenExtendInEditor = async () => {
+    const thumbUrl = createProceduralAiImage('9:16', 'cinematic', `Extended Video +${extendSecs}s`);
+    await saveDataUrlToLibrary(thumbUrl, `Extended_Video_${Date.now()}.png`, 'video');
+    const id = 'proj-ext-' + Date.now();
+    const title = `Video Kéo Dài +${extendSecs}s (${extendMode})`;
+    const newProj: ProjectEntity = {
+      id,
+      title,
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      duration: 15 + extendSecs,
+      thumbnail: thumbUrl,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isDeleted: false
+    };
+    await db.projects.add(newProj);
+    setCurrentProjectId(id);
+    setProjectTitle(title);
+    setDuration(15 + extendSecs);
+    setClips([
+      {
+        id: 'clip-ext-' + Date.now(),
+        track: 'video',
+        name: `Clip Kéo Dài +${extendSecs}s (${extendMode})`,
+        src: thumbUrl,
+        type: 'image',
+        start: 0,
+        duration: 15 + extendSecs,
+        filter: 'cinematic'
+      } as any
+    ]);
+    showToast('Đã lưu vào Thư viện và mở trong Editor!', 'success');
+    closeModal();
+    navigate(`/editor/${id}`);
   };
 
   // Handler for AI Edit
   const handleApplyAiEdit = () => {
-    const target = videoClips.find(c => c.id === aiEditClipId) || videoClips[0];
+    const target = videoClips.find((c) => c.id === aiEditClipId) || videoClips[0];
     if (!target) {
       addClip({
         track: 'video',
@@ -651,7 +843,13 @@ export const Modals: React.FC = () => {
     const updates: any = {};
     const actionsTaken: string[] = [];
 
-    if (p.includes('tăng tốc') || p.includes('speed') || p.includes('nhanh') || p.includes('1.5x') || p.includes('2x')) {
+    if (
+      p.includes('tăng tốc') ||
+      p.includes('speed') ||
+      p.includes('nhanh') ||
+      p.includes('1.5x') ||
+      p.includes('2x')
+    ) {
       updates.speed = p.includes('2x') ? 2.0 : 1.5;
       actionsTaken.push(`Tăng tốc ${updates.speed}x`);
     } else if (p.includes('chậm') || p.includes('slow') || p.includes('0.75x') || p.includes('0.5x')) {
@@ -697,18 +895,61 @@ export const Modals: React.FC = () => {
   };
 
   // Handler for Enhance Quality
-  const handleApplyEnhance = () => {
-    const target = videoClips.find(c => c.id === enhanceClipId) || videoClips[0];
+  const handleApplyEnhance = async () => {
+    const target = videoClips.find((c) => c.id === enhanceClipId) || videoClips[0];
     if (target) {
       updateClip(target.id, {
         filter: 'cinematic',
         opacity: 1
       });
-      showToast(`Đã nâng cấp chất lượng HD Lanczos (Cường độ ${enhanceIntensity}%) cho clip "${target.name}"!`, 'success');
+      showToast(
+        `Đã nâng cấp chất lượng HD Lanczos (Cường độ ${enhanceIntensity}%) cho clip "${target.name}"!`,
+        'success'
+      );
     } else {
       showToast(`Đã nâng cấp bộ lọc chất lượng HD Lanczos (+${enhanceIntensity}%) cho toàn bộ dự án!`, 'success');
     }
+    const snapUrl = createProceduralAiImage('9:16', 'neon3d', `Enhanced HD +${enhanceIntensity}%`);
+    await saveDataUrlToLibrary(snapUrl, `Enhanced_HD_${Date.now()}.png`, 'image');
     closeModal();
+  };
+
+  const handleOpenEnhanceInEditor = async () => {
+    const snapUrl = createProceduralAiImage('9:16', 'neon3d', `Enhanced HD +${enhanceIntensity}%`);
+    await saveDataUrlToLibrary(snapUrl, `Enhanced_HD_${Date.now()}.png`, 'image');
+    const id = 'proj-enh-' + Date.now();
+    const title = `Video Nâng Cấp HD Lanczos (+${enhanceIntensity}%)`;
+    const newProj: ProjectEntity = {
+      id,
+      title,
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      duration: 15,
+      thumbnail: snapUrl,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isDeleted: false
+    };
+    await db.projects.add(newProj);
+    setCurrentProjectId(id);
+    setProjectTitle(title);
+    setDuration(15);
+    setClips([
+      {
+        id: 'clip-enh-' + Date.now(),
+        track: 'video',
+        name: `Clip Nâng Cấp HD Lanczos (+${enhanceIntensity}%)`,
+        src: snapUrl,
+        type: 'image',
+        start: 0,
+        duration: 15,
+        filter: 'cinematic'
+      } as any
+    ]);
+    showToast('Đã lưu vào Thư viện và mở trong Editor!', 'success');
+    closeModal();
+    navigate(`/editor/${id}`);
   };
 
   // Section 8 Handlers
@@ -717,6 +958,9 @@ export const Modals: React.FC = () => {
     try {
       const id = 'proj-vs-' + Date.now();
       const title = 'Video Studio 30s • Script to Video';
+      const thumbUrl = createProceduralAiImage('9:16', 'cyberpunk', 'Video Studio 30s');
+      await saveDataUrlToLibrary(thumbUrl, `VS_Thumb_${Date.now()}.png`, 'image');
+
       const newProj: ProjectEntity = {
         id,
         title,
@@ -724,7 +968,7 @@ export const Modals: React.FC = () => {
         height: 1920,
         fps: 30,
         duration: 30,
-        thumbnail: createProceduralAiImage('9:16', 'cyberpunk', 'Video Studio 30s'),
+        thumbnail: thumbUrl,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         isDeleted: false
@@ -736,12 +980,16 @@ export const Modals: React.FC = () => {
 
       const generatedClips: any[] = [];
       let startTime = 0;
-      vsScenes.forEach((sc, idx) => {
+      for (let idx = 0; idx < vsScenes.length; idx++) {
+        const sc = vsScenes[idx];
+        const sceneImg = createProceduralAiImage('9:16', sc.bg || 'cyberpunk', sc.text);
+        await saveDataUrlToLibrary(sceneImg, `VS_Scene_${idx + 1}_${Date.now()}.png`, 'image');
+
         generatedClips.push({
           id: `clip-vs-vid-${idx}-${Date.now()}`,
           track: 'video',
           name: `Cảnh ${idx + 1}: ${sc.title}`,
-          src: createProceduralAiImage('9:16', sc.bg || 'cyberpunk', sc.text),
+          src: sceneImg,
           type: 'image',
           start: startTime,
           duration: sc.duration,
@@ -761,7 +1009,7 @@ export const Modals: React.FC = () => {
         });
 
         startTime += sc.duration;
-      });
+      }
 
       generatedClips.push({
         id: `clip-vs-aud-${Date.now()}`,
@@ -774,7 +1022,7 @@ export const Modals: React.FC = () => {
       });
 
       setClips(generatedClips);
-      showToast('Đã tạo dự án Video 30s từ kịch bản!', 'success');
+      showToast('Đã lưu tài nguyên vào Thư viện và mở dự án Video Studio!', 'success');
       closeModal();
       navigate(`/editor/${id}`);
     } catch (err: any) {
@@ -782,11 +1030,36 @@ export const Modals: React.FC = () => {
     }
   };
 
+  const handleAppendVideoStudioToProject = async () => {
+    let curTime = duration;
+    for (let idx = 0; idx < vsScenes.length; idx++) {
+      const sc = vsScenes[idx];
+      const sceneImg = createProceduralAiImage('9:16', sc.bg || 'cyberpunk', sc.text);
+      await saveDataUrlToLibrary(sceneImg, `VS_Scene_${idx + 1}_${Date.now()}.png`, 'image');
+      addClip({
+        track: 'video',
+        name: `Cảnh ${idx + 1}: ${sc.title}`,
+        src: sceneImg,
+        type: 'image',
+        start: curTime,
+        duration: sc.duration,
+        filter: sc.bg === 'cinematic' ? 'cinematic' : undefined
+      });
+      curTime += sc.duration;
+    }
+    setDuration(curTime);
+    showToast('Đã lưu vào Thư viện và thêm vào Timeline dự án!', 'success');
+    closeModal();
+  };
+
   // 2. AI Ad Maker Handler
   const handleCreateAdProject = async () => {
     try {
       const id = 'proj-ad-' + Date.now();
       const title = `Quảng Cáo: ${adProdName} (Variant ${adActiveVariant})`;
+      const thumbUrl = createProceduralAiImage('9:16', 'neon3d', adProdName);
+      await saveDataUrlToLibrary(thumbUrl, `Ad_Thumb_${Date.now()}.png`, 'image');
+
       const newProj: ProjectEntity = {
         id,
         title,
@@ -794,7 +1067,7 @@ export const Modals: React.FC = () => {
         height: 1920,
         fps: 30,
         duration: 20,
-        thumbnail: createProceduralAiImage('9:16', 'neon3d', adProdName),
+        thumbnail: thumbUrl,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         isDeleted: false
@@ -804,38 +1077,42 @@ export const Modals: React.FC = () => {
       setProjectTitle(title);
       setDuration(20);
 
-      const scenes = adActiveVariant === 'A'
-        ? [
-            { text: `🔥 SALE SỐC: ${adProdName}`, dur: 4, bg: 'retro' },
-            { text: `✨ Điểm nổi bật: ${adUsp.split(',')[0] || adUsp}`, dur: 4, bg: 'cyberpunk' },
-            { text: `⚡ Pin khủng 60H & Bass siêu sâu`, dur: 4, bg: 'neon3d' },
-            { text: `⭐⭐⭐⭐⭐ 50,000+ Khách hàng hài lòng`, dur: 4, bg: 'cinematic' },
-            { text: `🛒 ${adCta} • MUA NGAY!`, dur: 4, bg: 'pastel' }
-          ]
-        : adActiveVariant === 'B'
-        ? [
-            { text: `📱 Review chân thực chiếc tai nghe hot nhất!`, dur: 4, bg: 'cinematic' },
-            { text: `🎧 Bật chống ồn là êm ru cả không gian`, dur: 4, bg: 'cyberpunk' },
-            { text: `🔋 Dùng cả tuần sạc đúng 1 lần`, dur: 4, bg: 'neon3d' },
-            { text: `💎 Chất âm vượt xa tầm giá`, dur: 4, bg: 'retro' },
-            { text: `👉 ${adCta} tại giỏ hàng góc trái!`, dur: 4, bg: 'pastel' }
-          ]
-        : [
-            { text: `Định nghĩa lại trải nghiệm âm thanh`, dur: 4, bg: 'cinematic' },
-            { text: `${adProdName} • Chuẩn âm Hi-Res`, dur: 4, bg: 'neon3d' },
-            { text: `${adUsp.split(',')[0]} & Thiết kế tối giản`, dur: 4, bg: 'cyberpunk' },
-            { text: `Sự lựa chọn của giới chuyên gia`, dur: 4, bg: 'retro' },
-            { text: `${adCta} • Ưu đãi độc quyền`, dur: 4, bg: 'pastel' }
-          ];
+      const scenes =
+        adActiveVariant === 'A'
+          ? [
+              { text: `🔥 SALE SỐC: ${adProdName}`, dur: 4, bg: 'retro' },
+              { text: `✨ Điểm nổi bật: ${adUsp.split(',')[0] || adUsp}`, dur: 4, bg: 'cyberpunk' },
+              { text: `⚡ Pin khủng 60H & Bass siêu sâu`, dur: 4, bg: 'neon3d' },
+              { text: `⭐⭐⭐⭐⭐ 50,000+ Khách hàng hài lòng`, dur: 4, bg: 'cinematic' },
+              { text: `🛒 ${adCta} • MUA NGAY!`, dur: 4, bg: 'pastel' }
+            ]
+          : adActiveVariant === 'B'
+            ? [
+                { text: `📱 Review chân thực chiếc tai nghe hot nhất!`, dur: 4, bg: 'cinematic' },
+                { text: `🎧 Bật chống ồn là êm ru cả không gian`, dur: 4, bg: 'cyberpunk' },
+                { text: `🔋 Dùng cả tuần sạc đúng 1 lần`, dur: 4, bg: 'neon3d' },
+                { text: `💎 Chất âm vượt xa tầm giá`, dur: 4, bg: 'retro' },
+                { text: `👉 ${adCta} tại giỏ hàng góc trái!`, dur: 4, bg: 'pastel' }
+              ]
+            : [
+                { text: `Định nghĩa lại trải nghiệm âm thanh`, dur: 4, bg: 'cinematic' },
+                { text: `${adProdName} • Chuẩn âm Hi-Res`, dur: 4, bg: 'neon3d' },
+                { text: `${adUsp.split(',')[0]} & Thiết kế tối giản`, dur: 4, bg: 'cyberpunk' },
+                { text: `Sự lựa chọn của giới chuyên gia`, dur: 4, bg: 'retro' },
+                { text: `${adCta} • Ưu đãi độc quyền`, dur: 4, bg: 'pastel' }
+              ];
 
       const clipsData: any[] = [];
       let cur = 0;
-      scenes.forEach((s, idx) => {
+      for (let idx = 0; idx < scenes.length; idx++) {
+        const s = scenes[idx];
+        const sceneImg = createProceduralAiImage('9:16', s.bg, s.text);
+        await saveDataUrlToLibrary(sceneImg, `Ad_Scene_${idx + 1}_${Date.now()}.png`, 'image');
         clipsData.push({
           id: `clip-ad-v-${idx}-${Date.now()}`,
           track: 'video',
           name: `Cảnh ${idx + 1}: ${s.text.slice(0, 16)}`,
-          src: createProceduralAiImage('9:16', s.bg, s.text),
+          src: sceneImg,
           type: 'image',
           start: cur,
           duration: s.dur,
@@ -853,7 +1130,7 @@ export const Modals: React.FC = () => {
           scale: 1.1
         });
         cur += s.dur;
-      });
+      }
 
       clipsData.push({
         id: `clip-ad-cta-${Date.now()}`,
@@ -868,7 +1145,7 @@ export const Modals: React.FC = () => {
       });
 
       setClips(clipsData);
-      showToast('Đã tạo Storyboard quảng cáo và đưa vào Editor!', 'success');
+      showToast('Đã lưu vào Thư viện và tạo Storyboard quảng cáo!', 'success');
       closeModal();
       navigate(`/editor/${id}`);
     } catch (err: any) {
@@ -876,19 +1153,47 @@ export const Modals: React.FC = () => {
     }
   };
 
+  const handleAppendAdToProject = async () => {
+    let cur = duration;
+    const s = { text: `🔥 SALE SỐC: ${adProdName}`, dur: 5, bg: 'retro' };
+    const sceneImg = createProceduralAiImage('9:16', s.bg, s.text);
+    await saveDataUrlToLibrary(sceneImg, `Ad_Insert_${Date.now()}.png`, 'image');
+    addClip({
+      track: 'video',
+      name: `Quảng cáo: ${adProdName}`,
+      src: sceneImg,
+      type: 'image',
+      start: cur,
+      duration: s.dur,
+      filter: 'cinematic'
+    });
+    setDuration(cur + s.dur);
+    showToast('Đã lưu vào Thư viện và chèn Quảng cáo vào Timeline!', 'success');
+    closeModal();
+  };
+
   // 3. Long Video to Shorts Handlers
   const handleOpenShortInEditor = async (shortId: number) => {
     try {
+      const candidate = ltsCandidates.find((c) => c.id === shortId) || ltsCandidates[0];
       const id = 'proj-short-' + Date.now();
-      const title = `Short #${shortId} • Auto-crop 9:16 (${ltsDurationPreset}s)`;
+      const title = `Short #${shortId} • Auto-crop 9:16 (${candidate.duration}s)`;
+      const thumbUrl = renderShortThumbnail(
+        candidate.title,
+        `${candidate.start}s - ${candidate.end}s`,
+        candidate.viralScore,
+        ltsFocalOffset
+      );
+      await saveDataUrlToLibrary(thumbUrl, `Short_${shortId}_${Date.now()}.png`, 'video');
+
       const newProj: ProjectEntity = {
         id,
         title,
         width: 1080,
         height: 1920,
         fps: 30,
-        duration: ltsDurationPreset,
-        thumbnail: createProceduralAiImage('9:16', 'cyberpunk', `Short ${shortId}`),
+        duration: candidate.duration,
+        thumbnail: thumbUrl,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         isDeleted: false
@@ -896,17 +1201,17 @@ export const Modals: React.FC = () => {
       await db.projects.add(newProj);
       setCurrentProjectId(id);
       setProjectTitle(title);
-      setDuration(ltsDurationPreset);
+      setDuration(candidate.duration);
 
       const shortClips: any[] = [
         {
           id: `clip-short-${Date.now()}`,
           track: 'video',
-          name: `Short #${shortId}: Auto-crop 9:16 Center Face`,
-          src: createProceduralAiImage('9:16', 'cinematic', `Short ${shortId} 9:16`),
+          name: `Short #${shortId}: ${candidate.title}`,
+          src: thumbUrl,
           type: 'video',
           start: 0,
-          duration: ltsDurationPreset,
+          duration: candidate.duration,
           scale: 1.8,
           filter: 'cinematic'
         },
@@ -914,17 +1219,17 @@ export const Modals: React.FC = () => {
           id: `clip-short-cap-${Date.now()}`,
           track: 'text',
           name: 'Phụ đề Cao trào',
-          text: `🔥 CAO TRÀO SHORT #${shortId}`,
+          text: `🔥 ${candidate.tag.toUpperCase()}`,
           type: 'text',
           start: 1,
-          duration: ltsDurationPreset - 2,
+          duration: Math.max(2, candidate.duration - 2),
           y: 110,
           scale: 1.15
         }
       ];
 
       setClips(shortClips);
-      showToast(`Đã đưa Short #${shortId} (Auto-crop 9:16) vào Editor!`, 'success');
+      showToast(`Đã lưu vào Thư viện và đưa Short #${shortId} (Auto-crop 9:16) vào Editor!`, 'success');
       closeModal();
       navigate(`/editor/${id}`);
     } catch (err: any) {
@@ -932,35 +1237,125 @@ export const Modals: React.FC = () => {
     }
   };
 
-  const handleBatchExportShorts = () => {
+  const handleAddShortToProject = async (shortId: number) => {
+    try {
+      const candidate = ltsCandidates.find((c) => c.id === shortId) || ltsCandidates[0];
+      const thumbUrl = renderShortThumbnail(
+        candidate.title,
+        `${candidate.start}s - ${candidate.end}s`,
+        candidate.viralScore,
+        ltsFocalOffset
+      );
+      await saveDataUrlToLibrary(thumbUrl, `Short_${shortId}_${Date.now()}.png`, 'video');
+      addClip({
+        track: 'video',
+        name: `Short #${shortId}: ${candidate.title}`,
+        src: thumbUrl,
+        type: 'video',
+        start: duration,
+        duration: candidate.duration,
+        filter: 'cinematic'
+      });
+      setDuration(duration + candidate.duration);
+      showToast(`Đã lưu vào Thư viện và chèn Short #${shortId} vào Timeline!`, 'success');
+      closeModal();
+    } catch (err: any) {
+      showToast('Lỗi thêm short: ' + err.message, 'error');
+    }
+  };
+
+  const handleBatchExportShorts = async () => {
     if (ltsSelectedShorts.length === 0) {
       showToast('Vui lòng chọn ít nhất 1 đoạn Short để xuất!', 'error');
       return;
     }
-    showToast(`Đang xuất hàng loạt ${ltsSelectedShorts.length} video shorts chuẩn 9:16...`, 'info');
-    setTimeout(() => {
-      ltsSelectedShorts.forEach((sid, idx) => {
-        setTimeout(() => {
-          const a = document.createElement('a');
-          const canvas = document.createElement('canvas');
-          canvas.width = 540;
-          canvas.height = 960;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, 540, 960);
-            ctx.fillStyle = '#22d3ee';
-            ctx.font = 'bold 28px sans-serif';
-            ctx.fillText(`SHORT #${sid} (9:16)`, 60, 480);
-          }
-          a.href = canvas.toDataURL('image/png');
-          a.download = `Short_${sid}_AutoCrop_916.png`;
-          a.click();
-        }, idx * 250);
-      });
-      showToast(`Đã xuất thành công ${ltsSelectedShorts.length} video shorts chuẩn 9:16!`, 'success');
-      closeModal();
-    }, 500);
+
+    const abortCtrl = new AbortController();
+    ltsAbortControllerRef.current = abortCtrl;
+    setLtsIsExporting(true);
+
+    const initialQueue: BatchExportQueueItem[] = ltsSelectedShorts.map((sid) => {
+      const cand = ltsCandidates.find((c) => c.id === sid);
+      return {
+        shortId: sid,
+        title: cand?.title || `Short #${sid}`,
+        duration: cand?.duration || 30,
+        progress: 0,
+        status: 'queued'
+      };
+    });
+    setLtsExportQueue(initialQueue);
+    showToast(`Đang khởi tạo hàng đợi xuất ${initialQueue.length} video shorts chuẩn 9:16...`, 'info');
+
+    try {
+      for (let i = 0; i < initialQueue.length; i++) {
+        if (abortCtrl.signal.aborted) {
+          break;
+        }
+
+        const sid = initialQueue[i].shortId;
+        const cand = ltsCandidates.find((c) => c.id === sid);
+
+        // Update status to processing
+        setLtsExportQueue((prev) =>
+          prev.map((item, idx) => (idx === i ? { ...item, status: 'processing', progress: 15 } : item))
+        );
+
+        await new Promise((res) => setTimeout(res, 200));
+        if (abortCtrl.signal.aborted) break;
+
+        setLtsExportQueue((prev) => prev.map((item, idx) => (idx === i ? { ...item, progress: 65 } : item)));
+
+        const dataUrl = renderShortThumbnail(
+          cand?.title || `Short #${sid}`,
+          `${cand?.start || 0}s - ${cand?.end || 30}s`,
+          cand?.viralScore || 90,
+          ltsFocalOffset
+        );
+
+        // Save to library
+        await saveDataUrlToLibrary(dataUrl, `Export_Short_${sid}_916.png`, 'video');
+
+        // Trigger file download
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `Short_${sid}_AutoCrop_916.png`;
+        a.click();
+
+        setLtsExportQueue((prev) =>
+          prev.map((item, idx) => (idx === i ? { ...item, status: 'done', progress: 100 } : item))
+        );
+      }
+
+      if (abortCtrl.signal.aborted) {
+        setLtsExportQueue((prev) =>
+          prev.map((item) =>
+            item.status === 'processing' || item.status === 'queued' ? { ...item, status: 'cancelled' } : item
+          )
+        );
+        showToast('Đã dừng xuất hàng loạt theo yêu cầu.', 'warning');
+      } else {
+        showToast(`Đã xuất thành công toàn bộ ${initialQueue.length} shorts vào Thư viện & tải về máy!`, 'success');
+      }
+    } catch (err: any) {
+      showToast('Lỗi xuất hàng loạt: ' + err.message, 'error');
+    } finally {
+      setLtsIsExporting(false);
+      ltsAbortControllerRef.current = null;
+    }
+  };
+
+  const handleCancelBatchExport = () => {
+    if (ltsAbortControllerRef.current) {
+      ltsAbortControllerRef.current.abort();
+      setLtsIsExporting(false);
+      setLtsExportQueue((prev) =>
+        prev.map((item) =>
+          item.status === 'processing' || item.status === 'queued' ? { ...item, status: 'cancelled' } : item
+        )
+      );
+      showToast('Đã hủy quá trình xuất hàng loạt Shorts!', 'info');
+    }
   };
 
   if (!activeModal) return null;
@@ -1001,7 +1396,9 @@ export const Modals: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const cleanTitle = (exportFileName || projectTitle || 'Frame').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const cleanTitle = (exportFileName || projectTitle || 'Frame')
+        .trim()
+        .replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
       a.download = `${cleanTitle}_frame_${currentTime.toFixed(2)}s.png`;
       a.click();
       URL.revokeObjectURL(url);
@@ -1018,7 +1415,9 @@ export const Modals: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const cleanTitle = (exportFileName || projectTitle || 'Subtitles').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const cleanTitle = (exportFileName || projectTitle || 'Subtitles')
+        .trim()
+        .replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
       a.download = `${cleanTitle}_captions.srt`;
       a.click();
       URL.revokeObjectURL(url);
@@ -1033,21 +1432,19 @@ export const Modals: React.FC = () => {
     try {
       showToast('Đang tạo ảnh động GIF từ timeline...', 'info');
       const shortDuration = Math.min(duration || 3, 5);
-      const videoBlob = await exportTimelineVideo(
-        clips,
-        shortDuration,
-        {
-          resolution: '720p',
-          fps: 24,
-          format: 'mp4',
-          range: { start: 0, end: shortDuration }
-        }
-      );
+      const videoBlob = await exportTimelineVideo(clips, shortDuration, {
+        resolution: '720p',
+        fps: 24,
+        format: 'mp4',
+        range: { start: 0, end: shortDuration }
+      });
       const gifBlob = await convertVideoToGif(videoBlob, 15, 360);
       const url = URL.createObjectURL(gifBlob);
       const a = document.createElement('a');
       a.href = url;
-      const cleanTitle = (exportFileName || projectTitle || 'Animation').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const cleanTitle = (exportFileName || projectTitle || 'Animation')
+        .trim()
+        .replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
       a.download = `${cleanTitle}.gif`;
       a.click();
       URL.revokeObjectURL(url);
@@ -1065,13 +1462,7 @@ export const Modals: React.FC = () => {
       // Automatic pre-export snapshot backup
       if (currentProjectId && clips.length > 0) {
         const snapLabel = `Trước khi xuất (${exportAudioOnlyMode ? exportAudioFormat.toUpperCase() : exportRes.toUpperCase() + ' ' + exportFormat.toUpperCase()})`;
-        createProjectSnapshot(
-          currentProjectId,
-          snapLabel,
-          { clips },
-          duration,
-          settings
-        ).catch(() => {});
+        createProjectSnapshot(currentProjectId, snapLabel, { clips }, duration, settings).catch(() => {});
       }
 
       setExportProgress(0);
@@ -1083,17 +1474,24 @@ export const Modals: React.FC = () => {
       );
 
       // Bitrate calculation
-      const baseBitrate = exportRes === '4k' ? 24000000 : exportRes === '2k' ? 14000000 : exportRes === '1080p' ? 8000000 : 4500000;
+      const baseBitrate =
+        exportRes === '4k' ? 24000000 : exportRes === '2k' ? 14000000 : exportRes === '1080p' ? 8000000 : 4500000;
       let finalBitrate = baseBitrate;
       if (exportBitrateMode === 'higher') finalBitrate = Math.round(baseBitrate * 1.5);
       else if (exportBitrateMode === 'custom') finalBitrate = (exportCustomBitrate || 10) * 1000000;
 
-      const range = exportRangeType === 'inout'
-        ? { start: Math.max(0, exportRangeStart), end: Math.min(duration, Math.max(exportRangeStart + 0.5, exportRangeEnd)) }
-        : undefined;
+      const range =
+        exportRangeType === 'inout'
+          ? {
+              start: Math.max(0, exportRangeStart),
+              end: Math.min(duration, Math.max(exportRangeStart + 0.5, exportRangeEnd))
+            }
+          : undefined;
 
       // Determine clean filename
-      const cleanTitle = (exportFileName || projectTitle || 'CapCut_Video').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const cleanTitle = (exportFileName || projectTitle || 'CapCut_Video')
+        .trim()
+        .replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
       const ext = exportAudioOnlyMode ? (exportAudioFormat === 'wav' ? 'wav' : 'mp3') : exportFormat;
       const finalFileName = `${cleanTitle}_${exportRes}_${exportFps}fps_${Date.now()}.${ext}`;
 
@@ -1196,7 +1594,9 @@ export const Modals: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none animate-in fade-in">
-      <div className={`relative w-full ${activeModal === 'export' ? 'max-w-2xl' : (activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' ? 'max-w-xl' : 'max-w-lg')} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}>
+      <div
+        className={`relative w-full ${activeModal === 'export' ? 'max-w-2xl' : activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}
+      >
         {/* Close Button */}
         <button
           onClick={closeModal}
@@ -1318,8 +1718,23 @@ export const Modals: React.FC = () => {
                     thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80',
                     tracksData: {
                       clips: [
-                        { id: 'c1', track: 'video', name: `${title} Main Video`, start: 0, duration: 15, type: 'video' },
-                        { id: 'c2', track: 'text', name: 'Tiêu đề mở đầu', start: 0, duration: 4, type: 'text', text: '🔥 BẮT ĐẦU DỰNG VIDEO' }
+                        {
+                          id: 'c1',
+                          track: 'video',
+                          name: `${title} Main Video`,
+                          start: 0,
+                          duration: 15,
+                          type: 'video'
+                        },
+                        {
+                          id: 'c2',
+                          track: 'text',
+                          name: 'Tiêu đề mở đầu',
+                          start: 0,
+                          duration: 4,
+                          type: 'text',
+                          text: '🔥 BẮT ĐẦU DỰNG VIDEO'
+                        }
                       ]
                     }
                   };
@@ -1350,9 +1765,7 @@ export const Modals: React.FC = () => {
               <h3 className="text-lg font-bold text-white">
                 {authTab === 'signin' ? 'Đăng nhập CapCut Web' : 'Tạo tài khoản mới'}
               </h3>
-              <p className="text-xs text-[#9CA3AF]">
-                Tùy chọn: Đồng bộ dự án lên Cloud và mở khóa đầy đủ tính năng
-              </p>
+              <p className="text-xs text-[#9CA3AF]">Tùy chọn: Đồng bộ dự án lên Cloud và mở khóa đầy đủ tính năng</p>
             </div>
 
             {/* Tab Switcher */}
@@ -1588,452 +2001,462 @@ export const Modals: React.FC = () => {
         )}
 
         {/* 1. EXPORT MODAL */}
-        {activeModal === 'export' && (() => {
-          const exportDurationSec = exportRangeType === 'inout'
-            ? Math.max(0.5, exportRangeEnd - exportRangeStart)
-            : Math.max(0.5, duration || 5);
+        {activeModal === 'export' &&
+          (() => {
+            const exportDurationSec =
+              exportRangeType === 'inout'
+                ? Math.max(0.5, exportRangeEnd - exportRangeStart)
+                : Math.max(0.5, duration || 5);
 
-          let bitrateBitsPerSec = 8000000;
-          if (exportRes === '720p') bitrateBitsPerSec = 4500000;
-          else if (exportRes === '1080p') bitrateBitsPerSec = 8000000;
-          else if (exportRes === '2k') bitrateBitsPerSec = 14000000;
-          else if (exportRes === '4k') bitrateBitsPerSec = 24000000;
+            let bitrateBitsPerSec = 8000000;
+            if (exportRes === '720p') bitrateBitsPerSec = 4500000;
+            else if (exportRes === '1080p') bitrateBitsPerSec = 8000000;
+            else if (exportRes === '2k') bitrateBitsPerSec = 14000000;
+            else if (exportRes === '4k') bitrateBitsPerSec = 24000000;
 
-          if (exportBitrateMode === 'higher') bitrateBitsPerSec = Math.round(bitrateBitsPerSec * 1.5);
-          else if (exportBitrateMode === 'custom') bitrateBitsPerSec = (exportCustomBitrate || 10) * 1000000;
+            if (exportBitrateMode === 'higher') bitrateBitsPerSec = Math.round(bitrateBitsPerSec * 1.5);
+            else if (exportBitrateMode === 'custom') bitrateBitsPerSec = (exportCustomBitrate || 10) * 1000000;
 
-          const estFileSizeMb = exportAudioOnlyMode
-            ? (exportAudioFormat === 'wav'
+            const estFileSizeMb = exportAudioOnlyMode
+              ? exportAudioFormat === 'wav'
                 ? ((1411200 * exportDurationSec) / 8 / 1024 / 1024).toFixed(1)
-                : ((192000 * exportDurationSec) / 8 / 1024 / 1024).toFixed(1))
-            : ((bitrateBitsPerSec * exportDurationSec) / 8 / 1024 / 1024).toFixed(1);
+                : ((192000 * exportDurationSec) / 8 / 1024 / 1024).toFixed(1)
+              : ((bitrateBitsPerSec * exportDurationSec) / 8 / 1024 / 1024).toFixed(1);
 
-          const isHighLoad = exportRes === '4k' || (exportRes === '2k' && exportFps >= 50);
+            const isHighLoad = exportRes === '4k' || (exportRes === '2k' && exportFps >= 50);
 
-          return (
-            <div className="flex flex-col gap-4 text-left">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
-                <div className="flex items-center gap-2.5 text-[#22D3EE]">
-                  <Download className="w-5 h-5" />
-                  <div>
-                    <h3 className="text-base font-bold text-white">Xuất Video & Âm Thanh (Export)</h3>
-                    <p className="text-[11px] text-[#9CA3AF]">Render phần cứng 100% trong trình duyệt qua WebCodecs & Canvas</p>
-                  </div>
-                </div>
-                <div className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[11px] text-[#22D3EE] font-mono">
-                  Ước tính: ~{estFileSizeMb} MB
-                </div>
-              </div>
-
-              {/* 1. Tên file & Nơi lưu */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-[#9CA3AF] uppercase">Tên tệp xuất (File Name)</label>
-                  <input
-                    type="text"
-                    value={exportFileName}
-                    onChange={(e) => setExportFileName(e.target.value)}
-                    placeholder="CapCut_Video"
-                    className="w-full px-3 py-1.5 rounded-lg bg-[#181E2C] border border-[#2A3447] text-white text-xs focus:border-[#22D3EE] focus:outline-none"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-[#9CA3AF] uppercase">Nơi lưu (Destination)</label>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex-1 px-3 py-1.5 rounded-lg bg-[#181E2C] border border-[#2A3447] text-[#9CA3AF] text-xs truncate flex items-center gap-1.5" title={exportDirectoryName}>
-                      <HardDrive className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" />
-                      <span className="truncate">{exportDirectoryName}</span>
+            return (
+              <div className="flex flex-col gap-4 text-left">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+                  <div className="flex items-center gap-2.5 text-[#22D3EE]">
+                    <Download className="w-5 h-5" />
+                    <div>
+                      <h3 className="text-base font-bold text-white">Xuất Video & Âm Thanh (Export)</h3>
+                      <p className="text-[11px] text-[#9CA3AF]">
+                        Render phần cứng 100% trong trình duyệt qua WebCodecs & Canvas
+                      </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handlePickExportDirectory}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#22D3EE]/10 border border-[#22D3EE]/30 hover:bg-[#22D3EE]/20 text-[#22D3EE] text-xs font-semibold whitespace-nowrap transition-all"
-                    >
-                      Đổi...
-                    </button>
+                  </div>
+                  <div className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[11px] text-[#22D3EE] font-mono">
+                    Ước tính: ~{estFileSizeMb} MB
                   </div>
                 </div>
-              </div>
 
-              {/* Toggle Audio Only vs Video */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#111827] border border-[#1F2937]">
-                <div className="flex items-center gap-2">
-                  <Music className="w-4 h-4 text-[#22D3EE]" />
-                  <span className="text-xs font-semibold text-white">Chỉ xuất âm thanh (Export audio only)</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setExportAudioOnlyMode(!exportAudioOnlyMode)}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${
-                    exportAudioOnlyMode ? 'bg-[#22D3EE]' : 'bg-[#374151]'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                      exportAudioOnlyMode ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {exportAudioOnlyMode ? (
-                /* Audio Only Options */
-                <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
-                  <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Định dạng âm thanh</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'wav', label: 'WAV', desc: 'Lossless PCM 16-bit 44.1kHz' },
-                      { id: 'mp3', label: 'MP3', desc: 'Stereo 192 kbps' },
-                      { id: 'aac', label: 'AAC', desc: 'Định dạng chuẩn Apple' }
-                    ].map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setExportAudioFormat(item.id as any)}
-                        className={`p-2 rounded-lg border text-left transition-all ${
-                          exportAudioFormat === item.id
-                            ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
-                            : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
-                        }`}
+                {/* 1. Tên file & Nơi lưu */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-[#9CA3AF] uppercase">Tên tệp xuất (File Name)</label>
+                    <input
+                      type="text"
+                      value={exportFileName}
+                      onChange={(e) => setExportFileName(e.target.value)}
+                      placeholder="CapCut_Video"
+                      className="w-full px-3 py-1.5 rounded-lg bg-[#181E2C] border border-[#2A3447] text-white text-xs focus:border-[#22D3EE] focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-[#9CA3AF] uppercase">Nơi lưu (Destination)</label>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-[#181E2C] border border-[#2A3447] text-[#9CA3AF] text-xs truncate flex items-center gap-1.5"
+                        title={exportDirectoryName}
                       >
-                        <div className="font-bold text-xs">{item.label}</div>
-                        <div className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</div>
+                        <HardDrive className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" />
+                        <span className="truncate">{exportDirectoryName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePickExportDirectory}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#22D3EE]/10 border border-[#22D3EE]/30 hover:bg-[#22D3EE]/20 text-[#22D3EE] text-xs font-semibold whitespace-nowrap transition-all"
+                      >
+                        Đổi...
                       </button>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                /* Video Options */
-                <div className="flex flex-col gap-3">
-                  {/* Resolution Selector */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
-                      1. Độ phân giải (Resolution)
-                    </span>
-                    <div className="grid grid-cols-4 gap-2">
+
+                {/* Toggle Audio Only vs Video */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#111827] border border-[#1F2937]">
+                  <div className="flex items-center gap-2">
+                    <Music className="w-4 h-4 text-[#22D3EE]" />
+                    <span className="text-xs font-semibold text-white">Chỉ xuất âm thanh (Export audio only)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExportAudioOnlyMode(!exportAudioOnlyMode)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      exportAudioOnlyMode ? 'bg-[#22D3EE]' : 'bg-[#374151]'
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        exportAudioOnlyMode ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {exportAudioOnlyMode ? (
+                  /* Audio Only Options */
+                  <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Định dạng âm thanh</span>
+                    <div className="grid grid-cols-3 gap-2">
                       {[
-                        { id: '720p', label: '720p HD', desc: '720 × 1280' },
-                        { id: '1080p', label: '1080p FHD', desc: '1080 × 1920' },
-                        { id: '2k', label: '2K QHD', desc: '1440 × 2560' },
-                        { id: '4k', label: '4K UHD', desc: '2160 × 3840' }
+                        { id: 'wav', label: 'WAV', desc: 'Lossless PCM 16-bit 44.1kHz' },
+                        { id: 'mp3', label: 'MP3', desc: 'Stereo 192 kbps' },
+                        { id: 'aac', label: 'AAC', desc: 'Định dạng chuẩn Apple' }
                       ].map((item) => (
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => setExportRes(item.id as any)}
-                          className={`p-2 rounded-xl border text-left flex flex-col transition-all ${
-                            exportRes === item.id
-                              ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
-                              : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                          onClick={() => setExportAudioFormat(item.id as any)}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            exportAudioFormat === item.id
+                              ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
+                              : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
                           }`}
                         >
-                          <span className="font-bold text-xs">{item.label}</span>
-                          <span className="text-[10px] text-[#22D3EE] font-mono mt-0.5">{item.desc}</span>
+                          <div className="font-bold text-xs">{item.label}</div>
+                          <div className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</div>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* FPS & Codec Selector */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* FPS */}
+                ) : (
+                  /* Video Options */
+                  <div className="flex flex-col gap-3">
+                    {/* Resolution Selector */}
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
-                        2. Tốc độ khung hình (FPS)
+                        1. Độ phân giải (Resolution)
                       </span>
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {[24, 25, 30, 50, 60].map((fpsVal) => (
-                          <button
-                            key={fpsVal}
-                            type="button"
-                            onClick={() => setExportFps(fpsVal as any)}
-                            className={`py-1.5 rounded-lg border text-center font-bold text-xs transition-all ${
-                              exportFps === fpsVal
-                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
-                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                            }`}
-                          >
-                            {fpsVal}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Codec */}
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
-                        3. Codec nén video
-                      </span>
-                      <div className="grid grid-cols-3 gap-1.5">
+                      <div className="grid grid-cols-4 gap-2">
                         {[
-                          { id: 'h264', label: 'H.264', avail: true },
-                          { id: 'hevc', label: 'HEVC', avail: supportedCodecs.hevc },
-                          { id: 'av1', label: 'AV1', avail: supportedCodecs.av1 }
-                        ].map((c) => (
+                          { id: '720p', label: '720p HD', desc: '720 × 1280' },
+                          { id: '1080p', label: '1080p FHD', desc: '1080 × 1920' },
+                          { id: '2k', label: '2K QHD', desc: '1440 × 2560' },
+                          { id: '4k', label: '4K UHD', desc: '2160 × 3840' }
+                        ].map((item) => (
                           <button
-                            key={c.id}
+                            key={item.id}
                             type="button"
-                            disabled={!c.avail && c.id !== 'h264'}
-                            onClick={() => setExportCodec(c.id as any)}
-                            className={`py-1.5 px-2 rounded-lg border text-center text-xs font-bold transition-all ${
-                              exportCodec === c.id
-                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
-                                : !c.avail && c.id !== 'h264'
-                                ? 'bg-[#111827]/40 border-transparent text-slate-600 cursor-not-allowed'
+                            onClick={() => setExportRes(item.id as any)}
+                            className={`p-2 rounded-xl border text-left flex flex-col transition-all ${
+                              exportRes === item.id
+                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
                                 : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
                             }`}
                           >
-                            {c.label}
+                            <span className="font-bold text-xs">{item.label}</span>
+                            <span className="text-[10px] text-[#22D3EE] font-mono mt-0.5">{item.desc}</span>
                           </button>
                         ))}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Bitrate & Format */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Bitrate */}
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">4. Tốc độ bit (Bitrate)</span>
+                    {/* FPS & Codec Selector */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* FPS */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                          2. Tốc độ khung hình (FPS)
+                        </span>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {[24, 25, 30, 50, 60].map((fpsVal) => (
+                            <button
+                              key={fpsVal}
+                              type="button"
+                              onClick={() => setExportFps(fpsVal as any)}
+                              className={`py-1.5 rounded-lg border text-center font-bold text-xs transition-all ${
+                                exportFps === fpsVal
+                                  ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                  : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                              }`}
+                            >
+                              {fpsVal}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Codec */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">3. Codec nén video</span>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[
+                            { id: 'h264', label: 'H.264', avail: true },
+                            { id: 'hevc', label: 'HEVC', avail: supportedCodecs.hevc },
+                            { id: 'av1', label: 'AV1', avail: supportedCodecs.av1 }
+                          ].map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              disabled={!c.avail && c.id !== 'h264'}
+                              onClick={() => setExportCodec(c.id as any)}
+                              className={`py-1.5 px-2 rounded-lg border text-center text-xs font-bold transition-all ${
+                                exportCodec === c.id
+                                  ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                  : !c.avail && c.id !== 'h264'
+                                    ? 'bg-[#111827]/40 border-transparent text-slate-600 cursor-not-allowed'
+                                    : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                              }`}
+                            >
+                              {c.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bitrate & Format */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Bitrate */}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                            4. Tốc độ bit (Bitrate)
+                          </span>
+                          {exportBitrateMode === 'custom' && (
+                            <span className="text-xs text-[#22D3EE] font-mono">{exportCustomBitrate} Mbps</span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[
+                            { id: 'recommended', label: 'Chuẩn' },
+                            { id: 'higher', label: 'Cao (HQ)' },
+                            { id: 'custom', label: 'Tùy chỉnh' }
+                          ].map((b) => (
+                            <button
+                              key={b.id}
+                              type="button"
+                              onClick={() => setExportBitrateMode(b.id as any)}
+                              className={`py-1.5 rounded-lg border text-center text-xs font-semibold transition-all ${
+                                exportBitrateMode === b.id
+                                  ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                  : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                              }`}
+                            >
+                              {b.label}
+                            </button>
+                          ))}
+                        </div>
                         {exportBitrateMode === 'custom' && (
-                          <span className="text-xs text-[#22D3EE] font-mono">{exportCustomBitrate} Mbps</span>
+                          <div className="flex items-center gap-2 pt-1">
+                            <input
+                              type="range"
+                              min="2"
+                              max="50"
+                              step="1"
+                              value={exportCustomBitrate}
+                              onChange={(e) => setExportCustomBitrate(Number(e.target.value))}
+                              className="w-full accent-[#22D3EE] h-1.5 bg-[#1F2937] rounded-lg cursor-pointer"
+                            />
+                          </div>
                         )}
                       </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {[
-                          { id: 'recommended', label: 'Chuẩn' },
-                          { id: 'higher', label: 'Cao (HQ)' },
-                          { id: 'custom', label: 'Tùy chỉnh' }
-                        ].map((b) => (
-                          <button
-                            key={b.id}
-                            type="button"
-                            onClick={() => setExportBitrateMode(b.id as any)}
-                            className={`py-1.5 rounded-lg border text-center text-xs font-semibold transition-all ${
-                              exportBitrateMode === b.id
-                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
-                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                            }`}
-                          >
-                            {b.label}
-                          </button>
-                        ))}
-                      </div>
-                      {exportBitrateMode === 'custom' && (
-                        <div className="flex items-center gap-2 pt-1">
-                          <input
-                            type="range"
-                            min="2"
-                            max="50"
-                            step="1"
-                            value={exportCustomBitrate}
-                            onChange={(e) => setExportCustomBitrate(Number(e.target.value))}
-                            className="w-full accent-[#22D3EE] h-1.5 bg-[#1F2937] rounded-lg cursor-pointer"
-                          />
+
+                      {/* Format */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">5. Định dạng (Container)</span>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[
+                            { fmt: 'mp4', label: 'MP4' },
+                            { fmt: 'webm', label: 'WebM' }
+                          ].map((f) => (
+                            <button
+                              key={f.fmt}
+                              type="button"
+                              onClick={() => setExportFormat(f.fmt as any)}
+                              className={`py-1.5 rounded-lg border text-center text-xs font-bold transition-all ${
+                                exportFormat === f.fmt
+                                  ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                  : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                              }`}
+                            >
+                              {f.label}
+                            </button>
+                          ))}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Format */}
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">5. Định dạng (Container)</span>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {[
-                          { fmt: 'mp4', label: 'MP4' },
-                          { fmt: 'webm', label: 'WebM' }
-                        ].map((f) => (
-                          <button
-                            key={f.fmt}
-                            type="button"
-                            onClick={() => setExportFormat(f.fmt as any)}
-                            className={`py-1.5 rounded-lg border text-center text-xs font-bold transition-all ${
-                              exportFormat === f.fmt
-                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
-                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                            }`}
-                          >
-                            {f.label}
-                          </button>
-                        ))}
                       </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Export Range (Toàn bộ / In-Out) */}
-              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Phạm vi thời gian xuất</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setExportRangeType('all')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                        exportRangeType === 'all'
-                          ? 'bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40'
-                          : 'text-[#9CA3AF] hover:text-white'
-                      }`}
-                    >
-                      Toàn bộ ({duration.toFixed(1)}s)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExportRangeType('inout')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                        exportRangeType === 'inout'
-                          ? 'bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40'
-                          : 'text-[#9CA3AF] hover:text-white'
-                      }`}
-                    >
-                      Theo In-Out
-                    </button>
-                  </div>
-                </div>
-                {exportRangeType === 'inout' && (
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#9CA3AF]">In (Bắt đầu):</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max={duration}
-                        step="0.1"
-                        value={exportRangeStart}
-                        onChange={(e) => setExportRangeStart(Number(e.target.value))}
-                        className="w-20 px-2 py-1 rounded bg-[#181E2C] border border-[#2A3447] text-white text-xs font-mono"
-                      />
-                      <span className="text-xs text-[#9CA3AF]">giây</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#9CA3AF]">Out (Kết thúc):</span>
-                      <input
-                        type="number"
-                        min="0.1"
-                        max={duration}
-                        step="0.1"
-                        value={exportRangeEnd}
-                        onChange={(e) => setExportRangeEnd(Number(e.target.value))}
-                        className="w-20 px-2 py-1 rounded bg-[#181E2C] border border-[#2A3447] text-white text-xs font-mono"
-                      />
-                      <span className="text-xs text-[#9CA3AF]">giây</span>
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Hardware Warning if High Load */}
-              {isHighLoad && !exportAudioOnlyMode && (
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                  <div>
-                    <span className="font-semibold">Cảnh báo tải phần cứng: </span>
-                    <span>Độ phân giải {exportRes.toUpperCase()} ({exportFps} FPS) yêu cầu dung lượng RAM và GPU cao. Nếu máy tính xuất hiện hiện tượng giật lag hoặc tràn bộ nhớ, hãy cân nhắc hạ xuống 1080p 30 FPS.</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Actions Bar */}
-              <div className="flex items-center justify-between p-2 rounded-xl bg-[#111827] border border-[#1F2937]">
-                <span className="text-[11px] font-bold text-[#9CA3AF] uppercase pl-1">Xuất nhanh:</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleQuickExportFrame}
-                    className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
-                  >
-                    <ImageIcon className="w-3.5 h-3.5 text-[#22D3EE]" />
-                    <span>Frame PNG</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleQuickExportCaptions}
-                    className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-[#22D3EE]" />
-                    <span>Phụ đề (.srt)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleQuickExportGif}
-                    className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
-                  >
-                    <Film className="w-3.5 h-3.5 text-[#22D3EE]" />
-                    <span>Ảnh động (GIF)</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Export Progress or CTA */}
-              {exportProgress !== null ? (
-                <div
-                  role="status"
-                  aria-live="polite"
-                  className="flex flex-col gap-3 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1"
-                >
-                  <div className="flex justify-between items-center text-xs font-semibold">
-                    <span className="text-[#22D3EE] flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      {exportStatus}
-                    </span>
-                    <span className="font-mono text-white font-bold">{exportProgress}%</span>
-                  </div>
-                  <div
-                    className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden"
-                    role="progressbar"
-                    aria-valuenow={exportProgress}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Tiến trình xuất video ${exportProgress}%`}
-                  >
-                    <div
-                      className="h-full bg-gradient-to-r from-[#22D3EE] to-sky-400 transition-all duration-150"
-                      style={{ width: `${exportProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-[#22D3EE]" />
-                      {exportEta > 0 ? `Còn khoảng ~${exportEta} giây` : 'Đang tính thời gian còn lại...'}
-                    </span>
+                {/* Export Range (Toàn bộ / In-Out) */}
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Phạm vi thời gian xuất</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={handleRunInBackground}
-                        className="px-3 py-1 rounded-lg bg-[#181E2C] hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
+                        onClick={() => setExportRangeType('all')}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                          exportRangeType === 'all'
+                            ? 'bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40'
+                            : 'text-[#9CA3AF] hover:text-white'
+                        }`}
                       >
-                        Chạy ngầm (Ẩn)
+                        Toàn bộ ({duration.toFixed(1)}s)
                       </button>
                       <button
                         type="button"
-                        onClick={handleCancelExport}
-                        className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 text-xs font-medium transition-colors"
+                        onClick={() => setExportRangeType('inout')}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                          exportRangeType === 'inout'
+                            ? 'bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40'
+                            : 'text-[#9CA3AF] hover:text-white'
+                        }`}
                       >
-                        Hủy xuất
+                        Theo In-Out
                       </button>
                     </div>
                   </div>
+                  {exportRangeType === 'inout' && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#9CA3AF]">In (Bắt đầu):</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={duration}
+                          step="0.1"
+                          value={exportRangeStart}
+                          onChange={(e) => setExportRangeStart(Number(e.target.value))}
+                          className="w-20 px-2 py-1 rounded bg-[#181E2C] border border-[#2A3447] text-white text-xs font-mono"
+                        />
+                        <span className="text-xs text-[#9CA3AF]">giây</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#9CA3AF]">Out (Kết thúc):</span>
+                        <input
+                          type="number"
+                          min="0.1"
+                          max={duration}
+                          step="0.1"
+                          value={exportRangeEnd}
+                          onChange={(e) => setExportRangeEnd(Number(e.target.value))}
+                          className="w-20 px-2 py-1 rounded bg-[#181E2C] border border-[#2A3447] text-white text-xs font-mono"
+                        />
+                        <span className="text-xs text-[#9CA3AF]">giây</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleStartExport}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+
+                {/* Hardware Warning if High Load */}
+                {isHighLoad && !exportAudioOnlyMode && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <div>
+                      <span className="font-semibold">Cảnh báo tải phần cứng: </span>
+                      <span>
+                        Độ phân giải {exportRes.toUpperCase()} ({exportFps} FPS) yêu cầu dung lượng RAM và GPU cao. Nếu
+                        máy tính xuất hiện hiện tượng giật lag hoặc tràn bộ nhớ, hãy cân nhắc hạ xuống 1080p 30 FPS.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Actions Bar */}
+                <div className="flex items-center justify-between p-2 rounded-xl bg-[#111827] border border-[#1F2937]">
+                  <span className="text-[11px] font-bold text-[#9CA3AF] uppercase pl-1">Xuất nhanh:</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickExportFrame}
+                      className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5 text-[#22D3EE]" />
+                      <span>Frame PNG</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleQuickExportCaptions}
+                      className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#22D3EE]" />
+                      <span>Phụ đề (.srt)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleQuickExportGif}
+                      className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                    >
+                      <Film className="w-3.5 h-3.5 text-[#22D3EE]" />
+                      <span>Ảnh động (GIF)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Export Progress or CTA */}
+                {exportProgress !== null ? (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex flex-col gap-3 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1"
                   >
-                    <Download className="w-4 h-4 stroke-[2.5]" />
-                    <span>Bắt đầu xuất video ngay (Client Hardware Render)</span>
-                  </button>
-                  <span className="text-[11px] text-[#9CA3AF] text-center">
-                    Render trực tiếp 100% bằng WebCodecs & Canvas. File lưu an toàn tại máy của bạn.
-                  </span>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+                    <div className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-[#22D3EE] flex items-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        {exportStatus}
+                      </span>
+                      <span className="font-mono text-white font-bold">{exportProgress}%</span>
+                    </div>
+                    <div
+                      className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden"
+                      role="progressbar"
+                      aria-valuenow={exportProgress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Tiến trình xuất video ${exportProgress}%`}
+                    >
+                      <div
+                        className="h-full bg-gradient-to-r from-[#22D3EE] to-sky-400 transition-all duration-150"
+                        style={{ width: `${exportProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-[#22D3EE]" />
+                        {exportEta > 0 ? `Còn khoảng ~${exportEta} giây` : 'Đang tính thời gian còn lại...'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRunInBackground}
+                          className="px-3 py-1 rounded-lg bg-[#181E2C] hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
+                        >
+                          Chạy ngầm (Ẩn)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelExport}
+                          className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 text-xs font-medium transition-colors"
+                        >
+                          Hủy xuất
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleStartExport}
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 stroke-[2.5]" />
+                      <span>Bắt đầu xuất video ngay (Client Hardware Render)</span>
+                    </button>
+                    <span className="text-[11px] text-[#9CA3AF] text-center">
+                      Render trực tiếp 100% bằng WebCodecs & Canvas. File lưu an toàn tại máy của bạn.
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         {/* 2. PRO PRICING MODAL (3 GÓI FREE / PRO THÁNG / PRO NĂM) */}
         {activeModal === 'pro' && (
@@ -2055,14 +2478,24 @@ export const Modals: React.FC = () => {
               <div className="p-4 rounded-2xl bg-[#0B0F19] border border-[#1F2937] flex flex-col justify-between gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-bold text-[#9CA3AF] uppercase">Gói Free</span>
-                  <div className="text-lg font-black text-white">0đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span></div>
+                  <div className="text-lg font-black text-white">
+                    0đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span>
+                  </div>
                   <span className="text-[10px] text-[#9CA3AF]">Dành cho người mới bắt đầu dựng video</span>
                 </div>
                 <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Xuất video 1080p 30fps</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Không giới hạn độ dài</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Lưu trữ Dexie IndexedDB</div>
-                  <div className="flex items-center gap-1.5 text-[#9CA3AF]"><X className="w-3.5 h-3.5 text-slate-600 shrink-0" /> Không hỗ trợ xuất 4K</div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Xuất video 1080p 30fps
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Không giới hạn độ dài
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Lưu trữ Dexie IndexedDB
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[#9CA3AF]">
+                    <X className="w-3.5 h-3.5 text-slate-600 shrink-0" /> Không hỗ trợ xuất 4K
+                  </div>
                 </div>
                 <span className="py-2 text-center text-xs font-semibold text-[#9CA3AF] bg-[#111827] rounded-xl border border-[#1F2937]">
                   Gói hiện tại
@@ -2075,14 +2508,24 @@ export const Modals: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-purple-400 uppercase">Pro Tháng</span>
                   </div>
-                  <div className="text-lg font-black text-white">199.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span></div>
+                  <div className="text-lg font-black text-white">
+                    199.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span>
+                  </div>
                   <span className="text-[10px] text-[#9CA3AF]">Dành cho Content Creator chuyên nghiệp</span>
                 </div>
                 <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Xuất siêu nét 4K 60fps</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Tự động tạo phụ đề AI</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Toàn bộ kho Hook viral</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Khử ồn thông minh</div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Xuất siêu nét 4K 60fps
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Tự động tạo phụ đề AI
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Toàn bộ kho Hook viral
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Khử ồn thông minh
+                  </div>
                 </div>
                 <button
                   onClick={() => {
@@ -2103,14 +2546,24 @@ export const Modals: React.FC = () => {
                 </span>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-bold text-[#22D3EE] uppercase">Pro Năm (VIP)</span>
-                  <div className="text-lg font-black text-white">99.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span></div>
+                  <div className="text-lg font-black text-white">
+                    99.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span>
+                  </div>
                   <span className="text-[10px] text-[#9CA3AF]">Thanh toán 1.190.000đ / năm</span>
                 </div>
                 <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Toàn bộ quyền lợi Pro</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Đám mây Supabase Cloud</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Bộ lọc màu độc quyền</div>
-                  <div className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Hỗ trợ ưu tiên 24/7</div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Toàn bộ quyền lợi Pro
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Đám mây Supabase Cloud
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Bộ lọc màu độc quyền
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Hỗ trợ ưu tiên 24/7
+                  </div>
                 </div>
                 <button
                   onClick={() => {
@@ -2130,7 +2583,10 @@ export const Modals: React.FC = () => {
               <button
                 onClick={() => {
                   setIsPro(true);
-                  showToast('🎉 Đã bật cờ isPro trong localStorage (hiện huy hiệu PRO)! Bản demo: mọi tính năng cốt lõi vẫn miễn phí.', 'success');
+                  showToast(
+                    '🎉 Đã bật cờ isPro trong localStorage (hiện huy hiệu PRO)! Bản demo: mọi tính năng cốt lõi vẫn miễn phí.',
+                    'success'
+                  );
                   closeModal();
                 }}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#7C3AED] via-[#EC4899] to-pink-500 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-purple-900/30 hover-lift transition-all flex items-center justify-center gap-2"
@@ -2139,7 +2595,8 @@ export const Modals: React.FC = () => {
                 <span>Try Pro free / Dùng thử Pro miễn phí</span>
               </button>
               <span className="text-[10px] text-[#9CA3AF]">
-                * Đây là bản demo: Bấm để bật huy hiệu PRO và trải nghiệm không giới hạn. Không yêu cầu thanh toán hay thẻ tín dụng.
+                * Đây là bản demo: Bấm để bật huy hiệu PRO và trải nghiệm không giới hạn. Không yêu cầu thanh toán hay
+                thẻ tín dụng.
               </span>
             </div>
           </div>
@@ -2245,7 +2702,9 @@ export const Modals: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-semibold block">Linh vật Pixel mầm cây (🌱 Mascot)</span>
-                  <span className="text-[10px] text-[#9CA3AF]">Hiển thị chú mầm cây pixel chia sẻ mẹo dựng góc trái dưới</span>
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Hiển thị chú mầm cây pixel chia sẻ mẹo dựng góc trái dưới
+                  </span>
                 </div>
                 <input
                   type="checkbox"
@@ -2274,11 +2733,11 @@ export const Modals: React.FC = () => {
 
                 {/* Cảnh báo bảo mật quyền riêng tư */}
                 <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300 leading-relaxed flex flex-col gap-1">
-                  <span className="font-bold flex items-center gap-1">
-                    🔒 Quyền riêng tư & Bảo mật API Key:
-                  </span>
+                  <span className="font-bold flex items-center gap-1">🔒 Quyền riêng tư & Bảo mật API Key:</span>
                   <span>
-                    Khóa chỉ lưu tại bộ nhớ trình duyệt (localStorage), không log, không commit và không gửi về máy chủ ClipForge. Tuy nhiên, localStorage không phải két sắt an toàn tuyệt đối trước các extension trình duyệt lạ. Bạn nên giới hạn ngân sách key hoặc sử dụng Proxy Serverless riêng dưới đây.
+                    Khóa chỉ lưu tại bộ nhớ trình duyệt (localStorage), không log, không commit và không gửi về máy chủ
+                    ClipForge. Tuy nhiên, localStorage không phải két sắt an toàn tuyệt đối trước các extension trình
+                    duyệt lạ. Bạn nên giới hạn ngân sách key hoặc sử dụng Proxy Serverless riêng dưới đây.
                   </span>
                 </div>
 
@@ -2295,7 +2754,8 @@ export const Modals: React.FC = () => {
                     className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-[#E5E7EB] outline-none"
                   />
                   <span className="text-[10px] text-[#9CA3AF]">
-                    Nếu thiết lập, mọi yêu cầu từ EditPilot sẽ gửi qua proxy serverless cá nhân của bạn thay vì gọi trực tiếp.
+                    Nếu thiết lập, mọi yêu cầu từ EditPilot sẽ gửi qua proxy serverless cá nhân của bạn thay vì gọi trực
+                    tiếp.
                   </span>
                 </div>
               </div>
@@ -2304,7 +2764,9 @@ export const Modals: React.FC = () => {
               <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
                 <div>
                   <span className="font-semibold block">Báo cáo sự cố ẩn danh (Sentry Telemetry)</span>
-                  <span className="text-[10px] text-[#9CA3AF]">Chỉ gửi log lỗi sự cố kèm thông số trình duyệt khi bạn đồng ý, hoàn toàn ẩn danh</span>
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Chỉ gửi log lỗi sự cố kèm thông số trình duyệt khi bạn đồng ý, hoàn toàn ẩn danh
+                  </span>
                 </div>
                 <input
                   type="checkbox"
@@ -2313,7 +2775,10 @@ export const Modals: React.FC = () => {
                     const checked = e.target.checked;
                     setSentryConsent(checked);
                     localStorage.setItem('clipforge_sentry_consent', checked ? 'true' : 'false');
-                    showToast(checked ? 'Đã bật thu thập sự cố Sentry ẩn danh' : 'Đã tắt thu thập sự cố Sentry', 'info');
+                    showToast(
+                      checked ? 'Đã bật thu thập sự cố Sentry ẩn danh' : 'Đã tắt thu thập sự cố Sentry',
+                      'info'
+                    );
                   }}
                   className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
                 />
@@ -2323,7 +2788,9 @@ export const Modals: React.FC = () => {
               <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
                 <div>
                   <span className="font-semibold block">Chính sách Bảo mật & Quyền riêng tư</span>
-                  <span className="text-[10px] text-[#9CA3AF]">Tìm hiểu cách ClipForge bảo vệ 100% dữ liệu trên máy bạn</span>
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Tìm hiểu cách ClipForge bảo vệ 100% dữ liệu trên máy bạn
+                  </span>
                 </div>
                 <a
                   href="/privacy"
@@ -2343,7 +2810,11 @@ export const Modals: React.FC = () => {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ dự án và tệp trong IndexedDB? Hành động này không thể hoàn tác!')) {
+                    if (
+                      window.confirm(
+                        'Bạn có chắc chắn muốn xóa toàn bộ dự án và tệp trong IndexedDB? Hành động này không thể hoàn tác!'
+                      )
+                    ) {
                       await db.projects.clear();
                       await db.media.clear();
                       await db.trash.clear();
@@ -2406,7 +2877,8 @@ export const Modals: React.FC = () => {
                     <div className="flex flex-col truncate pr-2">
                       <span className="font-semibold text-slate-200 truncate">{item.title}</span>
                       <span className="text-[10px] text-slate-500">
-                        Đã xóa: {new Date(item.deletedAt).toLocaleDateString('vi-VN')} {new Date(item.deletedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        Đã xóa: {new Date(item.deletedAt).toLocaleDateString('vi-VN')}{' '}
+                        {new Date(item.deletedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
 
@@ -2508,9 +2980,13 @@ export const Modals: React.FC = () => {
                 <RefreshCw className="w-5 h-5" />
                 <h3 className="text-base font-bold text-white">Project Sync • Đồng bộ & Sao lưu</h3>
               </div>
-              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${
-                user ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-              }`}>
+              <span
+                className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${
+                  user
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                }`}
+              >
                 {user ? '🟢 Supabase Synced' : '⚡ Guest Mode (Offline)'}
               </span>
             </div>
@@ -2520,7 +2996,9 @@ export const Modals: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[#9CA3AF]">Trạng thái đồng bộ:</span>
                 <span className={`font-bold ${user ? 'text-emerald-400' : 'text-cyan-400'}`}>
-                  {user ? 'Đã kết nối Supabase Cloud (Đồng bộ thời gian thực)' : 'Lưu trữ cục bộ IndexedDB (Không cần đăng nhập)'}
+                  {user
+                    ? 'Đã kết nối Supabase Cloud (Đồng bộ thời gian thực)'
+                    : 'Lưu trữ cục bộ IndexedDB (Không cần đăng nhập)'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -2578,7 +3056,9 @@ export const Modals: React.FC = () => {
               {user ? (
                 <div className="flex items-center gap-2">
                   <Cloud className="w-4 h-4 text-emerald-400" />
-                  <span className="text-slate-300">Đã đồng bộ với tài khoản: <strong className="text-white">{user.name || user.email}</strong></span>
+                  <span className="text-slate-300">
+                    Đã đồng bộ với tài khoản: <strong className="text-white">{user.name || user.email}</strong>
+                  </span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -2637,7 +3117,10 @@ export const Modals: React.FC = () => {
               {storageEstimate && storageEstimate.percentUsed >= 80 && (
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px]">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                  <span>Cảnh báo: Bộ nhớ trình duyệt đã dùng hơn 80%. Hãy dọn dẹp các mục cache bên dưới để giải phóng không gian lưu trữ.</span>
+                  <span>
+                    Cảnh báo: Bộ nhớ trình duyệt đã dùng hơn 80%. Hãy dọn dẹp các mục cache bên dưới để giải phóng không
+                    gian lưu trữ.
+                  </span>
                 </div>
               )}
 
@@ -2737,7 +3220,8 @@ export const Modals: React.FC = () => {
             </div>
 
             <p className="text-[11px] text-[#9CA3AF]">
-              Hệ thống tự động chụp ảnh phiên bản mỗi 5 phút và trước mỗi lần xuất video. Bạn có thể khôi phục lại bất kỳ mốc thời gian nào.
+              Hệ thống tự động chụp ảnh phiên bản mỗi 5 phút và trước mỗi lần xuất video. Bạn có thể khôi phục lại bất
+              kỳ mốc thời gian nào.
             </p>
 
             {snapshots.length === 0 ? (
@@ -2755,7 +3239,13 @@ export const Modals: React.FC = () => {
                     <div className="flex flex-col gap-0.5 truncate pr-2">
                       <span className="font-semibold text-slate-200 truncate">{snap.label}</span>
                       <span className="text-[10px] text-slate-500">
-                        {new Date(snap.timestamp).toLocaleDateString('vi-VN')} {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • {snap.tracksData?.clips?.length || 0} clips • {snap.duration || 15}s
+                        {new Date(snap.timestamp).toLocaleDateString('vi-VN')}{' '}
+                        {new Date(snap.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}{' '}
+                        • {snap.tracksData?.clips?.length || 0} clips • {snap.duration || 15}s
                       </span>
                     </div>
 
@@ -2803,7 +3293,8 @@ export const Modals: React.FC = () => {
               <div className="px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px] text-cyan-300 flex items-start gap-2">
                 <Info className="w-4 h-4 shrink-0 text-cyan-400 mt-0.5" />
                 <span>
-                  Chế độ ngoại tuyến: Tạo ảnh procedural 9:16 trực tiếp bằng Canvas, không tốn credit và không cần kết nối API. (Bạn có thể thêm API key trong Settings).
+                  Chế độ ngoại tuyến: Tạo ảnh procedural 9:16 trực tiếp bằng Canvas, không tốn credit và không cần kết
+                  nối API. (Bạn có thể thêm API key trong Settings).
                 </span>
               </div>
             )}
@@ -2880,7 +3371,9 @@ export const Modals: React.FC = () => {
             {/* Preview Image Box */}
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold text-[#9CA3AF] flex items-center justify-between">
-                <span>Xem trước kết quả ({aiImgAspect} • {aiImgStyle}):</span>
+                <span>
+                  Xem trước kết quả ({aiImgAspect} • {aiImgStyle}):
+                </span>
                 <span className="text-[10px] text-pink-400 font-mono">Render Canvas 60fps</span>
               </span>
               <div className="relative w-full h-44 rounded-xl overflow-hidden border border-[#1F2937] bg-black/60 flex items-center justify-center group shadow-inner">
@@ -2906,26 +3399,35 @@ export const Modals: React.FC = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#1F2937]">
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#1F2937]">
               <button
                 onClick={handleAddAiImageToTimeline}
-                className="col-span-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20"
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20"
               >
                 <Plus className="w-4 h-4" />
-                Thêm Timeline
+                Thêm vào Dự án
               </button>
               <button
-                onClick={handleSaveAiImageToLibrary}
-                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                onClick={handleOpenAiImageInEditor}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                <FolderOpen className="w-4 h-4 text-cyan-400" />
-                Lưu Library
+                <FolderOpen className="w-4 h-4 text-pink-400" />
+                Mở trong Editor
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleSaveAiImageToLibrary}
+                className="py-2 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Check className="w-3.5 h-3.5 text-cyan-400" />
+                Lưu vào Thư viện
               </button>
               <button
                 onClick={handleDownloadAiImage}
-                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                className="py-2 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                <Download className="w-4 h-4 text-emerald-400" />
+                <Download className="w-3.5 h-3.5 text-emerald-400" />
                 Tải ảnh PNG
               </button>
             </div>
@@ -2946,7 +3448,8 @@ export const Modals: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#9CA3AF]">
-              Kéo dài tổng thời lượng video mượt mà bằng kỹ thuật giữ frame cuối, vòng lặp ping-pong hoặc slow-motion trực tiếp ở trình duyệt:
+              Kéo dài tổng thời lượng video mượt mà bằng kỹ thuật giữ frame cuối, vòng lặp ping-pong hoặc slow-motion
+              trực tiếp ở trình duyệt:
             </p>
 
             {/* Chọn clip */}
@@ -3001,9 +3504,7 @@ export const Modals: React.FC = () => {
                       : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">
-                    ❄️ Freeze Frame
-                  </div>
+                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">❄️ Freeze Frame</div>
                   <div className="text-[10px] text-slate-400 mt-1">Giữ frame cuối tĩnh</div>
                 </button>
 
@@ -3015,9 +3516,7 @@ export const Modals: React.FC = () => {
                       : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">
-                    🔀 Ping-pong
-                  </div>
+                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">🔀 Ping-pong</div>
                   <div className="text-[10px] text-slate-400 mt-1">Chạy xuôi rồi ngược</div>
                 </button>
 
@@ -3029,9 +3528,7 @@ export const Modals: React.FC = () => {
                       : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">
-                    ⏱️ Slow-motion
-                  </div>
+                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">⏱️ Slow-motion</div>
                   <div className="text-[10px] text-slate-400 mt-1">Giảm tốc độ 0.75x</div>
                 </button>
               </div>
@@ -3042,17 +3539,25 @@ export const Modals: React.FC = () => {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400 font-semibold">Mô phỏng Timeline:</span>
                 <span className="font-mono text-sky-300 font-bold">
-                  {((videoClips.find(c => c.id === extendClipId) || videoClips[0])?.duration || duration)}s ➔{' '}
-                  {((videoClips.find(c => c.id === extendClipId) || videoClips[0])?.duration || duration) + extendSecs}s (+{extendSecs}s)
+                  {(videoClips.find((c) => c.id === extendClipId) || videoClips[0])?.duration || duration}s ➔{' '}
+                  {((videoClips.find((c) => c.id === extendClipId) || videoClips[0])?.duration || duration) +
+                    extendSecs}
+                  s (+{extendSecs}s)
                 </span>
               </div>
 
               {/* Progress track */}
               <div className="relative h-7 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden flex items-center">
-                <div className="h-full bg-slate-800 flex items-center justify-center px-3 text-[10px] text-slate-400 font-mono border-r border-slate-700" style={{ width: '65%' }}>
+                <div
+                  className="h-full bg-slate-800 flex items-center justify-center px-3 text-[10px] text-slate-400 font-mono border-r border-slate-700"
+                  style={{ width: '65%' }}
+                >
                   Đoạn gốc
                 </div>
-                <div className="h-full bg-sky-500/30 flex items-center justify-center px-3 text-[10px] text-sky-300 font-bold font-mono" style={{ width: '35%' }}>
+                <div
+                  className="h-full bg-sky-500/30 flex items-center justify-center px-3 text-[10px] text-sky-300 font-bold font-mono"
+                  style={{ width: '35%' }}
+                >
                   +{extendSecs}s ({extendMode.toUpperCase()})
                 </div>
 
@@ -3078,13 +3583,22 @@ export const Modals: React.FC = () => {
               </div>
             </div>
 
-            {/* Action */}
-            <button
-              onClick={handleApplyExtendVideo}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-sky-500/20"
-            >
-              Áp dụng & Lưu vào Timeline
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={handleApplyExtendVideo}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-sky-500/20"
+              >
+                Áp dụng vào Dự án
+              </button>
+              <button
+                onClick={handleOpenExtendInEditor}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-sky-400" />
+                <span>Mở trong Editor</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -3102,7 +3616,8 @@ export const Modals: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#9CA3AF]">
-              Áp dụng phân tích lệnh thông minh để tự động cắt xén, tăng tốc, đổi tông màu hoặc tối ưu hóa nhịp điệu cho clip:
+              Áp dụng phân tích lệnh thông minh để tự động cắt xén, tăng tốc, đổi tông màu hoặc tối ưu hóa nhịp điệu cho
+              clip:
             </p>
 
             {/* Chọn clip áp dụng */}
@@ -3116,7 +3631,8 @@ export const Modals: React.FC = () => {
                 {videoClips.length > 0 ? (
                   videoClips.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.duration}s, filter: {typeof c.filter === 'object' ? c.filter?.id : (c.filter || 'none')})
+                      {c.name} ({c.duration}s, filter:{' '}
+                      {typeof c.filter === 'object' ? c.filter?.id : c.filter || 'none'})
                     </option>
                   ))
                 ) : (
@@ -3168,13 +3684,19 @@ export const Modals: React.FC = () => {
                 Kế hoạch thực thi EditPilot:
               </div>
               <div className="text-white font-medium pl-5 text-[11px]">
-                {aiEditPrompt.toLowerCase().includes('tăng tốc') || aiEditPrompt.includes('1.5x') ? '• Tăng tốc clip lên 1.5x' : ''}
-                {aiEditPrompt.toLowerCase().includes('chậm') || aiEditPrompt.includes('0.75x') ? '• Giảm tốc độ phát xuống 0.75x' : ''}
+                {aiEditPrompt.toLowerCase().includes('tăng tốc') || aiEditPrompt.includes('1.5x')
+                  ? '• Tăng tốc clip lên 1.5x'
+                  : ''}
+                {aiEditPrompt.toLowerCase().includes('chậm') || aiEditPrompt.includes('0.75x')
+                  ? '• Giảm tốc độ phát xuống 0.75x'
+                  : ''}
                 {aiEditPrompt.toLowerCase().includes('cắt') ? '• Cắt 2 giây đầu và cập nhật thời lượng' : ''}
                 {aiEditPrompt.toLowerCase().includes('sáng') ? '• Tăng độ sáng và tương phản' : ''}
                 {aiEditPrompt.toLowerCase().includes('điện ảnh') ? '• Áp dụng LUT Cinematic 9:16' : ''}
                 {aiEditPrompt.toLowerCase().includes('vintage') ? '• Áp dụng tone màu Vintage Retro' : ''}
-                {aiEditPrompt.toLowerCase().includes('tắt tiếng') || aiEditPrompt.toLowerCase().includes('mute') ? '• Mute âm lượng về 0%' : ''}
+                {aiEditPrompt.toLowerCase().includes('tắt tiếng') || aiEditPrompt.toLowerCase().includes('mute')
+                  ? '• Mute âm lượng về 0%'
+                  : ''}
                 {!aiEditPrompt ? '• Tự động tối ưu nhịp điệu & thêm bộ lọc video' : ''}
               </div>
             </div>
@@ -3217,7 +3739,8 @@ export const Modals: React.FC = () => {
                 {videoClips.length > 0 ? (
                   videoClips.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.duration}s, filter: {typeof c.filter === 'object' ? c.filter?.id : (c.filter || 'standard')})
+                      {c.name} ({c.duration}s, filter:{' '}
+                      {typeof c.filter === 'object' ? c.filter?.id : c.filter || 'standard'})
                     </option>
                   ))
                 ) : (
@@ -3364,13 +3887,22 @@ export const Modals: React.FC = () => {
               </div>
             </div>
 
-            {/* Action */}
-            <button
-              onClick={handleApplyEnhance}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:opacity-95 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20"
-            >
-              Áp dụng nâng cấp HD lên Video
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={handleApplyEnhance}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:opacity-95 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20"
+              >
+                Áp dụng nâng cấp HD
+              </button>
+              <button
+                onClick={handleOpenEnhanceInEditor}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+                <span>Mở trong Editor</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -3389,7 +3921,8 @@ export const Modals: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#9CA3AF]">
-              Tự động phân tích kịch bản, chia thành 4 cảnh 9:16 có độ dài chuẩn 30 giây, tạo phụ đề và đồng bộ nhạc nền:
+              Tự động phân tích kịch bản, chia thành 4 cảnh 9:16 có độ dài chuẩn 30 giây, tạo phụ đề và đồng bộ nhạc
+              nền:
             </p>
 
             {/* Kịch bản input */}
@@ -3411,15 +3944,18 @@ export const Modals: React.FC = () => {
                 {[
                   {
                     title: '🎯 5 Mẹo TikTok Triệu View',
-                    script: '5 Bí quyết tạo video triệu view trên TikTok & Reels. Giữ chân người xem trong 3s đầu bằng một câu hỏi sốc. Đi thẳng vào giá trị cốt lõi, không vòng vo. Đưa ra ví dụ minh chứng thực tế. Kêu gọi hành động rõ ràng. Thử ngay hôm nay!'
+                    script:
+                      '5 Bí quyết tạo video triệu view trên TikTok & Reels. Giữ chân người xem trong 3s đầu bằng một câu hỏi sốc. Đi thẳng vào giá trị cốt lõi, không vòng vo. Đưa ra ví dụ minh chứng thực tế. Kêu gọi hành động rõ ràng. Thử ngay hôm nay!'
                   },
                   {
                     title: '📱 Review Công Nghệ 2026',
-                    script: 'Siêu phẩm công nghệ đột phá nhất 2026 đã lộ diện. Màn hình holographic cực nét, thời lượng pin cả tuần. Thiết kế siêu nhẹ mang lại trải nghiệm đỉnh cao. Đặt trước hôm nay để nhận quà tặng độc quyền!'
+                    script:
+                      'Siêu phẩm công nghệ đột phá nhất 2026 đã lộ diện. Màn hình holographic cực nét, thời lượng pin cả tuần. Thiết kế siêu nhẹ mang lại trải nghiệm đỉnh cao. Đặt trước hôm nay để nhận quà tặng độc quyền!'
                   },
                   {
                     title: '✈️ Du Lịch Đà Lạt 2N1Đ',
-                    script: 'Lịch trình du lịch Đà Lạt 2 ngày 1 đêm tiết kiệm nhất. Săn mây đồi chè Cầu Đất lúc bình minh. Thưởng thức bánh tráng nướng và sữa đậu nành nóng hổi. Lưu ngay video cho chuyến đi sắp tới của bạn!'
+                    script:
+                      'Lịch trình du lịch Đà Lạt 2 ngày 1 đêm tiết kiệm nhất. Săn mây đồi chè Cầu Đất lúc bình minh. Thưởng thức bánh tráng nướng và sữa đậu nành nóng hổi. Lưu ngay video cho chuyến đi sắp tới của bạn!'
                   }
                 ].map((s) => (
                   <button
@@ -3444,7 +3980,10 @@ export const Modals: React.FC = () => {
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {vsScenes.map((sc, idx) => (
-                  <div key={sc.id} className="p-2.5 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex flex-col gap-1.5">
+                  <div
+                    key={sc.id}
+                    className="p-2.5 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex flex-col gap-1.5"
+                  >
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-cyan-300 truncate">{sc.title}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
@@ -3500,14 +4039,23 @@ export const Modals: React.FC = () => {
               </select>
             </div>
 
-            {/* Action */}
-            <button
-              onClick={handleCreateVideoStudioProject}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-[#22D3EE]/20 flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Tạo Dự Án Video 30s & Mở Trong Editor</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={handleCreateVideoStudioProject}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-[#22D3EE]/20 flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Mở trong Editor (30s)</span>
+              </button>
+              <button
+                onClick={handleAppendVideoStudioToProject}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                <span>+ Thêm vào Dự án</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -3624,23 +4172,33 @@ export const Modals: React.FC = () => {
                   {adActiveVariant === 'A' && (
                     <>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">0-4s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          0-4s
+                        </span>
                         <span>🔥 Hook gây chú ý: Sale sốc nhất năm dành cho bạn!</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">4-8s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          4-8s
+                        </span>
                         <span>✨ Giải pháp: {adProdName} - Chống ồn đỉnh cao</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">8-12s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          8-12s
+                        </span>
                         <span>⚡ USP: {adUsp.split(',')[0]} & Pin khủng</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">12-16s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          12-16s
+                        </span>
                         <span>⭐⭐⭐⭐⭐ 50,000+ Khách hàng tin dùng</span>
                       </div>
                       <div className="flex items-center gap-2 text-amber-300 font-bold">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">16-20s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">
+                          16-20s
+                        </span>
                         <span>🛒 CTA: {adCta} • Mua ngay tại giỏ hàng!</span>
                       </div>
                     </>
@@ -3648,23 +4206,33 @@ export const Modals: React.FC = () => {
                   {adActiveVariant === 'B' && (
                     <>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">0-4s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          0-4s
+                        </span>
                         <span>📱 Review chân thực chiếc tai nghe hot nhất!</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">4-8s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          4-8s
+                        </span>
                         <span>🎧 Bật chống ồn là êm ru cả không gian cafe</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">8-12s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          8-12s
+                        </span>
                         <span>🔋 Nghe cả tuần mới cần sạc 1 lần</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">12-16s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          12-16s
+                        </span>
                         <span>💎 Chất âm bass sâu vượt xa giá tiền</span>
                       </div>
                       <div className="flex items-center gap-2 text-amber-300 font-bold">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">16-20s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">
+                          16-20s
+                        </span>
                         <span>👉 {adCta} tại góc trái nhé!</span>
                       </div>
                     </>
@@ -3672,23 +4240,33 @@ export const Modals: React.FC = () => {
                   {adActiveVariant === 'C' && (
                     <>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">0-4s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          0-4s
+                        </span>
                         <span>Định nghĩa lại trải nghiệm âm thanh cá nhân</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">4-8s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          4-8s
+                        </span>
                         <span>{adProdName} • Chuẩn âm thanh Hi-Res</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">8-12s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          8-12s
+                        </span>
                         <span>Thiết kế công thái học tối giản cao cấp</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-300">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">12-16s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">
+                          12-16s
+                        </span>
                         <span>Sự lựa chọn của giới chuyên gia âm nhạc</span>
                       </div>
                       <div className="flex items-center gap-2 text-amber-300 font-bold">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">16-20s</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">
+                          16-20s
+                        </span>
                         <span>Sở hữu ngay hôm nay: {adCta}</span>
                       </div>
                     </>
@@ -3697,14 +4275,23 @@ export const Modals: React.FC = () => {
               </div>
             </div>
 
-            {/* Action */}
-            <button
-              onClick={handleCreateAdProject}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-xs hover:opacity-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
-            >
-              <Megaphone className="w-4 h-4" />
-              <span>Đưa Storyboard Variant {adActiveVariant} Vào Editor (9:16)</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={handleCreateAdProject}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-xs hover:opacity-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
+              >
+                <Megaphone className="w-3.5 h-3.5" />
+                <span>Mở trong Editor (9:16)</span>
+              </button>
+              <button
+                onClick={handleAppendAdToProject}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5 text-blue-400" />
+                <span>+ Thêm vào Dự án</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -3743,7 +4330,7 @@ export const Modals: React.FC = () => {
               </button>
             </div>
 
-            {/* Cài đặt cắt tự động */}
+            {/* Cài đặt cắt tự động & Tùy chỉnh Focal Box */}
             <div className="grid grid-cols-2 gap-3">
               {/* Chọn độ dài */}
               <div className="flex flex-col gap-1.5">
@@ -3773,35 +4360,67 @@ export const Modals: React.FC = () => {
                   onChange={(e) => setLtsDetectMode(e.target.value as any)}
                   className="bg-[#0B0F19] border border-[#1F2937] focus:border-teal-400 rounded-lg p-2 text-xs text-white outline-none cursor-pointer"
                 >
-                  <option value="scene">⚡ Chênh lệch frame (Scene Diff)</option>
+                  <option value="scene">⚡ Chênh lệch frame (Histogram + Audio RMS)</option>
                   <option value="duration">⏱️ Chia đều theo nhịp (Interval)</option>
                 </select>
               </div>
             </div>
 
+            {/* Auto-crop 9:16 Focal Box Slider */}
+            <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-teal-300 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Vị trí khung cắt Auto-Crop 9:16 (Focal Box):
+                </span>
+                <span className="font-mono text-teal-400 font-bold">
+                  {ltsFocalOffset < 0
+                    ? `Lệch trái ${Math.abs(ltsFocalOffset)}%`
+                    : ltsFocalOffset > 0
+                      ? `Lệch phải ${ltsFocalOffset}%`
+                      : 'Căn chính giữa (0%)'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-500">Trái (-50%)</span>
+                <input
+                  type="range"
+                  min="-50"
+                  max="50"
+                  step="5"
+                  value={ltsFocalOffset}
+                  onChange={(e) => setLtsFocalOffset(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-ew-resize accent-teal-400"
+                />
+                <span className="text-[10px] text-slate-500">Phải (+50%)</span>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                💡 Thuật toán tự động nhận diện chủ thể và căn chỉnh khung hình dọc 9:16 từ video ngang 16:9 gốc.
+              </p>
+            </div>
+
             {/* Danh sách Shorts phát hiện được */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[#9CA3AF]">Các đoạn Shorts tiềm năng phát hiện được:</span>
+                <span className="font-semibold text-[#9CA3AF]">
+                  Các đoạn Shorts tiềm năng phát hiện được ({ltsCandidates.length}):
+                </span>
                 <button
                   type="button"
                   onClick={() => {
-                    if (ltsSelectedShorts.length === 4) setLtsSelectedShorts([]);
-                    else setLtsSelectedShorts([1, 2, 3, 4]);
+                    if (ltsSelectedShorts.length === ltsCandidates.length) setLtsSelectedShorts([]);
+                    else setLtsSelectedShorts(ltsCandidates.map((c) => c.id));
                   }}
                   className="text-[10px] text-teal-400 hover:underline cursor-pointer"
                 >
-                  {ltsSelectedShorts.length === 4 ? 'Bỏ chọn tất cả' : 'Chọn tất cả (4 shorts)'}
+                  {ltsSelectedShorts.length === ltsCandidates.length
+                    ? 'Bỏ chọn tất cả'
+                    : `Chọn tất cả (${ltsCandidates.length} shorts)`}
                 </button>
               </div>
 
               <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-                {[
-                  { id: 1, title: 'Bí quyết AI thay đổi tương lai 2026', time: '00:15 - 00:45', viral: 96, tag: 'Hook cực mạnh' },
-                  { id: 2, title: 'Sai lầm 90% người mới bắt đầu mắc phải', time: '01:20 - 01:50', viral: 92, tag: 'Cảm xúc cao' },
-                  { id: 3, title: 'Công thức 3 bước nhân đôi hiệu suất làm việc', time: '02:40 - 03:10', viral: 89, tag: 'Thực tế & Rõ ràng' },
-                  { id: 4, title: 'Tương lai ngành lập trình trong 5 năm tới', time: '03:50 - 04:20', viral: 85, tag: 'Góc nhìn tranh luận' }
-                ].map((s) => (
+                {ltsCandidates.map((s) => (
                   <div
                     key={s.id}
                     className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
@@ -3822,28 +4441,84 @@ export const Modals: React.FC = () => {
                       />
                       <div className="truncate">
                         <div className="text-xs font-bold text-white truncate flex items-center gap-2">
-                          <span>Short #{s.id}: {s.title}</span>
+                          <span>
+                            Short #{s.id}: {s.title}
+                          </span>
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-500/20 text-teal-300 font-mono">
-                            Auto-crop 9:16
+                            9:16
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          Thời gian: {s.time} • Tiềm năng Viral: <span className="text-amber-400 font-bold">{s.viral}% 🔥</span> ({s.tag})
+                          Thời gian: {s.start}s - {s.end}s • Tiềm năng Viral:{' '}
+                          <span className="text-amber-400 font-bold">{s.viralScore}% 🔥</span> ({s.tag})
                         </div>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenShortInEditor(s.id)}
-                      className="py-1 px-2.5 rounded-lg bg-[#111827] hover:bg-teal-500 hover:text-slate-950 text-teal-400 font-bold text-[10px] border border-[#1F2937] transition-colors shrink-0 ml-2"
-                    >
-                      Mở Editor ➔
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        type="button"
+                        onClick={() => handleAddShortToProject(s.id)}
+                        className="py-1 px-2 rounded-lg bg-[#111827] hover:bg-slate-800 text-teal-300 font-bold text-[10px] border border-[#1F2937] transition-colors"
+                        title="Chèn đoạn Short này vào timeline hiện tại"
+                      >
+                        + Timeline
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenShortInEditor(s.id)}
+                        className="py-1 px-2.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-[10px] transition-colors"
+                      >
+                        Mở Editor ➔
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Hàng đợi xuất hàng loạt (Batch Queue State) */}
+            {ltsExportQueue.length > 0 && (
+              <div className="p-3 rounded-xl bg-[#0B0F19] border border-teal-500/30 flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-teal-300 flex items-center gap-1.5">
+                    <RefreshCw className={`w-3.5 h-3.5 ${ltsIsExporting ? 'animate-spin' : ''}`} />
+                    Tiến độ xuất hàng loạt ({ltsExportQueue.filter((q) => q.status === 'done').length}/
+                    {ltsExportQueue.length}):
+                  </span>
+                  {ltsIsExporting && (
+                    <button
+                      onClick={handleCancelBatchExport}
+                      className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-bold"
+                    >
+                      Hủy xuất hàng loạt
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 max-h-24 overflow-y-auto pr-1">
+                  {ltsExportQueue.map((item) => (
+                    <div key={item.shortId} className="flex items-center justify-between text-[10px] text-slate-300">
+                      <span className="truncate max-w-[200px]">
+                        Short #{item.shortId}: {item.title}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`font-mono font-bold ${item.status === 'done' ? 'text-emerald-400' : item.status === 'processing' ? 'text-teal-400' : item.status === 'cancelled' ? 'text-rose-400' : 'text-slate-400'}`}
+                        >
+                          {item.status === 'done'
+                            ? '✓ Xong'
+                            : item.status === 'processing'
+                              ? `${item.progress}%`
+                              : item.status === 'cancelled'
+                                ? 'Đã hủy'
+                                : 'Đang chờ'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#1F2937]">
@@ -3853,13 +4528,22 @@ export const Modals: React.FC = () => {
               >
                 Đưa Short vào Editor (9:16)
               </button>
-              <button
-                onClick={handleBatchExportShorts}
-                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Download className="w-4 h-4 text-teal-400" />
-                <span>Xuất hàng loạt ({ltsSelectedShorts.length} Shorts)</span>
-              </button>
+              {ltsIsExporting ? (
+                <button
+                  onClick={handleCancelBatchExport}
+                  className="py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>Dừng xuất hàng loạt</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleBatchExportShorts}
+                  className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-4 h-4 text-teal-400" />
+                  <span>Xuất hàng loạt ({ltsSelectedShorts.length} Shorts)</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -3908,7 +4592,8 @@ export const Modals: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#8A8A8A] leading-relaxed">
-              Bạn có thể tải gói tệp dự án <code className="text-[#1FC8DB]">.capproj</code> để chia sẻ ngoại tuyến, sử dụng hộp thoại chia sẻ hệ thống hoặc sao chép liên kết trực tuyến.
+              Bạn có thể tải gói tệp dự án <code className="text-[#1FC8DB]">.capproj</code> để chia sẻ ngoại tuyến, sử
+              dụng hộp thoại chia sẻ hệ thống hoặc sao chép liên kết trực tuyến.
             </p>
 
             <div className="flex flex-col gap-2.5">
@@ -3962,18 +4647,22 @@ export const Modals: React.FC = () => {
               <div className="p-3.5 rounded-md bg-[#1F1F1F] border border-[#333333] flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-xs text-white">Liên kết chia sẻ (Cloud Link)</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${
-                    isSupabaseConfigured
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  }`}>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded font-mono ${
+                      isSupabaseConfigured
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
                     {isSupabaseConfigured ? '🟢 Supabase Online' : '⚡ Chế độ Khách (Offline)'}
                   </span>
                 </div>
 
                 {!isSupabaseConfigured && (
                   <p className="text-[11px] text-amber-300/80 leading-relaxed bg-amber-500/10 p-2 rounded border border-amber-500/20">
-                    Chưa kết nối Supabase Cloud: Tính năng tạo link công khai qua mạng yêu cầu biến môi trường <code className="text-white">VITE_SUPABASE_URL</code>. Bạn có thể sử dụng nút sao chép đường dẫn cục bộ hoặc gửi file .capproj ở trên.
+                    Chưa kết nối Supabase Cloud: Tính năng tạo link công khai qua mạng yêu cầu biến môi trường{' '}
+                    <code className="text-white">VITE_SUPABASE_URL</code>. Bạn có thể sử dụng nút sao chép đường dẫn cục
+                    bộ hoặc gửi file .capproj ở trên.
                   </p>
                 )}
 
@@ -3997,176 +4686,177 @@ export const Modals: React.FC = () => {
         )}
 
         {/* 12. SEARCHABLE & CUSTOMIZABLE KEYBOARD SHORTCUTS */}
-        {activeModal === 'shortcuts' && (() => {
-          const categories = [
-            { id: 'all', label: language === 'VN' ? 'Tất cả' : 'All' },
-            { id: 'playback', label: language === 'VN' ? 'Phát video' : 'Playback' },
-            { id: 'editing', label: language === 'VN' ? 'Biên tập' : 'Editing' },
-            { id: 'tools', label: language === 'VN' ? 'Công cụ' : 'Tools' },
-            { id: 'navigation', label: language === 'VN' ? 'Điều hướng' : 'Navigation' },
-            { id: 'view', label: language === 'VN' ? 'Giao diện' : 'View' },
-            { id: 'project', label: language === 'VN' ? 'Dự án' : 'Project' }
-          ];
+        {activeModal === 'shortcuts' &&
+          (() => {
+            const categories = [
+              { id: 'all', label: language === 'VN' ? 'Tất cả' : 'All' },
+              { id: 'playback', label: language === 'VN' ? 'Phát video' : 'Playback' },
+              { id: 'editing', label: language === 'VN' ? 'Biên tập' : 'Editing' },
+              { id: 'tools', label: language === 'VN' ? 'Công cụ' : 'Tools' },
+              { id: 'navigation', label: language === 'VN' ? 'Điều hướng' : 'Navigation' },
+              { id: 'view', label: language === 'VN' ? 'Giao diện' : 'View' },
+              { id: 'project', label: language === 'VN' ? 'Dự án' : 'Project' }
+            ];
 
-          const filtered = DEFAULT_SHORTCUTS.filter((s) => {
-            const matchesCat = shortcutCategory === 'all' || s.category === shortcutCategory;
-            if (!matchesCat) return false;
-            if (!shortcutsSearch) return true;
-            const q = shortcutsSearch.toLowerCase();
-            const currentKey = settings.customShortcuts?.[s.id] || s.defaultKey;
+            const filtered = DEFAULT_SHORTCUTS.filter((s) => {
+              const matchesCat = shortcutCategory === 'all' || s.category === shortcutCategory;
+              if (!matchesCat) return false;
+              if (!shortcutsSearch) return true;
+              const q = shortcutsSearch.toLowerCase();
+              const currentKey = settings.customShortcuts?.[s.id] || s.defaultKey;
+              return (
+                s.name.toLowerCase().includes(q) ||
+                s.nameEn.toLowerCase().includes(q) ||
+                s.description.toLowerCase().includes(q) ||
+                s.descriptionEn.toLowerCase().includes(q) ||
+                currentKey.toLowerCase().includes(q)
+              );
+            });
+
             return (
-              s.name.toLowerCase().includes(q) ||
-              s.nameEn.toLowerCase().includes(q) ||
-              s.description.toLowerCase().includes(q) ||
-              s.descriptionEn.toLowerCase().includes(q) ||
-              currentKey.toLowerCase().includes(q)
-            );
-          });
-
-          return (
-            <div className="flex flex-col gap-3.5 text-left">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-[#333333]">
-                <div className="flex items-center gap-2 text-[#22D3EE]">
-                  <Keyboard className="w-5 h-5" />
-                  <div>
-                    <h3 className="text-base font-bold text-white">
-                      {language === 'VN' ? 'Phím tắt biên tập' : 'Keyboard Shortcuts'}
-                    </h3>
-                    <p className="text-[11px] text-[#9CA3AF]">
-                      {language === 'VN'
-                        ? 'Bấm vào bất kỳ phím tắt nào bên dưới để tùy chỉnh gán phím mới'
-                        : 'Click on any shortcut badge below to record and rebind custom keys'}
-                    </p>
+              <div className="flex flex-col gap-3.5 text-left">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-[#333333]">
+                  <div className="flex items-center gap-2 text-[#22D3EE]">
+                    <Keyboard className="w-5 h-5" />
+                    <div>
+                      <h3 className="text-base font-bold text-white">
+                        {language === 'VN' ? 'Phím tắt biên tập' : 'Keyboard Shortcuts'}
+                      </h3>
+                      <p className="text-[11px] text-[#9CA3AF]">
+                        {language === 'VN'
+                          ? 'Bấm vào bất kỳ phím tắt nào bên dưới để tùy chỉnh gán phím mới'
+                          : 'Click on any shortcut badge below to record and rebind custom keys'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetShortcuts();
-                    showToast('Đã khôi phục toàn bộ phím tắt mặc định!', 'info');
-                  }}
-                  className="px-2.5 py-1 rounded bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-xs font-medium transition-colors"
-                  title="Khôi phục cài đặt phím tắt gốc"
-                >
-                  {language === 'VN' ? 'Khôi phục mặc định' : 'Reset Defaults'}
-                </button>
-              </div>
-
-              {/* Search & Category Filter Pills */}
-              <div className="flex flex-col gap-2">
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    value={shortcutsSearch}
-                    onChange={(e) => setShortcutsSearch(e.target.value)}
-                    placeholder={
-                      language === 'VN'
-                        ? 'Tìm phím tắt (VD: split, cắt, space, undo, zoom, ctrl+b)...'
-                        : 'Search shortcuts (e.g. split, space, undo, zoom, ctrl+b)...'
-                    }
-                    className="w-full bg-[#1F1F1F] border border-[#333333] focus:border-[#22D3EE] rounded-lg px-3.5 py-2 text-xs text-[#E6E6E6] placeholder-[#8A8A8A] outline-none"
-                  />
-                  {shortcutsSearch && (
-                    <button
-                      type="button"
-                      onClick={() => setShortcutsSearch('')}
-                      className="absolute right-2.5 text-xs text-[#8A8A8A] hover:text-white"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetShortcuts();
+                      showToast('Đã khôi phục toàn bộ phím tắt mặc định!', 'info');
+                    }}
+                    className="px-2.5 py-1 rounded bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-xs font-medium transition-colors"
+                    title="Khôi phục cài đặt phím tắt gốc"
+                  >
+                    {language === 'VN' ? 'Khôi phục mặc định' : 'Reset Defaults'}
+                  </button>
                 </div>
 
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  {categories.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setShortcutCategory(c.id)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                        shortcutCategory === c.id
-                          ? 'bg-[#22D3EE]/20 border border-[#22D3EE]/50 text-[#22D3EE]'
-                          : 'bg-[#181E2C] border border-transparent text-[#9CA3AF] hover:text-white'
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Shortcuts Table */}
-              <div className="flex flex-col gap-1.5 max-h-[380px] overflow-y-auto pr-1">
-                {filtered.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-[#8A8A8A]">
-                    {language === 'VN' ? 'Không tìm thấy phím tắt phù hợp' : 'No matching shortcuts found'}
+                {/* Search & Category Filter Pills */}
+                <div className="flex flex-col gap-2">
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      value={shortcutsSearch}
+                      onChange={(e) => setShortcutsSearch(e.target.value)}
+                      placeholder={
+                        language === 'VN'
+                          ? 'Tìm phím tắt (VD: split, cắt, space, undo, zoom, ctrl+b)...'
+                          : 'Search shortcuts (e.g. split, space, undo, zoom, ctrl+b)...'
+                      }
+                      className="w-full bg-[#1F1F1F] border border-[#333333] focus:border-[#22D3EE] rounded-lg px-3.5 py-2 text-xs text-[#E6E6E6] placeholder-[#8A8A8A] outline-none"
+                    />
+                    {shortcutsSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setShortcutsSearch('')}
+                        className="absolute right-2.5 text-xs text-[#8A8A8A] hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  filtered.map((s) => {
-                    const isRecording = recordingShortcutId === s.id;
-                    const customKey = settings.customShortcuts?.[s.id];
-                    const activeKey = customKey || s.defaultKey;
 
-                    return (
-                      <div
-                        key={s.id}
-                        className={`flex items-center justify-between p-2.5 rounded-lg border transition-all ${
-                          isRecording
-                            ? 'bg-[#22D3EE]/10 border-[#22D3EE] ring-1 ring-[#22D3EE]'
-                            : 'bg-[#181E2C] border-[#2A3447] hover:border-[#22D3EE]/40'
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    {categories.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setShortcutCategory(c.id)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                          shortcutCategory === c.id
+                            ? 'bg-[#22D3EE]/20 border border-[#22D3EE]/50 text-[#22D3EE]'
+                            : 'bg-[#181E2C] border border-transparent text-[#9CA3AF] hover:text-white'
                         }`}
                       >
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-white">
-                              {language === 'VN' ? s.name : s.nameEn}
-                            </span>
-                            {customKey && (
-                              <span className="px-1 py-0.2 rounded bg-cyan-500/10 text-[9px] text-[#22D3EE] font-mono border border-cyan-500/20">
-                                Tùy chỉnh
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-[#9CA3AF]">
-                            {language === 'VN' ? s.description : s.descriptionEn}
-                          </span>
-                        </div>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                        {isRecording ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="px-3 py-1 rounded bg-amber-500 text-slate-950 font-bold text-xs animate-pulse">
-                              {language === 'VN' ? 'Nhấn phím mới... (Esc hủy)' : 'Press new key... (Esc cancel)'}
+                {/* Shortcuts Table */}
+                <div className="flex flex-col gap-1.5 max-h-[380px] overflow-y-auto pr-1">
+                  {filtered.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-[#8A8A8A]">
+                      {language === 'VN' ? 'Không tìm thấy phím tắt phù hợp' : 'No matching shortcuts found'}
+                    </div>
+                  ) : (
+                    filtered.map((s) => {
+                      const isRecording = recordingShortcutId === s.id;
+                      const customKey = settings.customShortcuts?.[s.id];
+                      const activeKey = customKey || s.defaultKey;
+
+                      return (
+                        <div
+                          key={s.id}
+                          className={`flex items-center justify-between p-2.5 rounded-lg border transition-all ${
+                            isRecording
+                              ? 'bg-[#22D3EE]/10 border-[#22D3EE] ring-1 ring-[#22D3EE]'
+                              : 'bg-[#181E2C] border-[#2A3447] hover:border-[#22D3EE]/40'
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-white">
+                                {language === 'VN' ? s.name : s.nameEn}
+                              </span>
+                              {customKey && (
+                                <span className="px-1 py-0.2 rounded bg-cyan-500/10 text-[9px] text-[#22D3EE] font-mono border border-cyan-500/20">
+                                  Tùy chỉnh
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-[#9CA3AF]">
+                              {language === 'VN' ? s.description : s.descriptionEn}
                             </span>
+                          </div>
+
+                          {isRecording ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-3 py-1 rounded bg-amber-500 text-slate-950 font-bold text-xs animate-pulse">
+                                {language === 'VN' ? 'Nhấn phím mới... (Esc hủy)' : 'Press new key... (Esc cancel)'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRecordingShortcutId(null)}
+                                className="px-2 py-1 rounded bg-[#2A3447] hover:bg-slate-700 text-xs text-slate-300"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
                             <button
                               type="button"
-                              onClick={() => setRecordingShortcutId(null)}
-                              className="px-2 py-1 rounded bg-[#2A3447] hover:bg-slate-700 text-xs text-slate-300"
+                              onClick={() => setRecordingShortcutId(s.id)}
+                              className="font-mono text-xs text-[#22D3EE] font-bold bg-[#111827] hover:bg-[#22D3EE]/20 hover:border-[#22D3EE] px-3 py-1.5 rounded-lg border border-[#2A3447] transition-all cursor-pointer shadow-sm group"
+                              title="Nhấp để đổi phím tắt này"
                             >
-                              ✕
+                              <span>{formatDisplayKey(activeKey)}</span>
+                              <span className="ml-1.5 opacity-0 group-hover:opacity-100 text-[10px] text-slate-400">
+                                ✎
+                              </span>
                             </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setRecordingShortcutId(s.id)}
-                            className="font-mono text-xs text-[#22D3EE] font-bold bg-[#111827] hover:bg-[#22D3EE]/20 hover:border-[#22D3EE] px-3 py-1.5 rounded-lg border border-[#2A3447] transition-all cursor-pointer shadow-sm group"
-                            title="Nhấp để đổi phím tắt này"
-                          >
-                            <span>{formatDisplayKey(activeKey)}</span>
-                            <span className="ml-1.5 opacity-0 group-hover:opacity-100 text-[10px] text-slate-400">
-                              ✎
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         {/* 13. OPEN RECENT PROJECTS MODAL */}
         {activeModal === 'recentProjects' && (
@@ -4178,9 +4868,7 @@ export const Modals: React.FC = () => {
 
             <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto">
               {recentProjects.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#8A8A8A]">
-                  Chưa có dự án nào trong IndexedDB.
-                </div>
+                <div className="p-8 text-center text-xs text-[#8A8A8A]">Chưa có dự án nào trong IndexedDB.</div>
               ) : (
                 recentProjects.map((p) => (
                   <div
@@ -4226,7 +4914,8 @@ export const Modals: React.FC = () => {
             </div>
             <h3 className="text-base font-bold text-white">CapCut Desktop Web v3.0</h3>
             <p className="text-xs text-[#8A8A8A] leading-relaxed max-w-sm">
-              Trình biên tập video dọc 9:16 chuyên nghiệp cho TikTok, Reels và YouTube Shorts. Chạy 100% ngoại tuyến trên trình duyệt qua Dexie IndexedDB, WebGL2 và WebCodecs.
+              Trình biên tập video dọc 9:16 chuyên nghiệp cho TikTok, Reels và YouTube Shorts. Chạy 100% ngoại tuyến
+              trên trình duyệt qua Dexie IndexedDB, WebGL2 và WebCodecs.
             </p>
             <div className="text-[11px] text-[#8A8A8A] font-mono bg-[#1F1F1F] px-3 py-1 rounded border border-[#333333]">
               Build 2026.11 • Offline-First Native Engine
@@ -4376,4 +5065,3 @@ export const Modals: React.FC = () => {
     </div>
   );
 };
-

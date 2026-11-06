@@ -139,6 +139,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     try {
       const tplId = 'proj-tpl-' + Date.now();
       const tplTitle = `[Template] ${projectTitle}`;
+      const thumb = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80';
       await db.projects.add({
         id: tplId,
         title: tplTitle,
@@ -150,9 +151,29 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         isDeleted: false,
-        thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
+        thumbnail: thumb,
         tracksData: { clips }
       });
+
+      // Synchronize with user custom templates in localStorage
+      try {
+        const raw = localStorage.getItem('clipforge_custom_templates');
+        const list = raw ? JSON.parse(raw) : [];
+        list.unshift({
+          id: tplId,
+          cat: 'trending',
+          name: projectTitle || 'Mẫu của bạn',
+          dur: duration || 15,
+          slots: Math.max(1, clips.filter((c) => c.type === 'video' || c.type === 'image').length || 3),
+          tag: 'Tùy chỉnh ⭐',
+          img: thumb,
+          desc: 'Mẫu thiết kế lưu từ dự án của bạn'
+        });
+        localStorage.setItem('clipforge_custom_templates', JSON.stringify(list));
+      } catch {
+        // localStorage fallback
+      }
+
       showToast(`Đã lưu "${projectTitle}" làm Template mới!`, 'success');
     } catch (err: any) {
       showToast(`Lỗi lưu template: ${err.message}`, 'error');
@@ -228,9 +249,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
   return (
     <header
       className={`${
-        isEditor
-          ? 'h-[44px] bg-[#1F1F1F] border-[#333333] px-3 font-sans'
-          : 'h-14 bg-[#0E1320] border-[#1F2937] px-5'
+        isEditor ? 'h-[44px] bg-[#1F1F1F] border-[#333333] px-3 font-sans' : 'h-14 bg-[#0E1320] border-[#1F2937] px-5'
       } border-b flex items-center justify-between select-none z-30 shrink-0 text-xs`}
     >
       {/* Hidden file input for import .capproj */}
@@ -255,10 +274,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         )}
 
         {/* Logo CapCut placeholder: click confirms & navigates to Home */}
-        <Logo
-          size={isEditor ? 'sm' : 'md'}
-          onClick={isEditor ? handleHomeNavigation : undefined}
-        />
+        <Logo size={isEditor ? 'sm' : 'md'} onClick={isEditor ? handleHomeNavigation : undefined} />
 
         {/* Menu ▾ Dropdown for Editor */}
         {isEditor && (
@@ -307,7 +323,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><FilePlus className="w-3.5 h-3.5 text-[#1FC8DB]" /> Dự án mới (New project)</span>
+                      <span className="flex items-center gap-2">
+                        <FilePlus className="w-3.5 h-3.5 text-[#1FC8DB]" /> Dự án mới (New project)
+                      </span>
                     </button>
                     <button
                       onClick={() => {
@@ -316,20 +334,26 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><FolderOpen className="w-3.5 h-3.5 text-purple-400" /> Dự án gần đây (Recent)</span>
+                      <span className="flex items-center gap-2">
+                        <FolderOpen className="w-3.5 h-3.5 text-purple-400" /> Dự án gần đây (Recent)
+                      </span>
                     </button>
                     <button
                       onClick={handleManualSave}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Save className="w-3.5 h-3.5 text-emerald-400" /> Lưu dự án (Save)</span>
+                      <span className="flex items-center gap-2">
+                        <Save className="w-3.5 h-3.5 text-emerald-400" /> Lưu dự án (Save)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+S</span>
                     </button>
                     <button
                       onClick={handleSaveAsTemplate}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><BookmarkPlus className="w-3.5 h-3.5 text-amber-400" /> Lưu làm mẫu (Save as template)</span>
+                      <span className="flex items-center gap-2">
+                        <BookmarkPlus className="w-3.5 h-3.5 text-amber-400" /> Lưu làm mẫu (Save as template)
+                      </span>
                     </button>
                     <button
                       onClick={() => {
@@ -338,7 +362,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><History className="w-3.5 h-3.5 text-[#1FC8DB]" /> Lịch sử phiên bản (Version history)</span>
+                      <span className="flex items-center gap-2">
+                        <History className="w-3.5 h-3.5 text-[#1FC8DB]" /> Lịch sử phiên bản (Version history)
+                      </span>
                     </button>
                     <div className="border-t border-[#333333] my-1" />
                     <button
@@ -348,13 +374,17 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Upload className="w-3.5 h-3.5 text-sky-400" /> Nhập dự án (.capproj)</span>
+                      <span className="flex items-center gap-2">
+                        <Upload className="w-3.5 h-3.5 text-sky-400" /> Nhập dự án (.capproj)
+                      </span>
                     </button>
                     <button
                       onClick={handleExportCapproj}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Download className="w-3.5 h-3.5 text-teal-400" /> Xuất dự án (.capproj)</span>
+                      <span className="flex items-center gap-2">
+                        <Download className="w-3.5 h-3.5 text-teal-400" /> Xuất dự án (.capproj)
+                      </span>
                     </button>
                     <div className="border-t border-[#333333] my-1" />
                     <button
@@ -379,7 +409,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Undo2 className="w-3.5 h-3.5" /> Hoàn tác (Undo)</span>
+                      <span className="flex items-center gap-2">
+                        <Undo2 className="w-3.5 h-3.5" /> Hoàn tác (Undo)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+Z</span>
                     </button>
                     <button
@@ -389,7 +421,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Redo2 className="w-3.5 h-3.5" /> Làm lại (Redo)</span>
+                      <span className="flex items-center gap-2">
+                        <Redo2 className="w-3.5 h-3.5" /> Làm lại (Redo)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+Shift+Z</span>
                     </button>
                     <div className="border-t border-[#333333] my-1" />
@@ -400,7 +434,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Scissors className="w-3.5 h-3.5 text-amber-400" /> Cắt (Cut)</span>
+                      <span className="flex items-center gap-2">
+                        <Scissors className="w-3.5 h-3.5 text-amber-400" /> Cắt (Cut)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+X</span>
                     </button>
                     <button
@@ -410,7 +446,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Copy className="w-3.5 h-3.5 text-blue-400" /> Sao chép (Copy)</span>
+                      <span className="flex items-center gap-2">
+                        <Copy className="w-3.5 h-3.5 text-blue-400" /> Sao chép (Copy)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+C</span>
                     </button>
                     <button
@@ -420,7 +458,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><ClipboardPaste className="w-3.5 h-3.5 text-emerald-400" /> Dán (Paste)</span>
+                      <span className="flex items-center gap-2">
+                        <ClipboardPaste className="w-3.5 h-3.5 text-emerald-400" /> Dán (Paste)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+V</span>
                     </button>
                     <button
@@ -430,7 +470,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> Nhân bản (Duplicate)</span>
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Nhân bản (Duplicate)
+                      </span>
                       <span className="text-[10px] text-[#8A8A8A]">Ctrl+D</span>
                     </button>
                     <div className="border-t border-[#333333] my-1" />
@@ -498,7 +540,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Settings className="w-3.5 h-3.5 text-[#8A8A8A]" /> Cài đặt hệ thống (Settings)</span>
+                      <span className="flex items-center gap-2">
+                        <Settings className="w-3.5 h-3.5 text-[#8A8A8A]" /> Cài đặt hệ thống (Settings)
+                      </span>
                     </button>
                   </div>
                 )}
@@ -513,7 +557,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Keyboard className="w-3.5 h-3.5 text-[#1FC8DB]" /> Phím tắt (Keyboard shortcuts)</span>
+                      <span className="flex items-center gap-2">
+                        <Keyboard className="w-3.5 h-3.5 text-[#1FC8DB]" /> Phím tắt (Keyboard shortcuts)
+                      </span>
                     </button>
                     <button
                       onClick={() => {
@@ -522,7 +568,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       }}
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
-                      <span className="flex items-center gap-2"><Info className="w-3.5 h-3.5 text-sky-400" /> Giới thiệu CapCut Desktop Web</span>
+                      <span className="flex items-center gap-2">
+                        <Info className="w-3.5 h-3.5 text-sky-400" /> Giới thiệu CapCut Desktop Web
+                      </span>
                     </button>
                   </div>
                 )}
@@ -549,7 +597,11 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             <button
               onClick={redo}
               disabled={redoStack.length === 0}
-              title={redoStack.length === 0 ? 'Không có thao tác nào để làm lại (Ctrl+Shift+Z / Ctrl+Y)' : 'Làm lại (Redo - Ctrl+Shift+Z)'}
+              title={
+                redoStack.length === 0
+                  ? 'Không có thao tác nào để làm lại (Ctrl+Shift+Z / Ctrl+Y)'
+                  : 'Làm lại (Redo - Ctrl+Shift+Z)'
+              }
               className={`p-1.5 rounded-md transition-colors ${
                 redoStack.length === 0
                   ? 'text-[#555555] cursor-not-allowed opacity-40'
@@ -574,7 +626,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                 if (tempTitle.trim()) {
                   setProjectTitle(tempTitle.trim());
                   if (currentProjectId) {
-                    db.projects.update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() }).catch(() => {});
+                    db.projects
+                      .update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() })
+                      .catch(() => {});
                   }
                 }
                 setIsEditingTitle(false);
@@ -584,7 +638,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                   if (tempTitle.trim()) {
                     setProjectTitle(tempTitle.trim());
                     if (currentProjectId) {
-                      db.projects.update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() }).catch(() => {});
+                      db.projects
+                        .update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() })
+                        .catch(() => {});
                     }
                     showToast('Đã đổi tên dự án!', 'success');
                   }
