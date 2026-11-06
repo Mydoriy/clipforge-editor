@@ -30,7 +30,8 @@ import {
   FolderOpen,
   Calendar,
   Cloud,
-  Check
+  Check,
+  WifiOff
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
@@ -43,6 +44,7 @@ export const Home: React.FC = () => {
     setProjectTitle,
     setEditPilotOpen,
     addChatMessage,
+    isOffline,
     user
   } = useEditorStore();
 
@@ -186,6 +188,21 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0B0F19] p-7 flex flex-col gap-8 select-none">
+      {/* Offline Mode Banner */}
+      {isOffline && (
+        <div className="w-full p-3.5 rounded-xl bg-amber-950/70 border border-amber-500/40 flex items-center justify-between text-amber-200 text-xs shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Chế độ Ngoại tuyến (Offline):</strong> Bạn đang dùng ClipForge không có mạng. Các dự án lưu trên thiết bị vẫn mở và dựng bình thường.
+            </span>
+          </div>
+          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+            Local Only
+          </span>
+        </div>
+      )}
+
       {/* 1. HERO BANNER: gradient teal → xanh dương đậm (#12A8C9 → #0B4A66), bo góc 16px, nút "Create project" nằm giữa */}
       <div className="relative w-full h-48 rounded-[16px] bg-gradient-to-r from-[#12A8C9] to-[#0B4A66] flex items-center justify-center shadow-2xl shadow-cyan-950/40 overflow-hidden border border-cyan-400/20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/15 via-transparent to-transparent pointer-events-none" />

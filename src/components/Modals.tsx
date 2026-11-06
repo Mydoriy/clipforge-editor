@@ -32,6 +32,7 @@ import {
 import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import { APP_VERSION, APP_NAME, APP_BUILD_DATE } from '../constants/version';
 import { SystemCheckModal } from './SystemCheckModal';
+import { isIosSafari, isStandaloneMode, installPwaApp, applyPwaUpdate } from '../utils/pwa';
 import {
   X,
   Crown,
@@ -52,6 +53,7 @@ import {
   Scissors,
   VolumeX,
   Eye,
+  Smartphone,
   RefreshCw,
   Play,
   Pause,
@@ -106,10 +108,14 @@ export const Modals: React.FC = () => {
     currentTime,
     rebindShortcut,
     resetShortcuts,
-    projectSettings
+    projectSettings,
+    canInstallPwa,
+    pwaUpdateAvailable,
+    isOffline
   } = useEditorStore();
 
   const navigate = useNavigate();
+  const [showIosGuide, setShowIosGuide] = useState(false);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportStatus, setExportStatus] = useState<string>('');
   const [exportEta, setExportEta] = useState<number>(0);
@@ -2805,6 +2811,115 @@ export const Modals: React.FC = () => {
                   <span>Xem chi tiết</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
+              </div>
+
+              {/* PWA & Cài đặt Ứng dụng Offline */}
+              <div className="flex flex-col gap-3 pt-3 border-t border-[#1F2937]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold block flex items-center gap-1.5 text-white">
+                      <span>Ứng dụng Ngoại tuyến (PWA App & Offline)</span>
+                      {isStandaloneMode() && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                          ✓ Đã cài đặt
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-[#9CA3AF]">
+                      Cài đặt để mở nhanh từ desktop/màn hình chính và sử dụng 100% offline
+                    </span>
+                  </div>
+
+                  {canInstallPwa && !isStandaloneMode() && (
+                    <button
+                      type="button"
+                      onClick={() => installPwaApp()}
+                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Cài đặt App</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Hướng dẫn cài đặt riêng cho Safari / iOS */}
+                {isIosSafari() && !isStandaloneMode() && (
+                  <div className="p-3 rounded-xl bg-[#141B2D] border border-cyan-500/25 flex flex-col gap-2 text-[11px] text-[#CBD5E1]">
+                    <div className="flex items-center justify-between font-semibold text-white">
+                      <span className="flex items-center gap-1.5">
+                        <Smartphone className="w-4 h-4 text-[#22D3EE]" />
+                        <span>Cài đặt trên iPhone / iPad (Safari)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowIosGuide(!showIosGuide)}
+                        className="text-[#22D3EE] text-[10px] hover:underline cursor-pointer"
+                      >
+                        {showIosGuide ? 'Thu gọn' : 'Xem hướng dẫn'}
+                      </button>
+                    </div>
+                    {showIosGuide && (
+                      <ol className="list-decimal list-inside space-y-1 text-[#9CA3AF] pl-1 leading-relaxed">
+                        <li>
+                          Nhấn nút <strong>Chia sẻ</strong> (biểu tượng hình vuông có mũi tên lên) ở thanh dưới cùng Safari.
+                        </li>
+                        <li>
+                          Cuộn xuống và nhấn chọn <strong>"Thêm vào MH chính" (Add to Home Screen)</strong>.
+                        </li>
+                        <li>
+                          Nhấn <strong>"Thêm" (Add)</strong> ở góc trên bên phải để tạo biểu tượng ứng dụng ClipForge.
+                        </li>
+                      </ol>
+                    )}
+                  </div>
+                )}
+
+                {/* Kiểm tra và áp dụng cập nhật phiên bản mới */}
+                <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-white flex items-center gap-1.5">
+                      <span>Cập nhật phiên bản:</span>
+                      <span className="font-mono text-[#22D3EE] text-[11px]">v{APP_VERSION}</span>
+                    </span>
+                    <span className="text-[10px] text-[#9CA3AF]">
+                      {pwaUpdateAvailable
+                        ? 'Đã tải xong bản cập nhật mới trong nền!'
+                        : 'Service Worker tự động đồng bộ tài nguyên ngoại tuyến'}
+                    </span>
+                  </div>
+
+                  {pwaUpdateAvailable ? (
+                    <button
+                      type="button"
+                      onClick={() => applyPwaUpdate()}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Tải lại để cập nhật</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if ('serviceWorker' in navigator) {
+                          navigator.serviceWorker.getRegistration().then((reg) => {
+                            if (reg) {
+                              reg.update();
+                              showToast('Đang kiểm tra bản cập nhật mới...', 'info');
+                            } else {
+                              showToast('Bạn đang dùng phiên bản mới nhất!', 'success');
+                            }
+                          });
+                        } else {
+                          showToast('Bạn đang dùng phiên bản mới nhất!', 'success');
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#1F2937] hover:bg-[#374151] text-xs text-[#E5E7EB] font-medium transition-colors cursor-pointer"
+                    >
+                      Kiểm tra bản mới
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Xóa toàn bộ dữ liệu (Danger Zone) */}

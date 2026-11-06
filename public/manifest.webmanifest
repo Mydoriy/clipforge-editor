@@ -1,0 +1,103 @@
+{
+  "name": "ClipForge Web - Trình biên tập video ngắn 9:16",
+  "short_name": "ClipForge",
+  "description": "Trình dựng video ngắn dọc 9:16 chuyên nghiệp cho TikTok, Reels và Shorts. Vận hành 100% Client-Side trên trình duyệt, không cần đăng nhập.",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#080B12",
+  "background_color": "#080B12",
+  "lang": "vi",
+  "categories": [
+    "video",
+    "multimedia",
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dự án mới (New project)",
+      "short_name": "Dự án mới",
+      "description": "Tạo ngay một dự án video 9:16 mới",
+      "url": "/editor/new",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mở thư viện (Open Library)",
+      "short_name": "Thư viện",
+      "description": "Mở thư viện video và template đã lưu",
+      "url": "/library",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/editor/open-file",
+      "name": "Tệp dự án ClipForge (.capproj)",
+      "accept": {
+        "application/x-capproj": [
+          ".capproj"
+        ]
+      }
+    },
+    {
+      "action": "/editor/open-media",
+      "name": "Tệp Video & Âm thanh MP4 / WebM",
+      "accept": {
+        "video/mp4": [
+          ".mp4"
+        ],
+        "video/webm": [
+          ".webm"
+        ]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/editor/share-target",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

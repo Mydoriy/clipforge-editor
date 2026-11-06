@@ -77,6 +77,14 @@ interface EditorState {
   settings: AppSettings;
   updateSettings: (updates: Partial<AppSettings>) => void;
 
+  // PWA & Offline Network State
+  isOffline: boolean;
+  setIsOffline: (val: boolean) => void;
+  pwaUpdateAvailable: boolean;
+  setPwaUpdateAvailable: (val: boolean) => void;
+  canInstallPwa: boolean;
+  setCanInstallPwa: (val: boolean) => void;
+
   // Responsive Sidebar
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -302,6 +310,13 @@ export const useEditorStore = create<EditorState>()(
           return { settings: newSettings };
         });
       },
+
+      isOffline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
+      setIsOffline: (isOffline) => set({ isOffline }),
+      pwaUpdateAvailable: false,
+      setPwaUpdateAvailable: (pwaUpdateAvailable) => set({ pwaUpdateAvailable }),
+      canInstallPwa: false,
+      setCanInstallPwa: (canInstallPwa) => set({ canInstallPwa }),
 
       signIn: (name, email) => {
         set({

@@ -26,3 +26,4 @@
 - Toàn bộ **6/6 cổng kiểm tra trước khi ra mắt (L0)** đều đã chạy thực tế và đạt chuẩn 100%.
 - Không có mục nào bị chặn hoặc phát sinh lỗi nghiêm trọng.
 - Ứng dụng đủ điều kiện để công bố chính thức ra công chúng và bước vào giai đoạn thu thập phản hồi người dùng.
+

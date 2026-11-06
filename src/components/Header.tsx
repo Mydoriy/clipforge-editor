@@ -39,7 +39,8 @@ import {
   HelpCircle,
   Info,
   Maximize2,
-  History
+  History,
+  WifiOff
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -66,6 +67,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     notifications,
     markAllNotificationsAsRead,
     autosaveStatus,
+    isOffline,
     panelTopHeight,
     panelLeftWidth,
     panelRightWidth,
@@ -688,6 +690,17 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             />
             <span>{autosaveStatus === 'saving' ? 'Saving…' : 'Saved'}</span>
           </span>
+
+          {/* Offline Status Badge */}
+          {isOffline && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium flex items-center gap-1 select-none"
+              title="Đang ở chế độ Ngoại tuyến. Mọi thao tác dựng và xuất video vẫn hoạt động bình thường trên máy của bạn."
+            >
+              <WifiOff className="w-3 h-3 text-amber-400 shrink-0" />
+              <span>Offline</span>
+            </span>
+          )}
         </div>
       ) : (
         <div className="hidden md:flex items-center gap-2 text-xs text-[#9CA3AF]">

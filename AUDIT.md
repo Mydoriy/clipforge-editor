@@ -45,11 +45,12 @@
 | **Hướng Dẫn Sử Dụng Song Ngữ (USER_GUIDE.md) (W10)** | Hoạt động | Hướng dẫn chi tiết cho người dùng cuối bằng cả Tiếng Việt và English: từ tạo dự án, import, phím tắt, AI EditPilot đến xuất file và sao lưu `.capproj`. File: `USER_GUIDE.md`. | P1 | Đã hoàn thiện |
 | **Sổ Tay Vận Hành & SRE (RUNBOOK.md) (W10)** | Hoạt động | Quy trình chuẩn 4 bước deploy Vercel, giao thức rollback khẩn cấp tức thì (<30s), và ma trận phân tích nguyên nhân gốc thông tin chẩn đoán (System Diagnostics). File: `RUNBOOK.md`. | P1 | Đã hoàn thiện |
 | **Quản Lý Phiên Bản Semantic Versioning (W10)** | Hoạt động | Quản lý phiên bản tập trung tại `src/constants/version.ts` (`APP_VERSION = '1.0.0'`), hiển thị động trong Header và About modal; nhật ký [CHANGELOG.md](file:///d:/Editor/CHANGELOG.md). File: `CHANGELOG.md`, `src/constants/version.ts`, `src/components/Modals.tsx`. | P1 | Đã hoàn thiện |
+| **PWA & Hoạt động Ngoại tuyến (L1)** | Hoạt động | Manifest chuẩn W3C (icons 192/512/maskable, standalone, shortcuts "New project/Library", file_handlers, share_target); Service Worker precache shell và cache-first runtime giữ COOP/COEP/CORP; Banner offline rõ ràng; Nút Install App và hướng dẫn Safari iOS; Cơ chế cập nhật phiên bản an toàn chống mất dữ liệu khi đang lưu. File: `public/manifest.webmanifest`, `public/sw.js`, `src/utils/pwa.ts`, `src/tests/l1PwaOffline.test.mjs`. | P1 | Đã hoàn thiện |
 
 ---
 
 ## 2. KẾT LUẬN & ĐÁNH GIÁ CHUNG
-- Tất cả các hạng mục P0, P1, P2 từ W1 đến W10 và các tiêu chí cổng kiểm tra L0 (RELEASE_CHECKLIST.md) đã được hiện thực hóa bằng mã nguồn thực tế, không có stub giả lập `setTimeout` che đậy logic.
-- Toàn bộ 70 test suites tự động (56 node native tests + 13 vitest tests + 1 Playwright E2E production build test) đạt tỷ lệ vượt qua **100% (70/70)**.
-- Dự án đáp ứng trọn vẹn Định Nghĩa Hoàn Thành (Definition of Done) & Cổng Ra Mắt L0: 0 mục P0 mở, mọi nút giao diện đều có phản hồi thật hoặc tooltip giải thích lý do disabled, test E2E Chromium trên production build đạt chuẩn nghiệm thu khách vãng lai (không đăng nhập), test Golden-frame preview/export chuẩn xác, TypeScript strict 0 lỗi, ESLint sạch, i18n đầy đủ, bundle tối ưu, quét bảo mật Gitleaks sạch 0 secret, và tài nguyên được cấp phép minh bạch.
+- Tất cả các hạng mục P0, P1, P2 từ W1 đến W10, tiêu chí cổng kiểm tra L0 (RELEASE_CHECKLIST.md) và PWA & Hoạt động Ngoại tuyến L1 đã được hiện thực hóa bằng mã nguồn thực tế, không có stub giả lập `setTimeout` che đậy logic.
+- Toàn bộ 75 test suites tự động (61 node native tests + 13 vitest tests + 1 Playwright E2E production build test) đạt tỷ lệ vượt qua **100% (75/75)**.
+- Dự án đáp ứng trọn vẹn Định Nghĩa Hoàn Thành (Definition of Done) & Cổng Ra Mắt L0/L1: 0 mục P0 mở, mọi nút giao diện đều có phản hồi thật hoặc tooltip giải thích lý do disabled, test E2E Chromium trên production build đạt chuẩn nghiệm thu khách vãng lai (không đăng nhập), test Golden-frame preview/export chuẩn xác, TypeScript strict 0 lỗi, ESLint sạch, i18n đầy đủ, bundle tối ưu, quét bảo mật Gitleaks sạch 0 secret, PWA offline và cài đặt hoàn tất, và tài nguyên được cấp phép minh bạch.
 

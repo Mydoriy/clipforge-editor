@@ -115,7 +115,8 @@ export const CategoryPanel: React.FC = () => {
     setTimelines,
     duration,
     settings,
-    openModal
+    openModal,
+    isOffline
   } = useEditorStore();
 
   const t = translations[language];
@@ -2654,11 +2655,22 @@ export const CategoryPanel: React.FC = () => {
 
                 <button
                   onClick={handleGenerateAiImage}
-                  disabled={isGeneratingAi}
-                  className="py-2.5 rounded-md bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all"
+                  disabled={isGeneratingAi || isOffline}
+                  title={isOffline ? 'Tính năng tạo ảnh AI từ mạng cần kết nối internet' : ''}
+                  className={`py-2.5 rounded-md font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
+                    isOffline
+                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'
+                      : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white cursor-pointer'
+                  }`}
                 >
                   <Wand2 className="w-3.5 h-3.5" />
-                  <span>{isGeneratingAi ? 'Đang tạo ảnh AI...' : 'Tạo ảnh 9:16 và chèn vào timeline'}</span>
+                  <span>
+                    {isOffline
+                      ? 'Tạm tắt (Cần internet)'
+                      : isGeneratingAi
+                      ? 'Đang tạo ảnh AI...'
+                      : 'Tạo ảnh 9:16 và chèn vào timeline'}
+                  </span>
                 </button>
               </div>
             )}

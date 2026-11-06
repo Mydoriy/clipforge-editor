@@ -67,10 +67,17 @@
   5. Quét bảo mật Gitleaks sạch: 0 API keys/secrets hardcode, 0 localhost URL trong `src/` (`l0PreRelease.test.mjs`).
   6. Quét license: 100% tài nguyên CC0/MIT/OFL minh bạch, tự sinh `THIRD_PARTY_NOTICES.md`.
 
+### 📱 L1 (PWA & Hoạt Động Ngoại Tuyến Hoàn Tất):
+- **Web App Manifest hoàn chỉnh**: `manifest.webmanifest` & `manifest.json` đầy đủ name, icons 192/512 + maskable, `theme_color: #080B12`, `display: standalone`, `start_url: /?source=pwa`, shortcuts ("Dự án mới", "Mở thư viện"), Chromium `file_handlers` (.capproj, .mp4, .webm), và `share_target`.
+- **Service Worker Workbox-compatible (`sw.js`)**: Precache application shell; Cache-first runtime cho `@ffmpeg/core`, model Whisper / Transformers, Google Fonts, asset mẫu; **giữ nguyên header COOP/COEP/CORP** trên mọi phản hồi từ cache để bảo toàn `crossOriginIsolated`.
+- **Editor & Export 100% Offline**: Sau lần nạp đầu, trình dựng và engine xuất WebCodecs MP4/Audio chạy hoàn toàn offline không cần internet. Banner Offline hiển thị rõ ràng tại Editor và Home; tính năng phụ thuộc mạng (Cloud sync, AI online) bị vô hiệu hóa kèm tooltip giải thích.
+- **Cài đặt Ứng dụng & Safari iOS Guide**: Bắt sự kiện `beforeinstallprompt` với nút "Cài đặt App" trong Settings modal; hướng dẫn 3 bước trực quan riêng cho Safari/iOS (Share → Add to Home Screen).
+- **Cập nhật Phiên bản An toàn**: Phát hiện worker mới và hiển thị thông báo "Có bản cập nhật mới"; kiểm tra an toàn chặn reload khi trạng thái autosave đang ghi dữ liệu hoặc đang xuất video.
+
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)
-- **Công bố sản phẩm & Tiếp nhận phản hồi (L1 - L3)**: Mở rộng tiếp nhận phản hồi từ người dùng thực tế qua GitHub Issues / Feedback modal.
+- **Thu thập Phản hồi & Telemetry (L2 - L3)**: Vận hành kênh tiếp nhận phản hồi từ người dùng thực tế và hoàn thiện kế hoạch mở rộng.
 - **Kiểm thử trên Safari/WebKit vật lý**: Tiếp tục xác nhận trải nghiệm trên macOS/iOS Safari thực tế.
 - **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
 - **Thêm container WebM native**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.

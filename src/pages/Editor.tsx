@@ -13,7 +13,7 @@ import { masterAudio } from '../engine/audioEngine';
 import { matchShortcut } from '../utils/shortcuts';
 import { acquireProjectLock, type ProjectLockHandle } from '../utils/projectLock';
 import { saveCrashCheckpoint, markCleanExit, checkUnsavedCrashCheckpoint, clearCrashCheckpoint, type CrashCheckpoint } from '../utils/crashRecovery';
-import { Sliders, Eye, AlertTriangle, Info, X, Lock, RotateCcw, Smartphone } from 'lucide-react';
+import { Sliders, Eye, AlertTriangle, Info, X, Lock, RotateCcw, Smartphone, WifiOff } from 'lucide-react';
 import { sanitizeSvg } from '../utils/sanitizer';
 
 export const Editor: React.FC = () => {
@@ -33,7 +33,8 @@ export const Editor: React.FC = () => {
     setStorageWarning,
     checkStorageQuota,
     isReadOnly,
-    setIsReadOnly
+    setIsReadOnly,
+    isOffline
   } = useEditorStore();
   const [showInspectorOnTablet, setShowInspectorOnTablet] = useState(false);
   const [missingApis, setMissingApis] = useState<{ webCodecs: boolean; fsAccess: boolean; webGpu: boolean }>({
@@ -722,6 +723,21 @@ export const Editor: React.FC = () => {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Offline Mode Indicator Banner */}
+      {isOffline && (
+        <div className="bg-amber-950/80 border-b border-amber-500/40 px-4 py-2 flex items-center justify-between text-amber-200 text-xs z-30 select-none shadow-md">
+          <div className="flex items-center gap-2.5">
+            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Chế độ Ngoại tuyến (Offline):</strong> Bạn có thể tiếp tục dựng, thêm chữ, hiệu ứng và xuất video WebCodecs bình thường. Tính năng đồng bộ Cloud và gọi API ngoài tạm thời được tắt.
+            </span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold uppercase">
+            Offline Ready
+          </span>
         </div>
       )}
 
