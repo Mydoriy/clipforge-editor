@@ -1,17 +1,20 @@
 /* ==========================================================================
-   CLIPFORGE - SUPABASE CLOUD DATABASE INTEGRATION
-   Quản lý dự án, lưu trữ mẫu và đồng bộ đám mây qua Supabase Postgres
+   CLIPFORGE - SUPABASE CLOUD DATABASE & AUTHENTICATION
+   Quản lý xác thực người dùng (Auth), tuyến bảo vệ (Protected Routes) & RLS
    ========================================================================== */
 
 const SB_STORAGE_KEYS = {
   url: "clipforge_supabase_url",
   key: "clipforge_supabase_key",
-  autoSync: "clipforge_supabase_autosync"
+  autoSync: "clipforge_supabase_autosync",
+  protectApp: "clipforge_protect_app"
 };
 
 let supabaseClient = null;
 let isSupabaseConnected = false;
 let isAutoSyncEnabled = false;
+let isAppProtectionEnabled = false;
+let currentUser = null;
 let cloudSyncTimer = null;
 
 // Khởi tạo Supabase từ LocalStorage khi khởi động
@@ -19,27 +22,33 @@ function initSupabase() {
   const savedUrl = localStorage.getItem(SB_STORAGE_KEYS.url);
   const savedKey = localStorage.getItem(SB_STORAGE_KEYS.key);
   const savedAutoSync = localStorage.getItem(SB_STORAGE_KEYS.autoSync);
+  const savedProtectApp = localStorage.getItem(SB_STORAGE_KEYS.protectApp);
 
   isAutoSyncEnabled = (savedAutoSync === "true");
+  isAppProtectionEnabled = (savedProtectApp === "true");
 
   const inputUrl = document.getElementById("sbProjectUrl");
   const inputKey = document.getElementById("sbAnonKey");
   const chkAutoSync = document.getElementById("sbAutoSyncCheck");
+  const chkProtectApp = document.getElementById("sbProtectAppCheck");
 
   if (inputUrl && savedUrl) inputUrl.value = savedUrl;
   if (inputKey && savedKey) inputKey.value = savedKey;
   if (chkAutoSync) chkAutoSync.checked = isAutoSyncEnabled;
+  if (chkProtectApp) chkProtectApp.checked = isAppProtectionEnabled;
 
   if (savedUrl && savedKey) {
     setupSupabaseClient(savedUrl, savedKey, false);
   } else {
     updateSupabaseUIStatus(false, "Chưa kết nối");
+    checkAppProtectionGate();
   }
 
   bindSupabaseEvents();
+  bindAuthEvents();
 }
 
-// Thiết lập Supabase Client
+// Thiết lập Supabase Client và Auth Listener
 async function setupSupabaseClient(url, key, isManualTest = false) {
   const statusEl = document.getElementById("sbConnectionStatus");
   if (statusEl) statusEl.innerHTML = `<span style="color:#f59e0b;">⏳ Đang kiểm tra kết nối...</span>`;
@@ -51,17 +60,20 @@ async function setupSupabaseClient(url, key, isManualTest = false) {
 
     const client = window.supabase.createClient(url.trim(), key.trim());
     
-    // Kiểm tra kết nối thực tế bằng truy vấn SELECT đơn giản
-    const { data, error } = await client.from("clipforge_projects").select("id").limit(1);
+    // Kiểm tra phiên đăng nhập hiện tại
+    const { data: { session } } = await client.auth.getSession();
+    currentUser = session ? session.user : null;
 
-    if (error) {
-      if (error.code === "PGRST204" || error.code === "42P01" || error.message.includes("relation") || error.message.includes("does not exist")) {
-        throw new Error("Kết nối được tới Supabase nhưng chưa tạo bảng 'clipforge_projects'. Hãy chạy mã SQL ở tab hướng dẫn!");
+    // Lắng nghe thay đổi trạng thái xác thực (Login, Logout, Token Refresh)
+    client.auth.onAuthStateChange((event, newSession) => {
+      currentUser = newSession ? newSession.user : null;
+      updateAuthUI();
+      checkAppProtectionGate();
+      if (currentUser && isSupabaseConnected) {
+        loadCloudProjectsList();
       }
-      throw error;
-    }
+    });
 
-    // Kết nối thành công
     supabaseClient = client;
     isSupabaseConnected = true;
 
@@ -69,17 +81,25 @@ async function setupSupabaseClient(url, key, isManualTest = false) {
     localStorage.setItem(SB_STORAGE_KEYS.key, key.trim());
 
     updateSupabaseUIStatus(true, "Đã kết nối Cloud");
+    updateAuthUI();
+    checkAppProtectionGate();
+
     if (isManualTest) {
-      alert("✅ Kết nối Supabase thành công! Giờ bạn có thể lưu trữ và quản lý dự án trên Cloud.");
+      alert("✅ Kết nối Supabase thành công! Giờ bạn có thể Đăng nhập / Đăng ký để lưu trữ dự án an toàn.");
     }
 
-    loadCloudProjectsList();
+    if (currentUser) {
+      loadCloudProjectsList();
+    }
     return true;
   } catch (err) {
     console.warn("Supabase connection error:", err);
     supabaseClient = null;
     isSupabaseConnected = false;
+    currentUser = null;
     updateSupabaseUIStatus(false, "Lỗi kết nối");
+    updateAuthUI();
+    checkAppProtectionGate();
     if (isManualTest) {
       alert("❌ Lỗi kết nối Supabase: " + (err.message || err));
     }
@@ -87,7 +107,7 @@ async function setupSupabaseClient(url, key, isManualTest = false) {
   }
 }
 
-// Cập nhật trạng thái hiển thị trên giao diện (Header + Modal)
+// Cập nhật trạng thái hiển thị trên Header + Modal
 function updateSupabaseUIStatus(connected, message) {
   const headerBtn = document.getElementById("btnSupabaseModal");
   const headerLabel = document.getElementById("lblSupabaseStatus");
@@ -114,11 +134,158 @@ function updateSupabaseUIStatus(connected, message) {
   }
 }
 
-// Lưu dự án hiện tại lên Supabase
+// Cập nhật giao diện Auth (Đăng nhập / Đăng xuất)
+function updateAuthUI() {
+  const btnAuthOpen = document.getElementById("btnOpenAuthModal");
+  const userBadge = document.getElementById("userAuthBadge");
+  const userEmailSpan = document.getElementById("userEmailSpan");
+  const sbAuthNotice = document.getElementById("sbAuthNotice");
+  const sbUserStatus = document.getElementById("sbUserStatus");
+
+  if (currentUser) {
+    // Đã đăng nhập
+    if (btnAuthOpen) btnAuthOpen.style.display = "none";
+    if (userBadge) userBadge.style.display = "inline-flex";
+    if (userEmailSpan) userEmailSpan.innerText = "👤 " + (currentUser.email || "User");
+    if (sbAuthNotice) sbAuthNotice.style.display = "none";
+    if (sbUserStatus) {
+      sbUserStatus.innerHTML = `<span style="color:var(--supabase-green);">Đang đăng nhập: <strong>${escapeHtml(currentUser.email)}</strong></span>`;
+    }
+  } else {
+    // Chưa đăng nhập
+    if (btnAuthOpen) btnAuthOpen.style.display = "inline-flex";
+    if (userBadge) userBadge.style.display = "none";
+    if (sbAuthNotice) sbAuthNotice.style.display = "block";
+    if (sbUserStatus) {
+      sbUserStatus.innerHTML = `<span style="color:var(--text-dim);">Chưa đăng nhập tài khoản.</span>`;
+    }
+  }
+}
+
+// Tuyến bảo vệ (Protected Gate) cho toàn bộ ứng dụng
+function checkAppProtectionGate() {
+  const gate = document.getElementById("gateProtected");
+  if (!gate) return;
+
+  if (isAppProtectionEnabled && !currentUser) {
+    gate.classList.add("active");
+  } else {
+    gate.classList.remove("active");
+  }
+}
+
+// Đăng ký tài khoản mới (Supabase Sign Up)
+async function signUpUser(email, password) {
+  if (!supabaseClient) {
+    alert("Vui lòng kết nối Supabase trước khi tạo tài khoản!");
+    openSupabaseModal();
+    return;
+  }
+
+  const alertBox = document.getElementById("authAlert");
+  if (alertBox) {
+    alertBox.style.display = "block";
+    alertBox.className = "auth-alert info";
+    alertBox.innerText = "Đang tạo tài khoản...";
+  }
+
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email.trim(),
+      password: password
+    });
+
+    if (error) throw error;
+
+    if (alertBox) {
+      alertBox.className = "auth-alert success";
+      if (data.session) {
+        alertBox.innerText = "🎉 Đăng ký thành công! Đang đăng nhập...";
+        setTimeout(() => closeAuthModal(), 1200);
+      } else {
+        alertBox.innerText = "📧 Đăng ký thành công! Vui lòng kiểm tra hộp thư email để kích hoạt tài khoản.";
+      }
+    }
+  } catch (err) {
+    console.error("Sign up error:", err);
+    if (alertBox) {
+      alertBox.className = "auth-alert error";
+      alertBox.innerText = "❌ Lỗi đăng ký: " + (err.message || err);
+    }
+  }
+}
+
+// Đăng nhập tài khoản (Supabase Sign In with Password)
+async function signInUser(email, password) {
+  if (!supabaseClient) {
+    alert("Vui lòng kết nối Supabase trước khi đăng nhập!");
+    openSupabaseModal();
+    return;
+  }
+
+  const alertBox = document.getElementById("authAlert");
+  if (alertBox) {
+    alertBox.style.display = "block";
+    alertBox.className = "auth-alert info";
+    alertBox.innerText = "Đang xác thực tài khoản...";
+  }
+
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email.trim(),
+      password: password
+    });
+
+    if (error) throw error;
+
+    if (alertBox) {
+      alertBox.className = "auth-alert success";
+      alertBox.innerText = "🎉 Đăng nhập thành công!";
+    }
+
+    setTimeout(() => {
+      closeAuthModal();
+      checkAppProtectionGate();
+    }, 800);
+  } catch (err) {
+    console.error("Sign in error:", err);
+    if (alertBox) {
+      alertBox.className = "auth-alert error";
+      alertBox.innerText = "❌ Lỗi đăng nhập: " + (err.message || err);
+    }
+  }
+}
+
+// Đăng xuất tài khoản (Supabase Sign Out)
+async function signOutUser() {
+  if (!confirm("Bạn có chắc chắn muốn đăng xuất tài khoản Supabase?")) return;
+
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
+  }
+  currentUser = null;
+  updateAuthUI();
+  checkAppProtectionGate();
+  
+  const container = document.getElementById("sbProjectsList");
+  if (container) {
+    container.innerHTML = `<div class="empty-state-notice">Vui lòng đăng nhập để xem danh sách dự án cá nhân của bạn.</div>`;
+  }
+}
+
+// Lưu dự án hiện tại lên Supabase (Gắn với user_id của tài khoản đăng nhập)
 async function saveProjectToSupabase(silent = false) {
   if (!isSupabaseConnected || !supabaseClient) {
     if (!silent) alert("Vui lòng kết nối Supabase trước khi lưu dự án lên Cloud!");
     openSupabaseModal();
+    return false;
+  }
+
+  if (!currentUser) {
+    if (!silent) {
+      alert("🔒 Vui lòng đăng nhập tài khoản Supabase để lưu dự án cá nhân của bạn!");
+    }
+    openAuthModal();
     return false;
   }
 
@@ -129,6 +296,7 @@ async function saveProjectToSupabase(silent = false) {
 
     const payload = {
       id: project.id,
+      user_id: currentUser.id,
       name: project.name || "Dự án TikTok #1",
       duration: project.duration || 15.0,
       fps: project.fps || 30,
@@ -145,7 +313,7 @@ async function saveProjectToSupabase(silent = false) {
     if (error) throw error;
 
     if (!silent) {
-      alert(`🎉 Đã lưu dự án "${project.name}" lên cơ sở dữ liệu Supabase thành công!`);
+      alert(`🎉 Đã lưu dự án "${project.name}" lên Cloud an toàn cho tài khoản ${currentUser.email}!`);
     }
     loadCloudProjectsList();
     return true;
@@ -158,13 +326,22 @@ async function saveProjectToSupabase(silent = false) {
   }
 }
 
-// Lấy danh sách dự án từ Supabase
+// Lấy danh sách dự án từ Supabase (Được lọc tự động bởi RLS của Supabase theo user_id)
 async function loadCloudProjectsList() {
   const container = document.getElementById("sbProjectsList");
   if (!container) return;
 
   if (!isSupabaseConnected || !supabaseClient) {
     container.innerHTML = `<div class="empty-state-notice">Chưa kết nối Supabase. Hãy nhập URL và Key ở trên để tải danh sách.</div>`;
+    return;
+  }
+
+  if (!currentUser) {
+    container.innerHTML = `
+      <div class="empty-state-notice">
+        🔒 Bạn cần <a href="javascript:void(0)" onclick="openAuthModal()" style="color:var(--supabase-green); text-decoration:underline;">đăng nhập tài khoản</a> để quản lý các dự án cá nhân được bảo vệ.
+      </div>
+    `;
     return;
   }
 
@@ -181,7 +358,8 @@ async function loadCloudProjectsList() {
     if (!data || data.length === 0) {
       container.innerHTML = `
         <div class="empty-state-notice">
-          Chưa có dự án nào trên Supabase. Nhấp vào <strong>"Lưu dự án hiện tại lên Supabase"</strong> để lưu dự án đầu tiên!
+          Chưa có dự án nào trên Supabase cho tài khoản <strong>${escapeHtml(currentUser.email)}</strong>.<br/>
+          Nhấp vào <strong>"Lưu dự án hiện tại lên Supabase"</strong> để lưu dự án đầu tiên!
         </div>
       `;
       return;
@@ -250,11 +428,9 @@ async function loadProjectFromSupabase(id) {
 
     project = data.data;
 
-    // Cập nhật tên vào input header
     const projNameInput = document.getElementById("projectNameInput");
     if (projNameInput) projNameInput.value = project.name || "Dự án TikTok";
 
-    // Cập nhật toàn bộ hệ thống
     saveState("Mở dự án từ Supabase");
     renderTimeline();
     updateInspector();
@@ -296,8 +472,12 @@ function disconnectSupabase() {
 
   localStorage.removeItem(SB_STORAGE_KEYS.url);
   localStorage.removeItem(SB_STORAGE_KEYS.key);
+  if (supabaseClient) {
+    supabaseClient.auth.signOut();
+  }
   supabaseClient = null;
   isSupabaseConnected = false;
+  currentUser = null;
 
   const inputUrl = document.getElementById("sbProjectUrl");
   const inputKey = document.getElementById("sbAnonKey");
@@ -305,12 +485,14 @@ function disconnectSupabase() {
   if (inputKey) inputKey.value = "";
 
   updateSupabaseUIStatus(false, "Đã ngắt kết nối");
+  updateAuthUI();
+  checkAppProtectionGate();
   loadCloudProjectsList();
 }
 
 // Kích hoạt đồng bộ đám mây (Cloud Auto-sync)
 function triggerCloudAutoSync() {
-  if (!isSupabaseConnected || !isAutoSyncEnabled) return;
+  if (!isSupabaseConnected || !isAutoSyncEnabled || !currentUser) return;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(() => {
     saveProjectToSupabase(true);
@@ -321,7 +503,7 @@ function triggerCloudAutoSync() {
 function openSupabaseModal() {
   const modal = document.getElementById("modalSupabase");
   if (modal) modal.classList.add("open");
-  if (isSupabaseConnected) {
+  if (isSupabaseConnected && currentUser) {
     loadCloudProjectsList();
   }
 }
@@ -329,6 +511,45 @@ function openSupabaseModal() {
 function closeSupabaseModal() {
   const modal = document.getElementById("modalSupabase");
   if (modal) modal.classList.remove("open");
+}
+
+// Mở & Đóng Modal Auth
+function openAuthModal(mode = "signin") {
+  const modal = document.getElementById("modalAuth");
+  if (!modal) return;
+  modal.classList.add("open");
+
+  const alertBox = document.getElementById("authAlert");
+  if (alertBox) alertBox.style.display = "none";
+
+  setAuthTab(mode);
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById("modalAuth");
+  if (modal) modal.classList.remove("open");
+}
+
+function setAuthTab(tab) {
+  const tabSignIn = document.getElementById("tabAuthSignIn");
+  const tabSignUp = document.getElementById("tabAuthSignUp");
+  const btnSubmit = document.getElementById("btnAuthSubmit");
+
+  if (tab === "signup") {
+    if (tabSignUp) tabSignUp.classList.add("active");
+    if (tabSignIn) tabSignIn.classList.remove("active");
+    if (btnSubmit) {
+      btnSubmit.innerText = "Tạo Tài Khoản Mới";
+      btnSubmit.dataset.action = "signup";
+    }
+  } else {
+    if (tabSignIn) tabSignIn.classList.add("active");
+    if (tabSignUp) tabSignUp.classList.remove("active");
+    if (btnSubmit) {
+      btnSubmit.innerText = "Đăng Nhập";
+      btnSubmit.dataset.action = "signin";
+    }
+  }
 }
 
 // Gắn các sự kiện điều khiển Supabase UI
@@ -341,6 +562,7 @@ function bindSupabaseEvents() {
   const btnRefresh = document.getElementById("btnSbRefresh");
   const btnCopySql = document.getElementById("btnSbCopySql");
   const chkAutoSync = document.getElementById("sbAutoSyncCheck");
+  const chkProtectApp = document.getElementById("sbProtectAppCheck");
 
   if (btnOpen) btnOpen.addEventListener("click", openSupabaseModal);
   if (btnClose) btnClose.addEventListener("click", closeSupabaseModal);
@@ -376,11 +598,20 @@ function bindSupabaseEvents() {
     });
   }
 
+  if (chkProtectApp) {
+    chkProtectApp.addEventListener("change", (e) => {
+      isAppProtectionEnabled = e.target.checked;
+      localStorage.setItem(SB_STORAGE_KEYS.protectApp, isAppProtectionEnabled ? "true" : "false");
+      checkAppProtectionGate();
+    });
+  }
+
   if (btnCopySql) {
     btnCopySql.addEventListener("click", () => {
-      const sqlText = `-- CLIPFORGE SUPABASE SCHEMA
+      const sqlText = `-- CLIPFORGE SUPABASE AUTH & RLS SCHEMA
 CREATE TABLE IF NOT EXISTS public.clipforge_projects (
     id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     name TEXT NOT NULL,
     duration NUMERIC NOT NULL DEFAULT 15,
     fps INTEGER NOT NULL DEFAULT 30,
@@ -390,9 +621,12 @@ CREATE TABLE IF NOT EXISTS public.clipforge_projects (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_clipforge_projects_updated_at ON public.clipforge_projects (updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_clipforge_projects_user_updated ON public.clipforge_projects (user_id, updated_at DESC);
 ALTER TABLE public.clipforge_projects ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public Access Projects" ON public.clipforge_projects FOR ALL USING (true) WITH CHECK (true);`;
+CREATE POLICY "Users can view their own projects" ON public.clipforge_projects FOR SELECT TO authenticated USING ((select auth.uid()) = user_id);
+CREATE POLICY "Users can insert their own projects" ON public.clipforge_projects FOR INSERT TO authenticated WITH CHECK ((select auth.uid()) = user_id);
+CREATE POLICY "Users can update their own projects" ON public.clipforge_projects FOR UPDATE TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
+CREATE POLICY "Users can delete their own projects" ON public.clipforge_projects FOR DELETE TO authenticated USING ((select auth.uid()) = user_id);`;
 
       navigator.clipboard.writeText(sqlText).then(() => {
         btnCopySql.innerText = "✓ Đã sao chép SQL!";
@@ -400,6 +634,57 @@ CREATE POLICY "Public Access Projects" ON public.clipforge_projects FOR ALL USIN
       }).catch(() => {
         alert("Không thể sao chép tự động. Bạn có thể mở file supabase_schema.sql trong thư mục dự án!");
       });
+    });
+  }
+}
+
+// Gắn các sự kiện điều khiển Auth Modal & Form
+function bindAuthEvents() {
+  const btnOpenAuth = document.getElementById("btnOpenAuthModal");
+  const btnCloseAuth = document.getElementById("btnCloseAuthModal");
+  const btnSignOut = document.getElementById("btnSignOut");
+  const tabSignIn = document.getElementById("tabAuthSignIn");
+  const tabSignUp = document.getElementById("tabAuthSignUp");
+  const btnSubmit = document.getElementById("btnAuthSubmit");
+  const btnGateLogin = document.getElementById("btnGateLogin");
+  const btnGateBypass = document.getElementById("btnGateBypass");
+
+  if (btnOpenAuth) btnOpenAuth.addEventListener("click", () => openAuthModal("signin"));
+  if (btnCloseAuth) btnCloseAuth.addEventListener("click", closeAuthModal);
+  if (btnSignOut) btnSignOut.addEventListener("click", signOutUser);
+
+  if (tabSignIn) tabSignIn.addEventListener("click", () => setAuthTab("signin"));
+  if (tabSignUp) tabSignUp.addEventListener("click", () => setAuthTab("signup"));
+
+  if (btnSubmit) {
+    btnSubmit.addEventListener("click", () => {
+      const email = document.getElementById("authEmail").value;
+      const pass = document.getElementById("authPassword").value;
+      if (!email || !pass) {
+        alert("Vui lòng nhập đầy đủ Email và Mật khẩu!");
+        return;
+      }
+      if (pass.length < 6) {
+        alert("Mật khẩu phải có ít nhất 6 ký tự!");
+        return;
+      }
+
+      if (btnSubmit.dataset.action === "signup") {
+        signUpUser(email, pass);
+      } else {
+        signInUser(email, pass);
+      }
+    });
+  }
+
+  if (btnGateLogin) {
+    btnGateLogin.addEventListener("click", () => openAuthModal("signin"));
+  }
+
+  if (btnGateBypass) {
+    btnGateBypass.addEventListener("click", () => {
+      const gate = document.getElementById("gateProtected");
+      if (gate) gate.classList.remove("active");
     });
   }
 }
@@ -413,4 +698,3 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-

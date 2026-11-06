@@ -1292,3 +1292,53 @@
       white-space: pre-wrap;
       user-select: text;
     }
+
+    /* Supabase Auth & Protected Routes */
+    .user-auth-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+    }
+    .auth-alert.info {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
+    }
+    .auth-alert.success {
+      background: rgba(62, 207, 142, 0.15);
+      border: 1px solid var(--supabase-green);
+      color: var(--supabase-green);
+    }
+    .auth-alert.error {
+      background: rgba(255, 59, 92, 0.15);
+      border: 1px solid var(--accent-coral);
+      color: #fca5a5;
+    }
+    .protected-gate {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 11, 14, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .protected-gate.active {
+      display: flex;
+    }
+    .gate-card {
+      width: 440px;
+      max-width: 90vw;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
