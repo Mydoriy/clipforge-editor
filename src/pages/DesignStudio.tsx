@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Stage, Layer, Rect, Circle, Text as KonvaText } from 'react-konva';
+import { useNavigate } from 'react-router-dom';
+import { Stage, Layer, Rect, Circle, Text as KonvaText, Image as KonvaImage } from 'react-konva';
 import { Header } from '../components/Header';
 import { useEditorStore } from '../store/useEditorStore';
 import {
@@ -9,13 +10,26 @@ import {
   Download,
   Palette,
   Undo2,
+  Redo2,
   Smile,
-  Trash2
+  Trash2,
+  Image as ImageIcon,
+  Layers,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignVerticalJustifyCenter,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+  ArrowLeft,
+  Sliders
 } from 'lucide-react';
 
 interface CanvasItem {
   id: string;
-  type: 'text' | 'rect' | 'circle' | 'sticker';
+  type: 'text' | 'rect' | 'circle' | 'sticker' | 'image';
   x: number;
   y: number;
   fill: string;
@@ -24,177 +38,557 @@ interface CanvasItem {
   height?: number;
   radius?: number;
   fontSize?: number;
+  visible?: boolean;
+  imageObj?: HTMLImageElement;
 }
 
 export const DesignStudio: React.FC = () => {
+  const navigate = useNavigate();
   const { showToast } = useEditorStore();
   const stageRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [bgColor, setBgColor] = useState('#0f172a');
+  // Preset formats: 9:16 (Poster/Story), 16:9 (Thumbnail), 1:1 (Square Post)
+  const [format, setFormat] = useState<'9:16' | '16:9' | '1:1'>('9:16');
+  const stageDims = {
+    '9:16': { width: 360, height: 640, label: 'Story / Poster (9:16)' },
+    '16:9': { width: 640, height: 360, label: 'Thumbnail (16:9)' },
+    '1:1': { width: 450, height: 450, label: 'Post Vuông (1:1)' }
+  }[format];
+
+  const [bgColor, setBgColor] = useState('#0B0F19');
   const [items, setItems] = useState<CanvasItem[]>([
     {
       id: 'item-1',
       type: 'text',
       x: 40,
-      y: 120,
-      text: 'VIRAL POSTER',
-      fill: '#facc15',
-      fontSize: 32
+      y: 80,
+      text: 'CAPCUT DESIGN',
+      fill: '#22D3EE',
+      fontSize: 28,
+      visible: true
     },
     {
       id: 'item-2',
       type: 'rect',
       x: 40,
-      y: 200,
+      y: 150,
       width: 280,
-      height: 240,
-      fill: '#1e293b'
+      height: 200,
+      fill: '#111827',
+      visible: true
     },
     {
       id: 'item-3',
       type: 'sticker',
       x: 150,
-      y: 300,
+      y: 220,
       text: '🚀',
       fill: '#ffffff',
-      fontSize: 54
+      fontSize: 52,
+      visible: true
+    },
+    {
+      id: 'item-4',
+      type: 'text',
+      x: 60,
+      y: 400,
+      text: '9:16 Vertical Poster Studio',
+      fill: '#E5E7EB',
+      fontSize: 16,
+      visible: true
     }
   ]);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>('item-1');
+  const [exportFormat, setExportFormat] = useState<'png' | 'jpg'>('png');
 
-  const handleExportImage = () => {
-    if (stageRef.current) {
-      const uri = stageRef.current.toDataURL({ pixelRatio: 2 });
-      const a = document.createElement('a');
-      a.href = uri;
-      a.download = `ClipForge_Poster_916_${Date.now()}.png`;
-      a.click();
-      showToast('Đã xuất ảnh Poster 9:16 (PNG)!', 'success');
+  // Undo / Redo History Stack
+  const [history, setHistory] = useState<CanvasItem[][]>([items]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const pushState = (newItems: CanvasItem[]) => {
+    const nextHistory = history.slice(0, historyIndex + 1);
+    nextHistory.push(newItems);
+    setHistory(nextHistory);
+    setHistoryIndex(nextHistory.length - 1);
+    setItems(newItems);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prev = historyIndex - 1;
+      setHistoryIndex(prev);
+      setItems(history[prev]);
+      showToast('Đã hoàn tác (Undo)');
     }
   };
 
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const next = historyIndex + 1;
+      setHistoryIndex(next);
+      setItems(history[next]);
+      showToast('Đã làm lại (Redo)');
+    }
+  };
+
+  // Add Item
   const handleAddItem = (type: 'text' | 'rect' | 'circle' | 'sticker', extra?: string) => {
     const id = 'item-' + Date.now();
     let newItem: CanvasItem;
 
     if (type === 'text') {
-      newItem = { id, type: 'text', x: 80, y: 150, text: 'TIÊU ĐỀ MỚI', fill: '#00f2fe', fontSize: 28 };
+      newItem = { id, type: 'text', x: 50, y: 180, text: 'TIÊU ĐỀ MỚI', fill: '#EC4899', fontSize: 26, visible: true };
     } else if (type === 'rect') {
-      newItem = { id, type: 'rect', x: 80, y: 220, width: 200, height: 120, fill: '#334155' };
+      newItem = { id, type: 'rect', x: 60, y: 220, width: 220, height: 130, fill: '#1F2937', visible: true };
     } else if (type === 'circle') {
-      newItem = { id, type: 'circle', x: 180, y: 300, radius: 50, fill: '#ec4899' };
+      newItem = { id, type: 'circle', x: 180, y: 260, radius: 55, fill: '#7C3AED', visible: true };
     } else {
-      newItem = { id, type: 'sticker', x: 160, y: 250, text: extra || '🔥', fill: '#ffffff', fontSize: 48 };
+      newItem = { id, type: 'sticker', x: 160, y: 240, text: extra || '🔥', fill: '#ffffff', fontSize: 48, visible: true };
     }
 
-    setItems([...items, newItem]);
+    pushState([...items, newItem]);
     setSelectedId(id);
     showToast(`Đã thêm ${type} vào Canvas`);
   };
 
+  // Upload Image to Canvas
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const src = event.target?.result as string;
+      const img = new window.Image();
+      img.src = src;
+      img.onload = () => {
+        const id = 'item-' + Date.now();
+        const aspect = img.width / img.height;
+        const w = 200;
+        const h = w / aspect;
+        const newItem: CanvasItem = {
+          id,
+          type: 'image',
+          x: 50,
+          y: 100,
+          width: w,
+          height: h,
+          fill: '',
+          imageObj: img,
+          visible: true
+        };
+        pushState([...items, newItem]);
+        setSelectedId(id);
+        showToast('Đã thêm ảnh vào Canvas!');
+      };
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Alignment
+  const handleAlign = (type: 'left' | 'center-x' | 'right' | 'center-y') => {
+    if (!selectedId) return;
+    const newItems = items.map((item) => {
+      if (item.id !== selectedId) return item;
+      const w = item.width || (item.radius ? item.radius * 2 : (item.text ? item.text.length * (item.fontSize || 20) * 0.55 : 100));
+      const h = item.height || (item.radius ? item.radius * 2 : (item.fontSize || 24));
+      let { x, y } = item;
+      if (type === 'left') x = 24;
+      else if (type === 'center-x') x = Math.round((stageDims.width - w) / 2);
+      else if (type === 'right') x = Math.round(stageDims.width - w - 24);
+      else if (type === 'center-y') y = Math.round((stageDims.height - h) / 2);
+      return { ...item, x, y };
+    });
+    pushState(newItems);
+    showToast(`Đã căn chỉnh: ${type}`);
+  };
+
+  // Layer Management (Move Up / Down / Toggle Visibility)
+  const handleMoveLayer = (id: string, direction: 'up' | 'down') => {
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    if (direction === 'up' && idx < items.length - 1) {
+      const newItems = [...items];
+      const temp = newItems[idx];
+      newItems[idx] = newItems[idx + 1];
+      newItems[idx + 1] = temp;
+      pushState(newItems);
+      showToast('Đã chuyển layer lên trên');
+    } else if (direction === 'down' && idx > 0) {
+      const newItems = [...items];
+      const temp = newItems[idx];
+      newItems[idx] = newItems[idx - 1];
+      newItems[idx - 1] = temp;
+      pushState(newItems);
+      showToast('Đã chuyển layer xuống dưới');
+    }
+  };
+
+  const handleToggleVisibility = (id: string) => {
+    const newItems = items.map((i) => (i.id === id ? { ...i, visible: i.visible === false ? true : false } : i));
+    pushState(newItems);
+  };
+
   const handleDeleteSelected = () => {
     if (selectedId) {
-      setItems(items.filter((i) => i.id !== selectedId));
+      pushState(items.filter((i) => i.id !== selectedId));
       setSelectedId(null);
       showToast('Đã xóa đối tượng');
     }
   };
 
+  // Export Canvas Image (PNG / JPG)
+  const handleExportImage = () => {
+    if (stageRef.current) {
+      const mime = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png';
+      const uri = stageRef.current.toDataURL({ mimeType: mime, quality: 0.95, pixelRatio: 2 });
+      const a = document.createElement('a');
+      a.href = uri;
+      a.download = `CapCut_Design_${format.replace(':', '_')}_${Date.now()}.${exportFormat}`;
+      a.click();
+      showToast(`Đã xuất ${stageDims.label} (${exportFormat.toUpperCase()})!`, 'success');
+    }
+  };
+
+  const selectedItem = items.find((i) => i.id === selectedId);
+
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0a0d14] select-none">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0B0F19] select-none text-[#E5E7EB]">
       <Header />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Toolbar */}
-        <div className="w-64 bg-[#11141c] border-r border-slate-800 p-4 flex flex-col gap-4 text-xs text-slate-300">
-          <span className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
+      {/* Studio Bar */}
+      <div className="h-12 bg-[#0E1320] border-b border-[#1F2937] px-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/')}
+            className="p-1.5 rounded-lg bg-[#111827] hover:bg-slate-800 text-slate-300 hover:text-white border border-[#1F2937] transition-colors flex items-center gap-1.5 text-xs font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Về Trang Chủ</span>
+          </button>
+          <span className="text-xs font-bold text-white flex items-center gap-1.5">
             <Palette className="w-4 h-4 text-purple-400" />
-            Design Studio (Konva 2D)
+            Design Studio • Trình Thiết Kế Canvas 2D
           </span>
+        </div>
 
+        {/* Format Selector */}
+        <div className="flex items-center gap-1 bg-[#111827] p-1 rounded-xl border border-[#1F2937]">
+          {(['9:16', '16:9', '1:1'] as const).map((fmt) => (
+            <button
+              key={fmt}
+              onClick={() => {
+                setFormat(fmt);
+                showToast(`Đã chuyển khung hình: ${fmt}`);
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                format === fmt ? 'bg-purple-600 text-white shadow-sm' : 'text-[#9CA3AF] hover:text-white'
+              }`}
+            >
+              {fmt}
+            </button>
+          ))}
+        </div>
+
+        {/* Undo / Redo & Export */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-[#111827] rounded-xl border border-[#1F2937] p-0.5">
+            <button
+              onClick={handleUndo}
+              disabled={historyIndex === 0}
+              title="Hoàn tác (Undo)"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              title="Làm lại (Redo)"
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center bg-[#111827] rounded-xl border border-[#1F2937] p-1">
+            <button
+              onClick={() => setExportFormat('png')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                exportFormat === 'png' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
+              }`}
+            >
+              PNG
+            </button>
+            <button
+              onClick={() => setExportFormat('jpg')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                exportFormat === 'jpg' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
+              }`}
+            >
+              JPG
+            </button>
+          </div>
+
+          <button
+            onClick={handleExportImage}
+            className="py-1.5 px-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20"
+          >
+            <Download className="w-4 h-4" />
+            <span>Xuất {exportFormat.toUpperCase()}</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar Toolbar */}
+        <div className="w-72 bg-[#0E1320] border-r border-[#1F2937] p-4 flex flex-col gap-4 text-xs overflow-y-auto">
+          {/* Add Elements */}
           <div className="flex flex-col gap-2">
-            <span className="text-[11px] text-slate-400 font-semibold">Thêm đối tượng:</span>
+            <span className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider">Thêm đối tượng:</span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleAddItem('text')}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center gap-2 font-medium"
+                className="p-2.5 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center gap-2 font-bold text-cyan-400 transition-colors"
               >
-                <Type className="w-4 h-4 text-cyan-400" />
+                <Type className="w-4 h-4" />
                 <span>Văn bản</span>
               </button>
 
               <button
                 onClick={() => handleAddItem('rect')}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center gap-2 font-medium"
+                className="p-2.5 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center gap-2 font-bold text-amber-400 transition-colors"
               >
-                <Square className="w-4 h-4 text-amber-400" />
-                <span>Hình chữ nhật</span>
+                <Square className="w-4 h-4" />
+                <span>Hình hộp</span>
               </button>
 
               <button
                 onClick={() => handleAddItem('circle')}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center gap-2 font-medium"
+                className="p-2.5 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center gap-2 font-bold text-pink-400 transition-colors"
               >
-                <CircleIcon className="w-4 h-4 text-pink-400" />
+                <CircleIcon className="w-4 h-4" />
                 <span>Hình tròn</span>
               </button>
 
               <button
-                onClick={() => handleAddItem('sticker', '💎')}
-                className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center gap-2 font-medium"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2.5 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center gap-2 font-bold text-emerald-400 transition-colors"
               >
-                <Smile className="w-4 h-4 text-emerald-400" />
-                <span>Sticker</span>
+                <ImageIcon className="w-4 h-4" />
+                <span>Tải ảnh lên</span>
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </div>
+
+            {/* Quick Stickers */}
+            <div className="flex items-center gap-1.5 pt-1">
+              {['🔥', '✨', '💎', '🚀', '👑', '⚡'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => handleAddItem('sticker', st)}
+                  className="flex-1 py-1.5 rounded-lg bg-[#111827] hover:bg-slate-800 border border-[#1F2937] text-base transition-colors"
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Alignment Tools */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937]">
+            <span className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider">Căn chỉnh vị trí:</span>
+            <div className="grid grid-cols-4 gap-1.5">
+              <button
+                onClick={() => handleAlign('left')}
+                title="Căn trái"
+                className="p-2 rounded-lg bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center justify-center text-slate-300 hover:text-white"
+              >
+                <AlignLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleAlign('center-x')}
+                title="Căn giữa ngang"
+                className="p-2 rounded-lg bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center justify-center text-slate-300 hover:text-white"
+              >
+                <AlignCenter className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleAlign('right')}
+                title="Căn phải"
+                className="p-2 rounded-lg bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center justify-center text-slate-300 hover:text-white"
+              >
+                <AlignRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleAlign('center-y')}
+                title="Căn giữa dọc"
+                className="p-2 rounded-lg bg-[#111827] hover:bg-slate-800 border border-[#1F2937] flex items-center justify-center text-slate-300 hover:text-white"
+              >
+                <AlignVerticalJustifyCenter className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Color palette */}
-          <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-            <span className="text-[11px] text-slate-400 font-semibold">Màu nền Poster:</span>
-            <div className="grid grid-cols-5 gap-2">
-              {['#0f172a', '#1e1b4b', '#18181b', '#3b0764', '#064e3b'].map((color) => (
+          {/* Color & Properties */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937]">
+            <span className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider">Màu nền Canvas:</span>
+            <div className="grid grid-cols-5 gap-1.5">
+              {['#0B0F19', '#1E1B4B', '#18181B', '#3B0764', '#064E3B'].map((color) => (
                 <button
                   key={color}
                   onClick={() => setBgColor(color)}
                   style={{ backgroundColor: color }}
-                  className={`h-8 rounded-lg border-2 transition-all ${
-                    bgColor === color ? 'border-cyan-400 scale-110' : 'border-slate-700'
+                  className={`h-7 rounded-lg border-2 transition-all ${
+                    bgColor === color ? 'border-cyan-400 scale-105' : 'border-[#1F2937]'
                   }`}
                 />
               ))}
             </div>
           </div>
 
-          {/* Delete item */}
-          {selectedId && (
-            <button
-              onClick={handleDeleteSelected}
-              className="mt-auto py-2 px-3 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/50 text-rose-300 font-bold flex items-center justify-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Xóa đối tượng đang chọn</span>
-            </button>
+          {/* Selected Item Editor */}
+          {selectedItem && (
+            <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937] bg-[#111827] p-3 rounded-xl border">
+              <span className="text-[11px] font-bold text-cyan-400 flex items-center justify-between">
+                <span>Chỉnh sửa: {selectedItem.type.toUpperCase()}</span>
+                <button onClick={handleDeleteSelected} title="Xóa đối tượng" className="text-rose-400 hover:text-rose-300">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </span>
+
+              {selectedItem.type === 'text' && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-slate-400">Nội dung chữ:</span>
+                  <input
+                    type="text"
+                    value={selectedItem.text || ''}
+                    onChange={(e) => {
+                      const newItems = items.map((i) => (i.id === selectedId ? { ...i, text: e.target.value } : i));
+                      setItems(newItems);
+                    }}
+                    onBlur={() => pushState(items)}
+                    className="bg-[#0B0F19] border border-[#1F2937] focus:border-cyan-400 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                    <span>Cỡ chữ: {selectedItem.fontSize}px</span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => {
+                          const newItems = items.map((i) => (i.id === selectedId ? { ...i, fontSize: Math.max(12, (i.fontSize || 24) - 2) } : i));
+                          pushState(newItems);
+                        }}
+                        className="px-2 py-0.5 rounded bg-slate-800 text-white font-bold"
+                      >
+                        -
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newItems = items.map((i) => (i.id === selectedId ? { ...i, fontSize: Math.min(72, (i.fontSize || 24) + 2) } : i));
+                          pushState(newItems);
+                        }}
+                        className="px-2 py-0.5 rounded bg-slate-800 text-white font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Color options */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-slate-400">Màu sắc đối tượng:</span>
+                <div className="flex items-center gap-1.5">
+                  {['#FFFFFF', '#22D3EE', '#EC4899', '#FACC15', '#A855F7', '#10B981'].map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        const newItems = items.map((i) => (i.id === selectedId ? { ...i, fill: c } : i));
+                        pushState(newItems);
+                      }}
+                      style={{ backgroundColor: c }}
+                      className={`w-5 h-5 rounded-full border ${selectedItem.fill === c ? 'border-white ring-2 ring-cyan-400' : 'border-slate-700'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
 
-          {/* Export PNG */}
-          <button
-            onClick={handleExportImage}
-            className="py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 text-slate-950 font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
-          >
-            <Download className="w-4 h-4 stroke-[2.5]" />
-            <span>Xuất Poster 9:16 (PNG)</span>
-          </button>
+          {/* Layer Management List */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937] mt-auto">
+            <span className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5 text-purple-400" />
+              Danh sách Layers ({items.length}):
+            </span>
+            <div className="flex flex-col gap-1 max-h-36 overflow-y-auto pr-1">
+              {[...items].reverse().map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                  className={`p-2 rounded-lg flex items-center justify-between border cursor-pointer text-[11px] transition-colors ${
+                    selectedId === item.id
+                      ? 'bg-purple-600/20 border-purple-500 text-purple-200'
+                      : 'bg-[#111827] border-[#1F2937] text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleVisibility(item.id);
+                      }}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      {item.visible !== false ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-rose-400" />}
+                    </button>
+                    <span className="truncate">{item.text || item.type.toUpperCase()}</span>
+                  </div>
+
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveLayer(item.id, 'up');
+                      }}
+                      className="p-1 hover:text-white"
+                      title="Lên trên"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveLayer(item.id, 'down');
+                      }}
+                      className="p-1 hover:text-white"
+                      title="Xuống dưới"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Center Canvas */}
-        <div className="flex-1 bg-[#07090e] p-6 flex items-center justify-center overflow-auto">
-          <div className="relative aspect-[9/16] h-[640px] rounded-xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-950">
+        {/* Center Canvas Stage */}
+        <div className="flex-1 bg-[#07090E] p-6 flex items-center justify-center overflow-auto">
+          <div
+            className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#1F2937] bg-slate-950 transition-all"
+            style={{ width: stageDims.width, height: stageDims.height }}
+          >
             <Stage
               ref={stageRef}
-              width={360}
-              height={640}
+              width={stageDims.width}
+              height={stageDims.height}
               onMouseDown={(e) => {
                 if (e.target === e.target.getStage()) {
                   setSelectedId(null);
@@ -203,9 +597,11 @@ export const DesignStudio: React.FC = () => {
             >
               <Layer>
                 {/* Background Rect */}
-                <Rect x={0} y={0} width={360} height={640} fill={bgColor} />
+                <Rect x={0} y={0} width={stageDims.width} height={stageDims.height} fill={bgColor} />
 
                 {items.map((item) => {
+                  if (item.visible === false) return null;
+
                   if (item.type === 'rect') {
                     return (
                       <Rect
@@ -216,16 +612,18 @@ export const DesignStudio: React.FC = () => {
                         height={item.height}
                         fill={item.fill}
                         draggable
-                        stroke={selectedId === item.id ? '#00f2fe' : undefined}
+                        stroke={selectedId === item.id ? '#22D3EE' : undefined}
                         strokeWidth={2}
                         onClick={() => setSelectedId(item.id)}
                         onDragEnd={(e) => {
                           const { x, y } = e.target.position();
-                          setItems(items.map((i) => (i.id === item.id ? { ...i, x, y } : i)));
+                          const newItems = items.map((i) => (i.id === item.id ? { ...i, x, y } : i));
+                          pushState(newItems);
                         }}
                       />
                     );
                   }
+
                   if (item.type === 'circle') {
                     return (
                       <Circle
@@ -235,16 +633,40 @@ export const DesignStudio: React.FC = () => {
                         radius={item.radius}
                         fill={item.fill}
                         draggable
-                        stroke={selectedId === item.id ? '#00f2fe' : undefined}
+                        stroke={selectedId === item.id ? '#22D3EE' : undefined}
                         strokeWidth={2}
                         onClick={() => setSelectedId(item.id)}
                         onDragEnd={(e) => {
                           const { x, y } = e.target.position();
-                          setItems(items.map((i) => (i.id === item.id ? { ...i, x, y } : i)));
+                          const newItems = items.map((i) => (i.id === item.id ? { ...i, x, y } : i));
+                          pushState(newItems);
                         }}
                       />
                     );
                   }
+
+                  if (item.type === 'image' && item.imageObj) {
+                    return (
+                      <KonvaImage
+                        key={item.id}
+                        x={item.x}
+                        y={item.y}
+                        image={item.imageObj}
+                        width={item.width}
+                        height={item.height}
+                        draggable
+                        stroke={selectedId === item.id ? '#22D3EE' : undefined}
+                        strokeWidth={2}
+                        onClick={() => setSelectedId(item.id)}
+                        onDragEnd={(e) => {
+                          const { x, y } = e.target.position();
+                          const newItems = items.map((i) => (i.id === item.id ? { ...i, x, y } : i));
+                          pushState(newItems);
+                        }}
+                      />
+                    );
+                  }
+
                   return (
                     <KonvaText
                       key={item.id}
@@ -252,14 +674,17 @@ export const DesignStudio: React.FC = () => {
                       y={item.y}
                       text={item.text || ''}
                       fontSize={item.fontSize || 24}
-                      fontFamily="sans-serif"
+                      fontFamily="Inter, sans-serif"
                       fontStyle="bold"
                       fill={item.fill}
                       draggable
+                      stroke={selectedId === item.id ? '#22D3EE' : undefined}
+                      strokeWidth={selectedId === item.id ? 1 : 0}
                       onClick={() => setSelectedId(item.id)}
                       onDragEnd={(e) => {
                         const { x, y } = e.target.position();
-                        setItems(items.map((i) => (i.id === item.id ? { ...i, x, y } : i)));
+                        const newItems = items.map((i) => (i.id === item.id ? { ...i, x, y } : i));
+                        pushState(newItems);
                       }}
                     />
                   );
@@ -272,4 +697,3 @@ export const DesignStudio: React.FC = () => {
     </div>
   );
 };
-

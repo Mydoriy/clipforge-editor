@@ -134,12 +134,21 @@ export const SectionPage: React.FC = () => {
                 Tạo dự án 9:16 với tỷ lệ chuẩn TikTok/Reels, không gian dựng đa track và bộ công cụ AI thông minh.
               </p>
             </div>
-            <button
-              onClick={() => handleUseTemplate('0917 Studio Project', 15)}
-              className="px-6 py-3 rounded-xl bg-[#22D3EE] text-slate-950 font-bold text-xs hover-lift shadow-lg shadow-cyan-500/20"
-            >
-              + Khởi tạo dự án Video Studio
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm">
+              <button
+                onClick={() => openModal('videoStudio')}
+                className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-500 text-slate-950 font-bold text-xs hover-lift shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Tạo từ kịch bản AI (30s)</span>
+              </button>
+              <button
+                onClick={() => handleUseTemplate('0917 Studio Project', 30)}
+                className="py-3 px-4 rounded-xl bg-[#111827] border border-[#1F2937] hover:bg-slate-800 text-white font-bold text-xs transition-colors"
+              >
+                Dự án trống
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -180,14 +189,23 @@ export const SectionPage: React.FC = () => {
       {/* 4. MARKETING TOOLS ROUTE */}
       {path === '/marketing' && (
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-[#1F2937]">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30">
-              <TrendingUp className="w-5 h-5" />
+          <div className="flex items-center justify-between pb-4 border-b border-[#1F2937]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Công Cụ Marketing & Bán Hàng</h2>
+                <p className="text-xs text-[#9CA3AF]">Tối ưu hóa tỷ lệ chuyển đổi cho video TikTok Shop & Quảng cáo</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">Công Cụ Marketing & Bán Hàng</h2>
-              <p className="text-xs text-[#9CA3AF]">Tối ưu hóa tỷ lệ chuyển đổi cho video TikTok Shop & Quảng cáo</p>
-            </div>
+            <button
+              onClick={() => openModal('aiAdMaker')}
+              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Mở AI Ad Maker</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

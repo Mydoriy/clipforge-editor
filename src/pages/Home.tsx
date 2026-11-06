@@ -260,7 +260,7 @@ export const Home: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Video Studio */}
           <div
-            onClick={() => navigate('/editor/demo-916-intro')}
+            onClick={() => openModal('videoStudio')}
             className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE] p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
             <div className="w-10 h-10 rounded-xl bg-[#22D3EE]/15 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/30">
@@ -292,7 +292,7 @@ export const Home: React.FC = () => {
 
           {/* Card 3: AI Ad Maker */}
           <div
-            onClick={() => openModal('marketing')}
+            onClick={() => openModal('aiAdMaker')}
             className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-blue-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
             <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center border border-blue-500/30">
@@ -308,7 +308,7 @@ export const Home: React.FC = () => {
 
           {/* Card 4: Long video to shorts */}
           <div
-            onClick={() => openModal('aiEdit')}
+            onClick={() => openModal('longToShorts')}
             className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-teal-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
             <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center border border-teal-500/30">

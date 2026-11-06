@@ -31,7 +31,12 @@ import {
   Pause,
   Layers,
   Plus,
-  Wand2
+  Wand2,
+  Megaphone,
+  Video,
+  Clock,
+  Music,
+  CheckCircle2
 } from 'lucide-react';
 
 export const Modals: React.FC = () => {
@@ -107,6 +112,30 @@ export const Modals: React.FC = () => {
   const [enhanceContrast, setEnhanceContrast] = useState<boolean>(true);
   const [enhanceDenoise, setEnhanceDenoise] = useState<boolean>(true);
   const [enhanceSplitPos, setEnhanceSplitPos] = useState<number>(50);
+
+  // Section 8: AI-powered Creative Suite States
+  // 1. Video Studio
+  const [vsScript, setVsScript] = useState('5 Bí quyết tạo video triệu view trên TikTok & Reels. Giữ chân người xem trong 3s đầu bằng một câu hỏi sốc. Đi thẳng vào giá trị cốt lõi, không vòng vo. Đưa ra ví dụ minh chứng thực tế. Kêu gọi hành động rõ ràng. Thử ngay hôm nay!');
+  const [vsMusic, setVsMusic] = useState('trending-beat');
+  const [vsScenes, setVsScenes] = useState([
+    { id: 1, title: 'Cảnh 1 (0-6s): Hook giữ chân', text: '5 Bí quyết tạo video triệu view trên TikTok!', bg: 'cyberpunk', duration: 6 },
+    { id: 2, title: 'Cảnh 2 (6-14s): Giá trị cốt lõi', text: 'Đi thẳng vào vấn đề trong 3 giây đầu tiên', bg: 'cinematic', duration: 8 },
+    { id: 3, title: 'Cảnh 3 (14-22s): Minh chứng thực tế', text: 'Công thức giữ chân 90% khán giả xem hết video', bg: 'neon3d', duration: 8 },
+    { id: 4, title: 'Cảnh 4 (22-30s): Kêu gọi hành động', text: 'Nhấn theo dõi và lưu video để thực hành nhé!', bg: 'anime', duration: 8 }
+  ]);
+
+  // 2. AI Ad Maker
+  const [adProdName, setAdProdName] = useState('Tai nghe chống ồn Sonix Pro Max');
+  const [adUsp, setAdUsp] = useState('Chống ồn chủ động 45dB, Pin khủng 60h, Bass siêu sâu, Kháng nước IPX7');
+  const [adTone, setAdTone] = useState<'energetic' | 'luxury' | 'genz' | 'urgency'>('energetic');
+  const [adCta, setAdCta] = useState('Mua ngay giảm 50% hôm nay');
+  const [adActiveVariant, setAdActiveVariant] = useState<'A' | 'B' | 'C'>('A');
+
+  // 3. Long Video to Shorts
+  const [ltsVideoName, setLtsVideoName] = useState('Podcast_Cong_Nghe_AI_Ep42.mp4');
+  const [ltsDurationPreset, setLtsDurationPreset] = useState<number>(30);
+  const [ltsDetectMode, setLtsDetectMode] = useState<'scene' | 'duration'>('scene');
+  const [ltsSelectedShorts, setLtsSelectedShorts] = useState<number[]>([1, 2]);
 
   // Helper for available video clips
   const videoClips = clips.filter((c) => c.track === 'video' || c.track === 'effect');
@@ -416,6 +445,258 @@ export const Modals: React.FC = () => {
     closeModal();
   };
 
+  // Section 8 Handlers
+  // 1. Video Studio Handler (Make 30-second videos)
+  const handleCreateVideoStudioProject = async () => {
+    try {
+      const id = 'proj-vs-' + Date.now();
+      const title = 'Video Studio 30s • Script to Video';
+      const newProj: ProjectEntity = {
+        id,
+        title,
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        duration: 30,
+        thumbnail: createProceduralAiImage('9:16', 'cyberpunk', 'Video Studio 30s'),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDeleted: false
+      };
+      await db.projects.add(newProj);
+      setCurrentProjectId(id);
+      setProjectTitle(title);
+      setDuration(30);
+
+      const generatedClips: any[] = [];
+      let startTime = 0;
+      vsScenes.forEach((sc, idx) => {
+        generatedClips.push({
+          id: `clip-vs-vid-${idx}-${Date.now()}`,
+          track: 'video',
+          name: `Cảnh ${idx + 1}: ${sc.title}`,
+          src: createProceduralAiImage('9:16', sc.bg || 'cyberpunk', sc.text),
+          type: 'image',
+          start: startTime,
+          duration: sc.duration,
+          filter: sc.bg === 'cinematic' ? 'cinematic' : undefined
+        });
+
+        generatedClips.push({
+          id: `clip-vs-txt-${idx}-${Date.now()}`,
+          track: 'text',
+          name: `Chữ: ${sc.text.slice(0, 16)}...`,
+          text: sc.text,
+          type: 'text',
+          start: startTime,
+          duration: sc.duration,
+          y: 120,
+          scale: 1.05
+        });
+
+        startTime += sc.duration;
+      });
+
+      generatedClips.push({
+        id: `clip-vs-aud-${Date.now()}`,
+        track: 'audio',
+        name: `Nhạc nền: ${vsMusic.toUpperCase()}`,
+        type: 'audio',
+        start: 0,
+        duration: 30,
+        volume: 0.8
+      });
+
+      setClips(generatedClips);
+      showToast('Đã tạo dự án Video 30s từ kịch bản!', 'success');
+      closeModal();
+      navigate(`/editor/${id}`);
+    } catch (err: any) {
+      showToast('Lỗi tạo dự án: ' + err.message, 'error');
+    }
+  };
+
+  // 2. AI Ad Maker Handler
+  const handleCreateAdProject = async () => {
+    try {
+      const id = 'proj-ad-' + Date.now();
+      const title = `Quảng Cáo: ${adProdName} (Variant ${adActiveVariant})`;
+      const newProj: ProjectEntity = {
+        id,
+        title,
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        duration: 20,
+        thumbnail: createProceduralAiImage('9:16', 'neon3d', adProdName),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDeleted: false
+      };
+      await db.projects.add(newProj);
+      setCurrentProjectId(id);
+      setProjectTitle(title);
+      setDuration(20);
+
+      const scenes = adActiveVariant === 'A'
+        ? [
+            { text: `🔥 SALE SỐC: ${adProdName}`, dur: 4, bg: 'retro' },
+            { text: `✨ Điểm nổi bật: ${adUsp.split(',')[0] || adUsp}`, dur: 4, bg: 'cyberpunk' },
+            { text: `⚡ Pin khủng 60H & Bass siêu sâu`, dur: 4, bg: 'neon3d' },
+            { text: `⭐⭐⭐⭐⭐ 50,000+ Khách hàng hài lòng`, dur: 4, bg: 'cinematic' },
+            { text: `🛒 ${adCta} • MUA NGAY!`, dur: 4, bg: 'pastel' }
+          ]
+        : adActiveVariant === 'B'
+        ? [
+            { text: `📱 Review chân thực chiếc tai nghe hot nhất!`, dur: 4, bg: 'cinematic' },
+            { text: `🎧 Bật chống ồn là êm ru cả không gian`, dur: 4, bg: 'cyberpunk' },
+            { text: `🔋 Dùng cả tuần sạc đúng 1 lần`, dur: 4, bg: 'neon3d' },
+            { text: `💎 Chất âm vượt xa tầm giá`, dur: 4, bg: 'retro' },
+            { text: `👉 ${adCta} tại giỏ hàng góc trái!`, dur: 4, bg: 'pastel' }
+          ]
+        : [
+            { text: `Định nghĩa lại trải nghiệm âm thanh`, dur: 4, bg: 'cinematic' },
+            { text: `${adProdName} • Chuẩn âm Hi-Res`, dur: 4, bg: 'neon3d' },
+            { text: `${adUsp.split(',')[0]} & Thiết kế tối giản`, dur: 4, bg: 'cyberpunk' },
+            { text: `Sự lựa chọn của giới chuyên gia`, dur: 4, bg: 'retro' },
+            { text: `${adCta} • Ưu đãi độc quyền`, dur: 4, bg: 'pastel' }
+          ];
+
+      const clipsData: any[] = [];
+      let cur = 0;
+      scenes.forEach((s, idx) => {
+        clipsData.push({
+          id: `clip-ad-v-${idx}-${Date.now()}`,
+          track: 'video',
+          name: `Cảnh ${idx + 1}: ${s.text.slice(0, 16)}`,
+          src: createProceduralAiImage('9:16', s.bg, s.text),
+          type: 'image',
+          start: cur,
+          duration: s.dur,
+          filter: 'cinematic'
+        });
+        clipsData.push({
+          id: `clip-ad-t-${idx}-${Date.now()}`,
+          track: 'text',
+          name: `Text: ${s.text.slice(0, 12)}`,
+          text: s.text,
+          type: 'text',
+          start: cur,
+          duration: s.dur,
+          y: idx === scenes.length - 1 ? 140 : 100,
+          scale: 1.1
+        });
+        cur += s.dur;
+      });
+
+      clipsData.push({
+        id: `clip-ad-cta-${Date.now()}`,
+        track: 'sticker',
+        name: 'Sticker Giỏ hàng Mua ngay',
+        text: '🛒 MUA NGAY',
+        type: 'sticker',
+        start: 12,
+        duration: 8,
+        y: 180,
+        scale: 1.2
+      });
+
+      setClips(clipsData);
+      showToast('Đã tạo Storyboard quảng cáo và đưa vào Editor!', 'success');
+      closeModal();
+      navigate(`/editor/${id}`);
+    } catch (err: any) {
+      showToast('Lỗi tạo quảng cáo: ' + err.message, 'error');
+    }
+  };
+
+  // 3. Long Video to Shorts Handlers
+  const handleOpenShortInEditor = async (shortId: number) => {
+    try {
+      const id = 'proj-short-' + Date.now();
+      const title = `Short #${shortId} • Auto-crop 9:16 (${ltsDurationPreset}s)`;
+      const newProj: ProjectEntity = {
+        id,
+        title,
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        duration: ltsDurationPreset,
+        thumbnail: createProceduralAiImage('9:16', 'cyberpunk', `Short ${shortId}`),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDeleted: false
+      };
+      await db.projects.add(newProj);
+      setCurrentProjectId(id);
+      setProjectTitle(title);
+      setDuration(ltsDurationPreset);
+
+      const shortClips: any[] = [
+        {
+          id: `clip-short-${Date.now()}`,
+          track: 'video',
+          name: `Short #${shortId}: Auto-crop 9:16 Center Face`,
+          src: createProceduralAiImage('9:16', 'cinematic', `Short ${shortId} 9:16`),
+          type: 'video',
+          start: 0,
+          duration: ltsDurationPreset,
+          scale: 1.8,
+          filter: 'cinematic'
+        },
+        {
+          id: `clip-short-cap-${Date.now()}`,
+          track: 'text',
+          name: 'Phụ đề Cao trào',
+          text: `🔥 CAO TRÀO SHORT #${shortId}`,
+          type: 'text',
+          start: 1,
+          duration: ltsDurationPreset - 2,
+          y: 110,
+          scale: 1.15
+        }
+      ];
+
+      setClips(shortClips);
+      showToast(`Đã đưa Short #${shortId} (Auto-crop 9:16) vào Editor!`, 'success');
+      closeModal();
+      navigate(`/editor/${id}`);
+    } catch (err: any) {
+      showToast('Lỗi mở short: ' + err.message, 'error');
+    }
+  };
+
+  const handleBatchExportShorts = () => {
+    if (ltsSelectedShorts.length === 0) {
+      showToast('Vui lòng chọn ít nhất 1 đoạn Short để xuất!', 'error');
+      return;
+    }
+    showToast(`Đang xuất hàng loạt ${ltsSelectedShorts.length} video shorts chuẩn 9:16...`, 'info');
+    setTimeout(() => {
+      ltsSelectedShorts.forEach((sid, idx) => {
+        setTimeout(() => {
+          const a = document.createElement('a');
+          const canvas = document.createElement('canvas');
+          canvas.width = 540;
+          canvas.height = 960;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, 540, 960);
+            ctx.fillStyle = '#22d3ee';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText(`SHORT #${sid} (9:16)`, 60, 480);
+          }
+          a.href = canvas.toDataURL('image/png');
+          a.download = `Short_${sid}_AutoCrop_916.png`;
+          a.click();
+        }, idx * 250);
+      });
+      showToast(`Đã xuất thành công ${ltsSelectedShorts.length} video shorts chuẩn 9:16!`, 'success');
+      closeModal();
+    }, 500);
+  };
+
   if (!activeModal) return null;
 
   // Handle Video Export
@@ -449,7 +730,7 @@ export const Modals: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none animate-in fade-in">
-      <div className={`relative w-full ${activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}>
+      <div className={`relative w-full ${activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}>
         {/* Close Button */}
         <button
           onClick={closeModal}
@@ -1874,6 +2155,496 @@ export const Modals: React.FC = () => {
             >
               Áp dụng nâng cấp HD lên Video
             </button>
+          </div>
+        )}
+
+        {/* SECTION 8: 1. VIDEO STUDIO MODAL (Make 30-second videos) */}
+        {activeModal === 'videoStudio' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-[#22D3EE]">
+                <Video className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">Video Studio • Script to Video</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-[#22D3EE] font-semibold border border-cyan-500/30 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Make 30-second videos (30s)
+              </span>
+            </div>
+
+            <p className="text-xs text-[#9CA3AF]">
+              Tự động phân tích kịch bản, chia thành 4 cảnh 9:16 có độ dài chuẩn 30 giây, tạo phụ đề và đồng bộ nhạc nền:
+            </p>
+
+            {/* Kịch bản input */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Nhập kịch bản video:</span>
+              <textarea
+                rows={3}
+                value={vsScript}
+                onChange={(e) => setVsScript(e.target.value)}
+                className="w-full bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl p-3 text-xs text-white outline-none resize-none leading-relaxed"
+                placeholder="Nhập nội dung kịch bản cần chuyển thành video 30s..."
+              />
+            </div>
+
+            {/* Gợi ý kịch bản mẫu */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Kịch bản mẫu thịnh hành:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  {
+                    title: '🎯 5 Mẹo TikTok Triệu View',
+                    script: '5 Bí quyết tạo video triệu view trên TikTok & Reels. Giữ chân người xem trong 3s đầu bằng một câu hỏi sốc. Đi thẳng vào giá trị cốt lõi, không vòng vo. Đưa ra ví dụ minh chứng thực tế. Kêu gọi hành động rõ ràng. Thử ngay hôm nay!'
+                  },
+                  {
+                    title: '📱 Review Công Nghệ 2026',
+                    script: 'Siêu phẩm công nghệ đột phá nhất 2026 đã lộ diện. Màn hình holographic cực nét, thời lượng pin cả tuần. Thiết kế siêu nhẹ mang lại trải nghiệm đỉnh cao. Đặt trước hôm nay để nhận quà tặng độc quyền!'
+                  },
+                  {
+                    title: '✈️ Du Lịch Đà Lạt 2N1Đ',
+                    script: 'Lịch trình du lịch Đà Lạt 2 ngày 1 đêm tiết kiệm nhất. Săn mây đồi chè Cầu Đất lúc bình minh. Thưởng thức bánh tráng nướng và sữa đậu nành nóng hổi. Lưu ngay video cho chuyến đi sắp tới của bạn!'
+                  }
+                ].map((s) => (
+                  <button
+                    key={s.title}
+                    onClick={() => {
+                      setVsScript(s.script);
+                      showToast(`Đã tải kịch bản: ${s.title}`);
+                    }}
+                    className="py-1 px-2.5 rounded-lg bg-[#0B0F19] hover:bg-cyan-500/20 hover:text-cyan-300 border border-[#1F2937] text-[11px] text-slate-300 transition-colors"
+                  >
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Phân cảnh tự động (Auto Scene Splitting • 4 Cảnh • 30s) */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold text-[#9CA3AF] flex items-center justify-between">
+                <span>Phân cảnh Storyboard (4 cảnh • Tổng thời lượng 30s):</span>
+                <span className="text-[10px] text-cyan-400 font-mono">30.0s Limit</span>
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {vsScenes.map((sc, idx) => (
+                  <div key={sc.id} className="p-2.5 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-cyan-300 truncate">{sc.title}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                        {sc.duration}s
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={sc.text}
+                      onChange={(e) => {
+                        const newScenes = vsScenes.map((s) => (s.id === sc.id ? { ...s, text: e.target.value } : s));
+                        setVsScenes(newScenes);
+                      }}
+                      className="bg-[#111827] border border-[#1F2937] focus:border-cyan-400 rounded-lg px-2 py-1 text-[11px] text-slate-200 outline-none truncate"
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>Nền:</span>
+                      <select
+                        value={sc.bg}
+                        onChange={(e) => {
+                          const newScenes = vsScenes.map((s) => (s.id === sc.id ? { ...s, bg: e.target.value } : s));
+                          setVsScenes(newScenes);
+                        }}
+                        className="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] text-slate-300 outline-none"
+                      >
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="cinematic">Cinematic</option>
+                        <option value="neon3d">Neon 3D</option>
+                        <option value="anime">Anime</option>
+                        <option value="pastel">Pastel</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Nhạc nền (Background Music) */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF] flex items-center gap-1.5">
+                <Music className="w-3.5 h-3.5 text-cyan-400" />
+                Nhạc nền đồng bộ (30s Audio):
+              </span>
+              <select
+                value={vsMusic}
+                onChange={(e) => setVsMusic(e.target.value)}
+                className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+              >
+                <option value="trending-beat">🎵 Trending Beat (Upbeat TikTok 120BPM)</option>
+                <option value="lofi-chill">🎧 Lofi Chill Hop (Ambient Relax)</option>
+                <option value="cinematic-epic">🔥 Cinematic Epic (High Energy Phonk)</option>
+                <option value="corporate-minimal">✨ Corporate Inspiring (Minimal)</option>
+              </select>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={handleCreateVideoStudioProject}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-[#22D3EE]/20 flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Tạo Dự Án Video 30s & Mở Trong Editor</span>
+            </button>
+          </div>
+        )}
+
+        {/* SECTION 8: 2. AI AD MAKER MODAL (Multi-variants) */}
+        {activeModal === 'aiAdMaker' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-blue-400">
+                <Megaphone className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">AI Ad Maker • Trình Tạo Video Bán Hàng</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30">
+                3 Biến thể Storyboard
+              </span>
+            </div>
+
+            {/* Form Sản phẩm */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-[#9CA3AF]">Tên sản phẩm:</span>
+                <input
+                  type="text"
+                  value={adProdName}
+                  onChange={(e) => setAdProdName(e.target.value)}
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-blue-400 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                  placeholder="VD: Tai nghe Sonix Pro..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-[#9CA3AF]">Lời kêu gọi (CTA):</span>
+                <input
+                  type="text"
+                  value={adCta}
+                  onChange={(e) => setAdCta(e.target.value)}
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-blue-400 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                  placeholder="VD: Mua ngay giảm 50%..."
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Điểm bán hàng chính (USP):</span>
+              <input
+                type="text"
+                value={adUsp}
+                onChange={(e) => setAdUsp(e.target.value)}
+                className="bg-[#0B0F19] border border-[#1F2937] focus:border-blue-400 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                placeholder="VD: Chống ồn 45dB, Pin 60h, Bass sâu..."
+              />
+            </div>
+
+            {/* Giọng điệu (Tone) */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Giọng điệu thương hiệu (Tone):</span>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { id: 'energetic', label: '🔥 Bùng nổ' },
+                  { id: 'luxury', label: '💎 Sang trọng' },
+                  { id: 'genz', label: '😂 GenZ Viral' },
+                  { id: 'urgency', label: '⏳ FOMO Deal' }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setAdTone(t.id as any)}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-colors ${
+                      adTone === t.id
+                        ? 'bg-blue-500/20 border-blue-400 text-blue-300'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Multi-variants Tabs */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937]">
+              <span className="text-xs font-semibold text-[#9CA3AF] flex items-center justify-between">
+                <span>Chọn biến thể Storyboard (Variants):</span>
+                <span className="text-[10px] text-blue-400">Click tab để xem kịch bản</span>
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { key: 'A', name: 'Biến thể A: Flash Sale Sốc', icon: '💥' },
+                  { key: 'B', name: 'Biến thể B: UGC Đời Thường', icon: '📱' },
+                  { key: 'C', name: 'Biến thể C: Luxury Tối Giản', icon: '💎' }
+                ].map((v) => (
+                  <button
+                    key={v.key}
+                    onClick={() => setAdActiveVariant(v.key as any)}
+                    className={`p-2 rounded-xl border text-left transition-all ${
+                      adActiveVariant === v.key
+                        ? 'bg-blue-600/20 border-blue-400 text-white shadow-sm'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="font-bold text-xs text-blue-300 flex items-center gap-1">
+                      <span>{v.icon}</span>
+                      <span>Variant {v.key}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate mt-0.5">{v.name.split(':')[1]}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Storyboard 5 Scenes Preview for Selected Variant */}
+              <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex flex-col gap-2">
+                <span className="text-[11px] font-bold text-blue-300">
+                  Storyboard 5 Cảnh (Biến thể {adActiveVariant} • 20s):
+                </span>
+                <div className="flex flex-col gap-1.5 text-[11px]">
+                  {adActiveVariant === 'A' && (
+                    <>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">0-4s</span>
+                        <span>🔥 Hook gây chú ý: Sale sốc nhất năm dành cho bạn!</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">4-8s</span>
+                        <span>✨ Giải pháp: {adProdName} - Chống ồn đỉnh cao</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">8-12s</span>
+                        <span>⚡ USP: {adUsp.split(',')[0]} & Pin khủng</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">12-16s</span>
+                        <span>⭐⭐⭐⭐⭐ 50,000+ Khách hàng tin dùng</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-amber-300 font-bold">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">16-20s</span>
+                        <span>🛒 CTA: {adCta} • Mua ngay tại giỏ hàng!</span>
+                      </div>
+                    </>
+                  )}
+                  {adActiveVariant === 'B' && (
+                    <>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">0-4s</span>
+                        <span>📱 Review chân thực chiếc tai nghe hot nhất!</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">4-8s</span>
+                        <span>🎧 Bật chống ồn là êm ru cả không gian cafe</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">8-12s</span>
+                        <span>🔋 Nghe cả tuần mới cần sạc 1 lần</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">12-16s</span>
+                        <span>💎 Chất âm bass sâu vượt xa giá tiền</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-amber-300 font-bold">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">16-20s</span>
+                        <span>👉 {adCta} tại góc trái nhé!</span>
+                      </div>
+                    </>
+                  )}
+                  {adActiveVariant === 'C' && (
+                    <>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">0-4s</span>
+                        <span>Định nghĩa lại trải nghiệm âm thanh cá nhân</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">4-8s</span>
+                        <span>{adProdName} • Chuẩn âm thanh Hi-Res</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">8-12s</span>
+                        <span>Thiết kế công thái học tối giản cao cấp</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono text-[10px]">12-16s</span>
+                        <span>Sự lựa chọn của giới chuyên gia âm nhạc</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-amber-300 font-bold">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 font-mono text-[10px]">16-20s</span>
+                        <span>Sở hữu ngay hôm nay: {adCta}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={handleCreateAdProject}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-xs hover:opacity-95 shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
+            >
+              <Megaphone className="w-4 h-4" />
+              <span>Đưa Storyboard Variant {adActiveVariant} Vào Editor (9:16)</span>
+            </button>
+          </div>
+        )}
+
+        {/* SECTION 8: 3. LONG VIDEO TO SHORTS MODAL */}
+        {activeModal === 'longToShorts' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-teal-400">
+                <Scissors className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">Long Video to Shorts • Cắt Tự Động 9:16</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 font-semibold border border-teal-500/30">
+                Auto-Crop 9:16 & Frame Diff
+              </span>
+            </div>
+
+            {/* Video nguồn Box */}
+            <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-xs">
+                  MP4
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white">{ltsVideoName}</div>
+                  <div className="text-[10px] text-slate-400">Thời lượng: 5:00 • 1080p • Tỉ lệ gốc 16:9 Landscape</div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setLtsVideoName('Workshop_Kinh_Doanh_2026.mp4');
+                  showToast('Đã đổi video nguồn dài!');
+                }}
+                className="py-1 px-2 rounded-lg bg-[#111827] hover:bg-slate-800 border border-[#1F2937] text-[10px] text-slate-300"
+              >
+                Đổi video
+              </button>
+            </div>
+
+            {/* Cài đặt cắt tự động */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Chọn độ dài */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-[#9CA3AF]">Độ dài mỗi Short:</span>
+                <div className="grid grid-cols-3 gap-1">
+                  {[15, 30, 60].map((sec) => (
+                    <button
+                      key={sec}
+                      onClick={() => setLtsDurationPreset(sec)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-colors ${
+                        ltsDurationPreset === sec
+                          ? 'bg-teal-500/20 border-teal-400 text-teal-300'
+                          : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                      }`}
+                    >
+                      {sec}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Phương thức phát hiện cảnh */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-[#9CA3AF]">Phương thức phát hiện:</span>
+                <select
+                  value={ltsDetectMode}
+                  onChange={(e) => setLtsDetectMode(e.target.value as any)}
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-teal-400 rounded-lg p-2 text-xs text-white outline-none cursor-pointer"
+                >
+                  <option value="scene">⚡ Chênh lệch frame (Scene Diff)</option>
+                  <option value="duration">⏱️ Chia đều theo nhịp (Interval)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Danh sách Shorts phát hiện được */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-[#9CA3AF]">Các đoạn Shorts tiềm năng phát hiện được:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (ltsSelectedShorts.length === 4) setLtsSelectedShorts([]);
+                    else setLtsSelectedShorts([1, 2, 3, 4]);
+                  }}
+                  className="text-[10px] text-teal-400 hover:underline cursor-pointer"
+                >
+                  {ltsSelectedShorts.length === 4 ? 'Bỏ chọn tất cả' : 'Chọn tất cả (4 shorts)'}
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {[
+                  { id: 1, title: 'Bí quyết AI thay đổi tương lai 2026', time: '00:15 - 00:45', viral: 96, tag: 'Hook cực mạnh' },
+                  { id: 2, title: 'Sai lầm 90% người mới bắt đầu mắc phải', time: '01:20 - 01:50', viral: 92, tag: 'Cảm xúc cao' },
+                  { id: 3, title: 'Công thức 3 bước nhân đôi hiệu suất làm việc', time: '02:40 - 03:10', viral: 89, tag: 'Thực tế & Rõ ràng' },
+                  { id: 4, title: 'Tương lai ngành lập trình trong 5 năm tới', time: '03:50 - 04:20', viral: 85, tag: 'Góc nhìn tranh luận' }
+                ].map((s) => (
+                  <div
+                    key={s.id}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
+                      ltsSelectedShorts.includes(s.id)
+                        ? 'bg-teal-950/30 border-teal-500/50 text-white'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <input
+                        type="checkbox"
+                        checked={ltsSelectedShorts.includes(s.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setLtsSelectedShorts([...ltsSelectedShorts, s.id]);
+                          else setLtsSelectedShorts(ltsSelectedShorts.filter((x) => x !== s.id));
+                        }}
+                        className="w-4 h-4 accent-teal-400 rounded cursor-pointer shrink-0"
+                      />
+                      <div className="truncate">
+                        <div className="text-xs font-bold text-white truncate flex items-center gap-2">
+                          <span>Short #{s.id}: {s.title}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-teal-500/20 text-teal-300 font-mono">
+                            Auto-crop 9:16
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          Thời gian: {s.time} • Tiềm năng Viral: <span className="text-amber-400 font-bold">{s.viral}% 🔥</span> ({s.tag})
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenShortInEditor(s.id)}
+                      className="py-1 px-2.5 rounded-lg bg-[#111827] hover:bg-teal-500 hover:text-slate-950 text-teal-400 font-bold text-[10px] border border-[#1F2937] transition-colors shrink-0 ml-2"
+                    >
+                      Mở Editor ➔
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#1F2937]">
+              <button
+                onClick={() => handleOpenShortInEditor(ltsSelectedShorts[0] || 1)}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-teal-500/20"
+              >
+                Đưa Short vào Editor (9:16)
+              </button>
+              <button
+                onClick={handleBatchExportShorts}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Download className="w-4 h-4 text-teal-400" />
+                <span>Xuất hàng loạt ({ltsSelectedShorts.length} Shorts)</span>
+              </button>
+            </div>
           </div>
         )}
 
