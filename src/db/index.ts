@@ -45,10 +45,30 @@ export interface TrashEntity {
   projectData: ProjectEntity;
 }
 
+export interface SnapshotEntity {
+  id: string;
+  projectId: string;
+  timestamp: number;
+  label: string;
+  duration: number;
+  tracksData: any;
+  settings?: any;
+}
+
+export interface OperationLogEntity {
+  id: string;
+  projectId: string;
+  timestamp: number;
+  action: string;
+  snapshotData?: any;
+}
+
 class ClipForgeDatabase extends Dexie {
   projects!: EntityTable<ProjectEntity, 'id'>;
   media!: EntityTable<MediaEntity, 'id'>;
   trash!: EntityTable<TrashEntity, 'id'>;
+  snapshots!: EntityTable<SnapshotEntity, 'id'>;
+  operationsLog!: EntityTable<OperationLogEntity, 'id'>;
 
   constructor() {
     super('ClipForgeDB');
@@ -57,10 +77,97 @@ class ClipForgeDatabase extends Dexie {
       media: 'id, projectId, type, createdAt',
       trash: 'id, projectId, deletedAt'
     });
+
+    this.version(2).stores({
+      projects: 'id, title, isDeleted, updatedAt, createdAt',
+      media: 'id, projectId, type, createdAt',
+      trash: 'id, projectId, deletedAt',
+      snapshots: 'id, projectId, timestamp',
+      operationsLog: 'id, projectId, timestamp'
+    }).upgrade((tx) => {
+      return tx.table('projects').toCollection().modify((proj: any) => {
+        if (!proj.updatedAt) proj.updatedAt = proj.createdAt || Date.now();
+        if (proj.isDeleted === undefined) proj.isDeleted = false;
+        if (!proj.tracksData) proj.tracksData = { clips: [] };
+        if (!proj.duration) proj.duration = 15;
+        if (!proj.width) proj.width = 1080;
+        if (!proj.height) proj.height = 1920;
+        if (!proj.fps) proj.fps = 30;
+      });
+    });
   }
 }
 
 export const db = new ClipForgeDatabase();
+
+// Auto clean trash items older than 30 days
+export async function autoCleanTrash(): Promise<number> {
+  try {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const oldItems = await db.trash.where('deletedAt').below(thirtyDaysAgo).toArray();
+    if (oldItems.length > 0) {
+      await db.trash.where('deletedAt').below(thirtyDaysAgo).delete();
+    }
+    return oldItems.length;
+  } catch (e) {
+    console.warn('Auto clean trash error:', e);
+    return 0;
+  }
+}
+
+// Request persistent storage from browser
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+    try {
+      const isPersisted = await navigator.storage.persisted();
+      if (!isPersisted) {
+        return await navigator.storage.persist();
+      }
+      return true;
+    } catch (e) {
+      console.warn('Persistent storage error:', e);
+    }
+  }
+  return false;
+}
+
+// Create a project snapshot for Version History
+export async function createProjectSnapshot(
+  projectId: string,
+  label: string,
+  tracksData: any,
+  duration: number,
+  settings?: any
+): Promise<string> {
+  const id = 'snap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  await db.snapshots.add({
+    id,
+    projectId,
+    timestamp: Date.now(),
+    label,
+    tracksData,
+    duration,
+    settings
+  });
+
+  // Keep maximum 20 latest snapshots per project to conserve storage
+  try {
+    const projectSnapshots = await db.snapshots
+      .where('projectId')
+      .equals(projectId)
+      .sortBy('timestamp');
+    if (projectSnapshots.length > 20) {
+      const toDelete = projectSnapshots.slice(0, projectSnapshots.length - 20);
+      for (const snap of toDelete) {
+        await db.snapshots.delete(snap.id);
+      }
+    }
+  } catch (e) {
+    console.warn('Prune snapshots error:', e);
+  }
+
+  return id;
+}
 
 // Seed initial demo project if database is empty
 export async function seedDemoProjects() {

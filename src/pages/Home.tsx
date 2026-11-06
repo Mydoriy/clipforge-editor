@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
-import { db, seedDemoProjects, type ProjectEntity } from '../db';
+import { db, seedDemoProjects, autoCleanTrash, requestPersistentStorage, type ProjectEntity } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Plus,
@@ -57,8 +57,10 @@ export const Home: React.FC = () => {
 
   const t = translations[language];
 
-  // Seed initial demo data in IndexedDB
+  // Seed initial demo data, auto-clean 30-day trash, request persistent storage
   useEffect(() => {
+    requestPersistentStorage();
+    autoCleanTrash();
     seedDemoProjects().then(() => {
       setTimeout(() => setIsLoading(false), 300);
     });

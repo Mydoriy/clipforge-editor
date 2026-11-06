@@ -36,7 +36,8 @@ import {
   Gem,
   HelpCircle,
   Info,
-  Maximize2
+  Maximize2,
+  History
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -328,6 +329,15 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
                       <span className="flex items-center gap-2"><BookmarkPlus className="w-3.5 h-3.5 text-amber-400" /> Lưu làm mẫu (Save as template)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('versionHistory');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><History className="w-3.5 h-3.5 text-[#1FC8DB]" /> Lịch sử phiên bản (Version history)</span>
                     </button>
                     <div className="border-t border-[#333333] my-1" />
                     <button

@@ -6,7 +6,10 @@ import { exportTimelineVideo, exportAudioOnly, exportCurrentFrameAsPng, exportCa
 import { convertVideoToGif } from '../lib/ffmpeg';
 import { DEFAULT_SHORTCUTS, eventToKeyCombo, formatDisplayKey } from '../utils/shortcuts';
 import { isSupabaseConfigured, supabase } from '../utils/supabase';
-import { db, createDefaultProject, type ProjectEntity } from '../db';
+import { db, createDefaultProject, createProjectSnapshot, type ProjectEntity, type SnapshotEntity } from '../db';
+import { checkStorageQuota, type StorageEstimateResult } from '../lib/db';
+import { validateCapprojFile } from '../utils/capprojValidator';
+import { masterAudio } from '../engine/audioEngine';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   X,
@@ -99,6 +102,18 @@ export const Modals: React.FC = () => {
   const [supportedCodecs, setSupportedCodecs] = useState<{ hevc: boolean; av1: boolean }>({ hevc: false, av1: false });
   const abortSignalRef = useRef<{ aborted: boolean }>({ aborted: false });
   const [promptInput, setPromptInput] = useState('');
+  const [storageEstimate, setStorageEstimate] = useState<StorageEstimateResult | null>(null);
+
+  useEffect(() => {
+    if (activeModal === 'cloud' || activeModal === 'projectSync' || activeModal === 'storage') {
+      checkStorageQuota().then(setStorageEstimate);
+    }
+  }, [activeModal]);
+
+  const snapshots = useLiveQuery(
+    () => (currentProjectId ? db.snapshots.where('projectId').equals(currentProjectId).reverse().sortBy('timestamp') : Promise.resolve([])),
+    [currentProjectId]
+  ) || [];
 
   // Probe codec support & init export file name
   useEffect(() => {
@@ -294,32 +309,27 @@ export const Modals: React.FC = () => {
     }
   };
 
-  // Import projects from .capproj file
-  const handleImportProjectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Import projects safely from .capproj file with Zod schema validation
+  const handleImportProjectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const data = JSON.parse(text);
-        if (data.projects && Array.isArray(data.projects)) {
-          await db.projects.bulkPut(data.projects);
-          showToast(`Đã khôi phục thành công ${data.projects.length} dự án từ file .capproj!`, 'success');
-          closeModal();
-        } else if (data.id && data.title) {
-          await db.projects.put(data);
-          showToast(`Đã nhập dự án "${data.title}" thành công!`, 'success');
-          closeModal();
-        } else {
-          showToast('Định dạng file .capproj không hợp lệ', 'error');
-        }
-      } catch (err: any) {
-        showToast('Lỗi đọc file: ' + err.message, 'error');
+
+    try {
+      showToast('Đang kiểm tra và xác thực file .capproj bằng Zod...', 'info');
+      const validation = await validateCapprojFile(file);
+      if (!validation.valid || !validation.projects || validation.projects.length === 0) {
+        showToast(validation.error || 'Cấu trúc file .capproj không hợp lệ', 'error');
+        return;
       }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+
+      await db.projects.bulkPut(validation.projects as any);
+      showToast(`Đã khôi phục an toàn ${validation.projects.length} dự án từ file .capproj!`, 'success');
+      closeModal();
+    } catch (err: any) {
+      showToast('Lỗi đọc file .capproj: ' + err.message, 'error');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Section 7: Bốn thẻ nhanh States & Handlers
@@ -1031,6 +1041,19 @@ export const Modals: React.FC = () => {
   const handleStartExport = async () => {
     try {
       abortSignalRef.current = { aborted: false };
+
+      // Automatic pre-export snapshot backup
+      if (currentProjectId && clips.length > 0) {
+        const snapLabel = `Trước khi xuất (${exportAudioOnlyMode ? exportAudioFormat.toUpperCase() : exportRes.toUpperCase() + ' ' + exportFormat.toUpperCase()})`;
+        createProjectSnapshot(
+          currentProjectId,
+          snapLabel,
+          { clips },
+          duration,
+          settings
+        ).catch(() => {});
+      }
+
       setExportProgress(0);
       setExportEta(0);
       setExportStatus(
@@ -2476,6 +2499,173 @@ export const Modals: React.FC = () => {
                 </button>
               )}
             </div>
+
+            {/* Storage Management Section (Dung lượng & Dọn dẹp Cache) */}
+            <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] text-xs mt-1">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <HardDrive className="w-4 h-4 text-[#22D3EE]" /> Quản lý dung lượng lưu trữ (Storage Quota)
+                </span>
+                {storageEstimate && (
+                  <span className="font-mono text-[11px] text-[#22D3EE]">
+                    {storageEstimate.usageMB} MB / {storageEstimate.quotaMB} MB ({storageEstimate.percentUsed}%)
+                  </span>
+                )}
+              </div>
+
+              {storageEstimate && (
+                <div className="w-full h-2 rounded-full bg-[#1F2937] overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      storageEstimate.percentUsed >= 80 ? 'bg-amber-400' : 'bg-[#22D3EE]'
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(2, storageEstimate.percentUsed))}%` }}
+                  />
+                </div>
+              )}
+
+              {storageEstimate && storageEstimate.percentUsed >= 80 && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px]">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                  <span>Cảnh báo: Bộ nhớ trình duyệt đã dùng hơn 80%. Hãy dọn dẹp các mục cache bên dưới để giải phóng không gian lưu trữ.</span>
+                </div>
+              )}
+
+              {/* Cache Cleanup Buttons */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await db.media.toCollection().modify((m: any) => {
+                      delete m.proxyBlob;
+                      delete m.proxySrc;
+                    });
+                    showToast('Đã dọn dẹp bộ nhớ đệm video proxy!', 'success');
+                    checkStorageQuota().then(setStorageEstimate);
+                  }}
+                  className="px-2.5 py-2 rounded-lg bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-left text-[11px] flex items-center justify-between transition-colors"
+                >
+                  <span>Dọn cache Proxy</span>
+                  <Trash2 className="w-3 h-3 text-cyan-400" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    masterAudio.clearCache();
+                    showToast('Đã dọn sạch cache waveform và audio buffer!', 'success');
+                  }}
+                  className="px-2.5 py-2 rounded-lg bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-left text-[11px] flex items-center justify-between transition-colors"
+                >
+                  <span>Dọn cache Waveform</span>
+                  <Trash2 className="w-3 h-3 text-emerald-400" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (typeof window !== 'undefined' && 'caches' in window) {
+                      await caches.delete('transformers-cache');
+                    }
+                    showToast('Đã dọn sạch bộ nhớ cache mô hình AI (Whisper)!', 'success');
+                    checkStorageQuota().then(setStorageEstimate);
+                  }}
+                  className="px-2.5 py-2 rounded-lg bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-left text-[11px] flex items-center justify-between transition-colors"
+                >
+                  <span>Dọn cache Model AI</span>
+                  <Trash2 className="w-3 h-3 text-purple-400" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await db.media.toCollection().modify((m: any) => {
+                      if (m.type === 'image' && m.name.includes('thumb')) {
+                        delete m.thumbnail;
+                      }
+                    });
+                    showToast('Đã dọn dẹp các ảnh thumbnail tạm thời!', 'success');
+                    checkStorageQuota().then(setStorageEstimate);
+                  }}
+                  className="px-2.5 py-2 rounded-lg bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-left text-[11px] flex items-center justify-between transition-colors"
+                >
+                  <span>Dọn cache Thumbnail</span>
+                  <Trash2 className="w-3 h-3 text-amber-400" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VERSION HISTORY MODAL */}
+        {activeModal === 'versionHistory' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-[#22D3EE]">
+                <RotateCcw className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">Lịch sử phiên bản (Version History)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (currentProjectId && clips.length > 0) {
+                    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    await createProjectSnapshot(
+                      currentProjectId,
+                      `Thủ công (${timeStr})`,
+                      { clips },
+                      duration,
+                      settings
+                    );
+                    showToast('Đã tạo một snapshot phiên bản thủ công mới!', 'success');
+                  }
+                }}
+                className="px-2.5 py-1 rounded-lg bg-[#22D3EE]/20 hover:bg-[#22D3EE]/30 text-[#22D3EE] font-bold text-xs border border-[#22D3EE]/40 transition-colors"
+              >
+                + Tạo snapshot ngay
+              </button>
+            </div>
+
+            <p className="text-[11px] text-[#9CA3AF]">
+              Hệ thống tự động chụp ảnh phiên bản mỗi 5 phút và trước mỗi lần xuất video. Bạn có thể khôi phục lại bất kỳ mốc thời gian nào.
+            </p>
+
+            {snapshots.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
+                <RotateCcw className="w-10 h-10 opacity-30 text-slate-600" />
+                <span>Chưa có bản snapshot nào được lưu cho dự án này.</span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                {snapshots.map((snap: any) => (
+                  <div
+                    key={snap.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs"
+                  >
+                    <div className="flex flex-col gap-0.5 truncate pr-2">
+                      <span className="font-semibold text-slate-200 truncate">{snap.label}</span>
+                      <span className="text-[10px] text-slate-500">
+                        {new Date(snap.timestamp).toLocaleDateString('vi-VN')} {new Date(snap.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • {snap.tracksData?.clips?.length || 0} clips • {snap.duration || 15}s
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (snap.tracksData?.clips) {
+                          setClips(snap.tracksData.clips);
+                          if (snap.duration) setDuration(snap.duration);
+                          showToast(`Đã khôi phục về phiên bản "${snap.label}"!`, 'success');
+                          closeModal();
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold text-xs border border-cyan-500/30 shrink-0 cursor-pointer"
+                    >
+                      Khôi phục
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

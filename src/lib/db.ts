@@ -1,7 +1,24 @@
-import { db, type ProjectEntity, type MediaEntity, type TrashEntity, seedDemoProjects } from '../db';
+import {
+  db,
+  type ProjectEntity,
+  type MediaEntity,
+  type TrashEntity,
+  type SnapshotEntity,
+  type OperationLogEntity,
+  seedDemoProjects,
+  autoCleanTrash,
+  requestPersistentStorage,
+  createProjectSnapshot
+} from '../db';
 
-export { db, seedDemoProjects };
-export type { ProjectEntity, MediaEntity, TrashEntity };
+export {
+  db,
+  seedDemoProjects,
+  autoCleanTrash,
+  requestPersistentStorage,
+  createProjectSnapshot
+};
+export type { ProjectEntity, MediaEntity, TrashEntity, SnapshotEntity, OperationLogEntity };
 
 export interface StorageEstimateResult {
   usageMB: number;
@@ -10,9 +27,9 @@ export interface StorageEstimateResult {
   isNearQuota: boolean;
 }
 
-// Check client IndexedDB storage quota safely
+// Check client IndexedDB storage quota safely (warn if > 80%)
 export async function checkStorageQuota(): Promise<StorageEstimateResult> {
-  if (navigator.storage && navigator.storage.estimate) {
+  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
     try {
       const estimate = await navigator.storage.estimate();
       const usage = estimate.usage || 0;
@@ -25,7 +42,7 @@ export async function checkStorageQuota(): Promise<StorageEstimateResult> {
         usageMB,
         quotaMB,
         percentUsed,
-        isNearQuota: percentUsed >= 90
+        isNearQuota: percentUsed >= 80
       };
     } catch (e) {
       console.warn('Storage estimate error', e);

@@ -198,6 +198,12 @@ interface EditorState {
   storageWarning: string | null;
   setStorageWarning: (warn: string | null) => void;
   checkStorageQuota: () => Promise<void>;
+
+  // Multi-tab locking & Crash recovery
+  isReadOnly: boolean;
+  setIsReadOnly: (val: boolean) => void;
+  crashCheckpoint: any | null;
+  setCrashCheckpoint: (cp: any | null) => void;
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -773,10 +779,10 @@ export const useEditorStore = create<EditorState>()(
             const estimate = await navigator.storage.estimate();
             if (estimate.quota && estimate.usage) {
               const ratio = estimate.usage / estimate.quota;
-              if (ratio >= 0.9) {
+              if (ratio >= 0.8) {
                 const usedMb = (estimate.usage / (1024 * 1024)).toFixed(0);
                 const totalMb = (estimate.quota / (1024 * 1024)).toFixed(0);
-                const msg = `Bộ nhớ trình duyệt gần đầy (${usedMb}MB / ${totalMb}MB, ${(ratio * 100).toFixed(0)}%). Hãy xóa bớt dự án cũ hoặc sao lưu .capproj để tránh mất dữ liệu!`;
+                const msg = `Bộ nhớ trình duyệt đã dùng hơn 80% (${usedMb}MB / ${totalMb}MB, ${(ratio * 100).toFixed(0)}%). Hãy xóa bớt dự án cũ hoặc sao lưu .capproj để tránh mất dữ liệu!`;
                 set({ storageWarning: msg });
               } else {
                 set({ storageWarning: null });
@@ -787,6 +793,11 @@ export const useEditorStore = create<EditorState>()(
           }
         }
       },
+
+      isReadOnly: false,
+      setIsReadOnly: (val) => set({ isReadOnly: val }),
+      crashCheckpoint: null,
+      setCrashCheckpoint: (cp) => set({ crashCheckpoint: cp }),
 
       relinkClipMedia: async (clipId: string, file: File | Blob) => {
         const { clips, updateClip, showToast } = get();

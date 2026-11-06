@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
-import { db } from '../lib/db';
+import { db, createProjectSnapshot } from '../lib/db';
 import { syncClipsToTracks, extractClipsFromTracks, createDefaultTracks, type Timeline } from '../types/project';
 import { Header } from '../components/Header';
 import { CategoryPanel, PlayerCanvas, Inspector, Timeline as TimelineComponent } from '../editor';
@@ -9,7 +9,9 @@ import { EditPilot } from '../components/EditPilot';
 import { Mascot } from '../components/Mascot';
 import { sharedCompositor } from '../engine/compositor';
 import { matchShortcut } from '../utils/shortcuts';
-import { Sliders, Eye, AlertTriangle, Info, X } from 'lucide-react';
+import { acquireProjectLock, type ProjectLockHandle } from '../utils/projectLock';
+import { saveCrashCheckpoint, markCleanExit, checkUnsavedCrashCheckpoint, clearCrashCheckpoint, type CrashCheckpoint } from '../utils/crashRecovery';
+import { Sliders, Eye, AlertTriangle, Info, X, Lock, RotateCcw } from 'lucide-react';
 
 export const Editor: React.FC = () => {
   const {
@@ -26,7 +28,9 @@ export const Editor: React.FC = () => {
     setMediaItems,
     storageWarning,
     setStorageWarning,
-    checkStorageQuota
+    checkStorageQuota,
+    isReadOnly,
+    setIsReadOnly
   } = useEditorStore();
   const [showInspectorOnTablet, setShowInspectorOnTablet] = useState(false);
   const [missingApis, setMissingApis] = useState<{ webCodecs: boolean; fsAccess: boolean; webGpu: boolean }>({
@@ -35,15 +39,34 @@ export const Editor: React.FC = () => {
     webGpu: false
   });
   const [dismissApiWarning, setDismissApiWarning] = useState(false);
+  const [unsavedCrashCheckpoint, setUnsavedCrashCheckpoint] = useState<CrashCheckpoint | null>(null);
 
   useEffect(() => {
+    let lockHandle: ProjectLockHandle | null = null;
+
     if (id) {
       setCurrentProjectId(id);
+
+      // 1. Acquire Project Lock to prevent multi-tab conflicts
+      acquireProjectLock(id, (readOnly) => {
+        setIsReadOnly(readOnly);
+      }).then((handle) => {
+        lockHandle = handle;
+        setIsReadOnly(handle.isReadOnly);
+      });
+
+      // 2. Load project data & check for crash recovery checkpoint
       db.projects.get(id).then(async (proj) => {
         if (proj) {
           const name = proj.name || proj.title;
           setProjectTitle(name);
           setDuration(proj.duration || 15);
+
+          // Check if there is an unsaved crash checkpoint from an abrupt tab closure
+          const checkpoint = checkUnsavedCrashCheckpoint(id, proj.updatedAt || proj.createdAt);
+          if (checkpoint) {
+            setUnsavedCrashCheckpoint(checkpoint);
+          }
 
           // Rehydrate persisted media blobs from IndexedDB into fresh Object URLs
           const allMedia = await db.media.toArray();
@@ -93,10 +116,22 @@ export const Editor: React.FC = () => {
       });
     }
 
+    const handleBeforeUnload = () => {
+      if (id && !useEditorStore.getState().isReadOnly) {
+        markCleanExit(id);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (lockHandle) {
+        lockHandle.release();
+      }
+      setIsReadOnly(false);
       sharedCompositor.cleanup();
     };
-  }, [id, setCurrentProjectId, setProjectTitle, setClips, setDuration, setTimelines, setActiveTimelineId, updateProjectSettings, setMediaItems]);
+  }, [id, setCurrentProjectId, setProjectTitle, setClips, setDuration, setTimelines, setActiveTimelineId, updateProjectSettings, setMediaItems, setIsReadOnly]);
 
   // Detect browser APIs & check storage quota
   useEffect(() => {
@@ -111,6 +146,10 @@ export const Editor: React.FC = () => {
   const handleImmediateSave = async () => {
     if (!id) return;
     const store = useEditorStore.getState();
+    if (store.isReadOnly) {
+      store.showToast('Dự án đang ở chế độ CHỈ ĐỌC vì mở ở tab khác, không thể lưu!', 'warning');
+      return;
+    }
     try {
       store.setAutosaveStatus('saving');
       const activeTracks = syncClipsToTracks(
@@ -132,6 +171,7 @@ export const Editor: React.FC = () => {
         timelines: updatedTimelines,
         tracksData: { clips: store.clips }
       });
+      saveCrashCheckpoint(id, store.projectTitle, store.duration, store.clips, store.projectSettings);
       store.setAutosaveStatus('saved');
       store.showToast('Đã lưu dự án vào bộ nhớ trình duyệt (Ctrl+S)', 'success');
     } catch (err: any) {
@@ -472,7 +512,7 @@ export const Editor: React.FC = () => {
 
     const interval = setInterval(async () => {
       const store = useEditorStore.getState();
-      if (store.settings.autosave === false) return;
+      if (store.isReadOnly || store.settings.autosave === false) return;
 
       try {
         store.setAutosaveStatus('saving');
@@ -497,12 +537,37 @@ export const Editor: React.FC = () => {
           media: store.mediaItems,
           tracksData: { clips: store.clips }
         });
+        saveCrashCheckpoint(id, store.projectTitle, store.duration, store.clips, store.projectSettings);
         store.setAutosaveStatus('saved');
       } catch (err) {
         console.warn('Autosave error:', err);
         store.setAutosaveStatus('idle');
       }
     }, 3000);
+
+    return () => clearInterval(interval);
+  }, [id]);
+
+  // Auto snapshot every 5 minutes (Version history)
+  useEffect(() => {
+    if (!id) return;
+
+    const interval = setInterval(async () => {
+      const store = useEditorStore.getState();
+      if (store.isReadOnly || store.clips.length === 0) return;
+      try {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        await createProjectSnapshot(
+          id,
+          `Tự động (${timeStr})`,
+          { clips: store.clips },
+          store.duration,
+          store.projectSettings
+        );
+      } catch (e) {
+        console.warn('Auto snapshot error:', e);
+      }
+    }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [id]);
@@ -574,6 +639,53 @@ export const Editor: React.FC = () => {
     <div className="theme-editor flex-1 flex flex-col h-screen min-w-[1280px] min-h-[720px] overflow-hidden select-none bg-[#141414] text-[#E6E6E6]">
       {/* Editor Header: Height 44px */}
       <Header isEditor={true} />
+
+      {/* Multi-tab Read-Only Warning Banner */}
+      {isReadOnly && (
+        <div className="bg-amber-500/20 border-b border-amber-500/40 px-4 py-2 flex items-center justify-between text-amber-200 text-xs z-30 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>CHẾ ĐỘ CHỈ ĐỌC (READ-ONLY):</strong> Dự án này đang được mở tại một tab trình duyệt khác. Chức năng chỉnh sửa và tự động lưu đã được khóa để tránh xung đột và ghi đè dữ liệu.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Crash Recovery Banner */}
+      {unsavedCrashCheckpoint && (
+        <div className="bg-[#22D3EE]/15 border-b border-[#22D3EE]/40 px-4 py-2.5 flex items-center justify-between text-[#22D3EE] text-xs z-30 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="w-4 h-4 text-[#22D3EE] shrink-0" />
+            <span>
+              <strong>Khôi phục phiên chưa lưu:</strong> Phát hiện bản ghi nhật ký chưa lưu từ lần thoát trước ({new Date(unsavedCrashCheckpoint.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, {unsavedCrashCheckpoint.clips.length} clip). Bạn có muốn khôi phục không?
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setClips(unsavedCrashCheckpoint.clips);
+                setDuration(unsavedCrashCheckpoint.duration || 15);
+                clearCrashCheckpoint(id!);
+                setUnsavedCrashCheckpoint(null);
+                useEditorStore.getState().showToast('Đã khôi phục thành công phiên làm việc chưa lưu!', 'success');
+              }}
+              className="px-3 py-1 rounded-md bg-[#22D3EE] text-slate-950 font-bold text-xs hover:bg-[#22D3EE]/90 shadow transition-colors cursor-pointer"
+            >
+              Khôi phục phiên
+            </button>
+            <button
+              onClick={() => {
+                clearCrashCheckpoint(id!);
+                setUnsavedCrashCheckpoint(null);
+              }}
+              className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Bỏ qua
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Storage Quota Warning Banner */}
       {storageWarning && (

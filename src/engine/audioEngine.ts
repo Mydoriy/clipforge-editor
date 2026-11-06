@@ -74,6 +74,17 @@ export class MasterAudioEngine {
     }
   }
 
+  // Clear waveform and audio buffer caches to free memory
+  public clearCache(): void {
+    this.audioBufferCache.clear();
+    this.waveformCache.clear();
+    this.audioElements.forEach((audio) => {
+      audio.pause();
+      audio.src = '';
+    });
+    this.audioElements.clear();
+  }
+
   // Play synthesized preview chime or beat
   public playSynthesizer(type: 'success' | 'click' | 'beat' = 'click'): void {
     try {
