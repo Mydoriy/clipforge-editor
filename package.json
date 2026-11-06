@@ -1,0 +1,20 @@
+{
+  "name": "clipforge",
+  "version": "1.0.0",
+  "description": "ClipForge - 9:16 Vertical Video Editor for TikTok, Reels, Shorts",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "deploy": "npx vercel"
+  },
+  "keywords": [
+    "video-editor",
+    "tiktok",
+    "reels",
+    "webcodecs",
+    "supabase",
+    "vercel"
+  ],
+  "author": "ClipForge",
+  "license": "MIT"
+}
