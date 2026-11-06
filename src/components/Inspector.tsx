@@ -246,7 +246,7 @@ export const Inspector: React.FC = () => {
             <div className="flex flex-col gap-2.5 pt-2 border-t border-[#1F2937]">
               <span className="text-[11px] font-bold text-[#9CA3AF] uppercase flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                Âm lượng & Hiệu ứng Fade
+                {t.volume} & Fade
               </span>
 
               {/* Volume */}
@@ -272,7 +272,7 @@ export const Inspector: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between text-[10px] text-[#9CA3AF]">
-                    <span>Fade In</span>
+                    <span>{t.fadeIn}</span>
                     <span className="font-mono text-emerald-400">{clip.fadeIn || 0}s</span>
                   </div>
                   <input
@@ -288,7 +288,7 @@ export const Inspector: React.FC = () => {
 
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between text-[10px] text-[#9CA3AF]">
-                    <span>Fade Out</span>
+                    <span>{t.fadeOut}</span>
                     <span className="font-mono text-emerald-400">{clip.fadeOut || 0}s</span>
                   </div>
                   <input
@@ -310,12 +310,12 @@ export const Inspector: React.FC = () => {
             <div className="flex flex-col gap-2.5 pt-2 border-t border-[#1F2937]">
               <span className="text-[11px] font-bold text-[#9CA3AF] uppercase flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-                Bộ lọc & Chỉnh màu (Color Grade)
+                {t.filterLabel}
               </span>
 
               {/* Filter Preset Dropdown */}
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-[#9CA3AF]">Bộ lọc (Filter LUT):</span>
+                <span className="text-[10px] text-[#9CA3AF]">{t.filterLabel}:</span>
                 <select
                   value={clip.filter || 'none'}
                   onChange={(e) => updateClip(clip.id, { filter: e.target.value })}
@@ -337,7 +337,7 @@ export const Inspector: React.FC = () => {
                 <div className="flex justify-between text-[10px] text-[#9CA3AF]">
                   <span className="flex items-center gap-1">
                     <Sun className="w-3 h-3" />
-                    Độ sáng (Brightness)
+                    {t.brightness}
                   </span>
                   <span className="font-mono text-[#22D3EE]">
                     {(clip.brightness || 0) > 0 ? `+${clip.brightness}` : clip.brightness || 0}%
@@ -359,7 +359,7 @@ export const Inspector: React.FC = () => {
                 <div className="flex justify-between text-[10px] text-[#9CA3AF]">
                   <span className="flex items-center gap-1">
                     <Contrast className="w-3 h-3" />
-                    Độ tương phản (Contrast)
+                    {t.contrast}
                   </span>
                   <span className="font-mono text-[#22D3EE]">
                     {(clip.contrast || 0) > 0 ? `+${clip.contrast}` : clip.contrast || 0}%
@@ -381,7 +381,7 @@ export const Inspector: React.FC = () => {
                 <div className="flex justify-between text-[10px] text-[#9CA3AF]">
                   <span className="flex items-center gap-1">
                     <Palette className="w-3 h-3" />
-                    Độ bão hòa màu (Saturation)
+                    {t.saturation}
                   </span>
                   <span className="font-mono text-[#22D3EE]">
                     {(clip.saturation || 0) > 0 ? `+${clip.saturation}` : clip.saturation || 0}%

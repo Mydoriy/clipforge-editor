@@ -92,6 +92,29 @@ export const translations = {
     exporting: 'Đang xuất video...',
     exportSuccess: 'Xuất video thành công!',
     
+    // Errors & Browser API Fallbacks
+    errUnsupportedFile: 'Tệp không được hỗ trợ. Định dạng hợp lệ: MP4, MOV, WEBM, JPG, PNG, MP3, WAV.',
+    errStorageQuota: 'Bộ nhớ trình duyệt (IndexedDB) đã đầy. Vui lòng vào Thùng rác để dọn dẹp hoặc xóa bớt tệp thừa.',
+    errNoSpeechApi: 'Trình duyệt hiện tại chưa hỗ trợ Web Speech API. Vui lòng dùng Chrome/Edge hoặc dùng mục Nhập tay / Import SRT.',
+    errNoMediaRecorder: 'Trình duyệt không hỗ trợ MediaRecorder để xuất video trực tiếp.',
+    errNoAudioContext: 'Không thể khởi tạo Web Audio API trên trình duyệt này.',
+
+    // Editor actions & labels
+    duplicate: 'Nhân bản',
+    snap: 'Hít nam châm',
+    zoom: 'Thu phóng',
+    fadeIn: 'Fade In',
+    fadeOut: 'Fade Out',
+    brightness: 'Độ sáng',
+    contrast: 'Tương phản',
+    saturation: 'Bão hòa',
+    filterLabel: 'Bộ lọc màu',
+    autoCaptions: 'Tự động nhận diện',
+    manualCaptions: 'Nhập tay',
+    importSrt: 'Nhập SRT',
+    autosaved: 'Đã lưu',
+    saving: 'Đang lưu...',
+
     // EditPilot AI
     editPilotName: 'EditPilot AI',
     aiSuggestedPrompt1: 'Thêm hook giật gân ở 3 giây đầu',
@@ -190,6 +213,29 @@ export const translations = {
     exporting: 'Exporting video...',
     exportSuccess: 'Export completed!',
     
+    // Errors & Browser API Fallbacks
+    errUnsupportedFile: 'Unsupported file format. Supported: MP4, MOV, WEBM, JPG, PNG, MP3, WAV.',
+    errStorageQuota: 'Browser storage (IndexedDB) quota exceeded. Please clean up Trash or remove unused media files.',
+    errNoSpeechApi: 'This browser does not support the Web Speech API. Please use Google Chrome/Edge or use Manual/SRT Import.',
+    errNoMediaRecorder: 'This browser does not support MediaRecorder for client-side video rendering.',
+    errNoAudioContext: 'Unable to initialize Web Audio API on this device.',
+
+    // Editor actions & labels
+    duplicate: 'Duplicate',
+    snap: 'Snap',
+    zoom: 'Zoom',
+    fadeIn: 'Fade In',
+    fadeOut: 'Fade Out',
+    brightness: 'Brightness',
+    contrast: 'Contrast',
+    saturation: 'Saturation',
+    filterLabel: 'Color Filter',
+    autoCaptions: 'Auto Captions',
+    manualCaptions: 'Manual Captions',
+    importSrt: 'Import SRT',
+    autosaved: 'Saved',
+    saving: 'Saving...',
+
     // EditPilot AI
     editPilotName: 'EditPilot AI',
     aiSuggestedPrompt1: 'Add a viral hook in the first 3 seconds',

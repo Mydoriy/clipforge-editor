@@ -39,6 +39,14 @@ export async function exportTimelineVideo(
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('Cannot get 2d context for video rendering');
 
+  if (typeof MediaRecorder === 'undefined') {
+    throw new Error('Trình duyệt hiện tại không hỗ trợ MediaRecorder API để xuất video. Vui lòng sử dụng Chrome, Edge hoặc Safari phiên bản mới.');
+  }
+
+  if (!canvas.captureStream) {
+    throw new Error('Trình duyệt hiện tại không hỗ trợ HTMLCanvasElement.captureStream API để ghi hình video.');
+  }
+
   const stream = canvas.captureStream(fps);
 
   // Setup Web Audio recording if possible

@@ -1,17 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
-import { db } from '../db';
+import { db } from '../lib/db';
 import { Header } from '../components/Header';
-import { CategoryPanel } from '../components/CategoryPanel';
-import { PlayerCanvas } from '../components/PlayerCanvas';
-import { Inspector } from '../components/Inspector';
-import { Timeline } from '../components/Timeline';
+import { CategoryPanel, PlayerCanvas, Inspector, Timeline } from '../editor';
 import { EditPilot } from '../components/EditPilot';
+import { Sliders, Eye } from 'lucide-react';
 
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { setCurrentProjectId, setProjectTitle, setClips, setDuration } = useEditorStore();
+  const [showInspectorOnTablet, setShowInspectorOnTablet] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -128,10 +127,35 @@ export const Editor: React.FC = () => {
       <Header isEditor={true} />
 
       {/* Main Workspace (Category Panel + 9:16 Canvas + Inspector) */}
-      <div className="flex-1 flex overflow-hidden">
-        <CategoryPanel />
-        <PlayerCanvas />
-        <Inspector />
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Category Panel: visible on tablet & desktop */}
+        <div className="hidden md:flex shrink-0">
+          <CategoryPanel />
+        </div>
+
+        {/* Central 9:16 Preview Canvas Area */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          <PlayerCanvas />
+
+          {/* Tablet Inspector Toggle Button (visible only when screen < 1280px) */}
+          <button
+            onClick={() => setShowInspectorOnTablet(!showInspectorOnTablet)}
+            className="xl:hidden absolute top-3 right-3 z-30 px-3 py-1.5 rounded-xl bg-[#111827]/90 hover:bg-[#1F2937] border border-[#1F2937] hover:border-[#22D3EE]/50 text-xs font-semibold text-white flex items-center gap-1.5 shadow-xl transition-all"
+            title="Bật/tắt bảng thuộc tính trên tablet"
+          >
+            <Sliders className="w-3.5 h-3.5 text-[#22D3EE]" />
+            <span>{showInspectorOnTablet ? 'Ẩn thuộc tính' : 'Thuộc tính'}</span>
+          </button>
+        </div>
+
+        {/* Inspector: Always visible on desktop (>= 1280px / xl), slide-in on tablet */}
+        <div
+          className={`shrink-0 transition-all ${
+            showInspectorOnTablet ? 'flex absolute right-0 top-0 bottom-0 z-40 md:relative' : 'hidden xl:flex'
+          }`}
+        >
+          <Inspector />
+        </div>
       </div>
 
       {/* Bottom Multi-track Timeline */}

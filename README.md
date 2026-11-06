@@ -1,87 +1,131 @@
-# ClipForge - Trình dựng video ngắn dọc 9:16 trên trình duyệt
+# CapCut Desktop Web v3.0 • 9:16 Vertical Video Studio
 
-Trình chỉnh sửa video ngắn 9:16 (1080×1920) chạy hoàn toàn trên trình duyệt dành cho creators TikTok / Reels / Shorts.
-
-## 🚀 Cách chạy ứng dụng
-Chỉ cần nhấp đúp trực tiếp vào file `index.html` để mở bằng Google Chrome hoặc Microsoft Edge (không cần cài đặt, không cần server backend).
+Trình biên tập video ngắn dọc tỷ lệ 9:16 (1080×1920 Full HD) chạy 100% phía máy khách (Client-Side) trên trình duyệt, lấy cảm hứng từ giao diện CapCut Desktop. Ứng dụng hoạt động theo tiêu chí **Offline-First**, không bắt buộc đăng nhập, không cần máy chủ backend, dữ liệu được lưu an toàn trong IndexedDB của trình duyệt.
 
 ---
 
-## 📁 Cấu trúc thư mục mã nguồn (Modular Architecture)
-Toàn bộ mã nguồn đã được tách rời theo từng module chuyên biệt nằm trong thư mục `src/`, giúp dễ dàng bảo trì và mở rộng:
+## 🛠️ Tech Stack & Kiến trúc mã nguồn
+
+- **Frontend Core**: React 18, Vite, TypeScript, Tailwind CSS, React Router v6.
+- **Quản lý trạng thái (State)**: Zustand (với middleware `persist` lưu cài đặt và trạng thái giao diện).
+- **Lưu trữ dữ liệu (Database)**: Dexie.js (IndexedDB) lưu trữ dự án, video, ảnh, âm thanh và thùng rác cục bộ.
+- **Xử lý video / âm thanh**: FFmpeg.wasm, Canvas 2D/WebGL, MediaRecorder, Web Audio API, Web Speech API.
+- **Đồ họa 2D**: Konva / HTML5 Canvas (Design Studio).
+- **Đa ngôn ngữ (i18n)**: Tiếng Việt (VN) và English (EN) chuyển đổi tức thì, không hard-code văn bản.
+- **Cloud Backend (Tùy chọn)**: Supabase (chỉ kích hoạt khi có biến môi trường cấu hình).
+
+### 📁 Cấu trúc thư mục (Modular Architecture)
 
 ```text
-Editor/
-├── index.html              # Bộ khung giao diện HTML5, modals và SVG icons
-├── README.md               # Hướng dẫn sử dụng & tài liệu kỹ thuật
-└── src/
-    ├── css/
-    │   └── style.css       # Toàn bộ CSS giao diện, theme xám trung tính, layout & responsive
-    └── js/
-        ├── state.js        # Quản lý trạng thái dự án, I18N đa ngữ, Undo/Redo (Command Pattern), IndexedDB
-        ├── audio.js        # Web Audio API, synthesizer mẫu âm thanh, phân tích nhịp Beat Sync
-        ├── graph.js        # Thuật toán Cubic Bezier solver, Easing presets & Modal Graph Editor
-        ├── particles.js    # Hệ thống hạt thủ tục (Confetti, Sparkles, Floating Hearts)
-        ├── shapes.js       # Shape Layer (Rect, Circle, Star, Arrow, Line) & Trim Path animation
-        ├── effects.js      # Bộ lọc hiệu ứng WebGL/Canvas, Chroma Key tách phông, Chỉnh màu & 3D LUT parser
-        ├── captions.js     # Trình phân tích SRT & chia nhịp kịch bản cho Caption Studio
-        ├── renderer.js     # Động cơ render Frame Canvas 1080×1920 (Blur Fill, Pan & Scan, Pre-comp, v.v.)
-        ├── timeline.js     # Quản lý timeline đa rãnh, kéo thả, cắt clip, snapping, audio waveform
-        ├── inspector.js    # Panel thuộc tính Inspector bên phải, binding controls & nút keyframe
-        ├── hooks.js        # Thư viện Hook Lab (8 preset 3s đầu), Loop Check mode & Template slots
-        ├── exporter.js     # Trình xuất video MP4 (WebCodecs H.264 + mp4-muxer / MediaRecorder WebM)
-        └── app.js          # Khởi tạo ứng dụng, phím tắt (Hotkeys), Drag & Drop media, gắn sự kiện giao diện
+src/
+├── components/          # Các component giao diện dùng chung (Header, Sidebar, Modals, Toasts, EditPilot, Logo)
+├── editor/              # Module chuyên biệt cho màn hình dựng video /editor/:id
+│   ├── CategoryPanel.tsx # 8 danh mục: Media, Audio, Text, Stickers, Effects, Transitions, Filters, Captions
+│   ├── PlayerCanvas.tsx  # Khung canvas 9:16, overlay Safe Zone TikTok/Reels, preview realtime
+│   ├── Inspector.tsx     # Bảng thuộc tính: scale, vị trí, xoay, opacity, tốc độ, volume, fade, bộ lọc màu, text anim
+│   ├── Timeline.tsx      # Timeline đa track, kéo thả, trim 2 đầu, split, duplicate, snap, zoom slider
+│   └── index.ts          # Barrel export module editor
+├── pages/               # Các trang chính: Home, Editor, DesignStudio, SectionPage (Templates, Library, Cloud, Marketing)
+├── store/               # Zustand store: useEditorStore (clips, history undo/redo, timeline zoom, snapping, autosave)
+├── lib/                 # Các dịch vụ lõi:
+│   ├── db.ts            # Dexie database, kiểm tra quota dung lượng, safeAddMedia chống tràn bộ nhớ
+│   ├── ffmpeg.ts        # FFmpeg.wasm client service: cắt video, thay đổi tốc độ, kiểm tra WebAssembly
+│   ├── ai.ts            # Bộ phân tích ngôn ngữ tự nhiên EditPilot và kết nối API LLM (OpenAI / Gemini)
+│   └── index.ts         # Barrel export module lib
+├── i18n/                # Hệ thống từ điển đa ngữ (index.ts: Tiếng Việt & English)
+├── utils/               # Audio synthesizer, TTS, WebCodecs/Canvas video exporter
+└── db/                  # Dexie schema & demo seed projects
 ```
 
 ---
 
-## ✨ Tính năng Giai đoạn 1 (Nền tảng NLE 9:16)
-- **100% Client-side**: Video & âm thanh không rời máy tính, tự lưu dữ liệu vào IndexedDB.
-- **Khung dọc 9:16 & Vùng an toàn TikTok**: Lớp phủ guide TikTok (top 160px, bottom 480px, left 120px, right 160px) bật/tắt tức thì, không bao giờ xuất vào video.
-- **Nền mờ (Blur Fill)**: Biến video ngang 16:9 thành dọc 9:16 với nền mờ hậu cảnh hoặc lấp đầy (Cover).
-- **Timeline đa rãnh**: Rãnh Video/Overlay, Chữ (Text) và Âm thanh (Audio); cắt (Split - phím S), kéo mép trim, nhân đôi (Ctrl+D), xóa, hít nam châm (Snapping), sóng âm thanh (Audio Waveform).
-- **8 Hiệu ứng & 4 Chuyển cảnh thủ tục**: Zoom Punch, Shake/Wiggle, RGB Split, Glitch, VHS, Film Grain, Vignette, Flash Cut, Dissolve, Slide, Zoom In.
-- **Xuất MP4 1080×1920 30/60fps**: Đóng gói MP4 trực tiếp qua WebCodecs + `mp4-muxer` (fallback MediaRecorder WebM).
+## 🚀 Hướng dẫn cài đặt & Khởi chạy
+
+### 1. Yêu cầu hệ thống
+- Node.js version 18 trở lên.
+- Trình duyệt hiện đại: Google Chrome, Microsoft Edge, Brave, hoặc Safari.
+
+### 2. Cài đặt các gói phụ thuộc
+```bash
+npm install
+```
+
+### 3. Chạy môi trường phát triển (Dev Server)
+```bash
+npm run dev
+```
+Mở trình duyệt truy cập: `http://localhost:5173`
+
+### 4. Đóng gói cho Production
+```bash
+npm run build
+```
+Thư mục xuất bản `./dist` đã sẵn sàng để triển khai lên Vercel, Netlify hoặc bất kỳ máy chủ tĩnh nào.
 
 ---
 
-## ⚡ Tính năng Giai đoạn 2 (Pro Creator & TikTok Trends)
-1. **Graph Editor cho Keyframe**: Đồ thị đường cong Bezier kéo chuột trực tiếp; Presets: Linear, Ease, Ease-In, Ease-Out, Ease-In-Out, **Bật nảy (Bounce)**, và **Vọt lố (Back-Overshoot)**.
-2. **Speed Ramp (Đồ thị tốc độ)**: Đồ thị tốc độ phi tuyến tích phân hình thang; Presets: **Montage**, **Hero Moment**, **Bullet Time**.
-3. **Beat Sync (Đồng bộ nhịp điệu)**: Phân tích tần số thấp bằng Web Audio; đánh dấu beat trên timeline; **Cắt theo nhịp** và **Nháy hiệu ứng theo beat** (Flash, Shake, Zoom Punch, RGB Split).
-4. **Caption Studio**: Dán kịch bản hoặc nhập file `.SRT`; chia từ và mốc thời gian; **6 Style chữ thời thượng** (*Karaoke Sáng từng từ*, *Hộp Nền Đen*, *Viền Neon*, *Pop-In Nảy*, *Máy Đánh Chữ*, *TikTok Pill*); hỗ trợ đầy đủ phông tiếng Việt.
-5. **Lớp Điều Chỉnh, Blend Mode, Mask & Chroma Key**:
-   - **Adjustment Layer**: Áp dụng hiệu ứng và chỉnh màu lên toàn bộ các lớp bên dưới.
-   - **Blend Mode**: Normal, Screen, Multiply, Overlay, Lighten, Darken, Color Dodge, Difference.
-   - **Mặt nạ (Mask)**: Hình chữ nhật hoặc Elip với độ mờ cạnh viền (Feather).
-   - **Chroma Key**: Tách phông xanh chọn màu, dung sai (Tolerance) và độ mịn viền (Smoothness).
-6. **Chỉnh màu (Color Grading) & 3D LUT**: Exposure, Contrast, Saturation, Temperature, Tint; nạp file 3D LUT `.cube` chuẩn Adobe/DaVinci.
-7. **Hook Lab, Loop Check & Template Studio**:
-   - **Hook Lab**: 8 preset giữ chân người xem 3 giây đầu (Zoom Punch, Flash Glitch, RGB Split, Đếm ngược 3-2-1, Whip Pan, Strobe, Vignette, Khung Neon).
-   - **Loop Check**: Kiểm tra video lặp vô tận (infinite seamless loop) giữa đoạn nối cuối và đầu.
-   - **Template Studio**: Lưu thành file `.clipforge.template.json` với các ô Media Slot thay thế nội dung 1 chạm.
+## ☁️ Cách cấu hình Supabase (Tùy chọn)
+
+Supabase trong dự án là **hoàn toàn tùy chọn**. Nếu không cấu hình, ứng dụng vẫn hoạt động 100% tính năng dưới chế độ **Khách (Offline)** và lưu vào IndexedDB.
+
+Để bật đăng nhập và đồng bộ dự án lên Cloud:
+
+1. Đăng ký tài khoản miễn phí tại [https://supabase.com](https://supabase.com) và tạo một Project mới.
+2. Tạo file `.env` hoặc `.env.local` tại thư mục gốc của dự án:
+```env
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key
+```
+3. Khởi động lại dev server: `npm run dev`.
+4. Lúc này, biểu tượng đám mây ở Header sẽ hiển thị trạng thái `Cloud Connected`, tính năng đăng nhập Google OAuth và đồng bộ dữ liệu sẽ tự động được kích hoạt.
 
 ---
 
-## 🚀 Tính năng Giai đoạn 3 (Motion Graphics & Kinetic Tools)
-1. **Particle System (Hệ thống hạt rơi thủ tục 60fps)**:
-   - Các Preset: **Pháo giấy (Confetti)**, **Bụi sáng lấp lánh (Sparkles/Stardust)**, **Tim bay dâng trào (Floating Hearts)**.
-   - Tùy chỉnh tham số: Số lượng hạt (Count), Tốc độ (Speed), Kích thước (Size).
-2. **Shape Layer & Trim Path (Hình khối vector & Vẽ viền After Effects)**:
-   - Các hình khối: Chữ nhật (Rect), Bo góc (Rounded Rect), Tròn (Circle), Ngôi sao (Star), Mũi tên (Arrow), Đường kẻ (Line).
-   - Hiệu ứng **Trim Path**: Điều khiển `Trim Start`, `Trim End` (0–100%) và `Trim Offset` để vẽ đường viền hoạt họa.
-3. **Text Animator theo Ký tự / Từ (Kiểu After Effects)**:
-   - Đơn vị chia: Từng ký tự (*Character*) hoặc từng từ (*Word*).
-   - Range Selector & Stagger delay giữa các ký tự.
-   - 4 Kiểu Animator: *Mờ Dần & Trồi Lên (Fade Rise)*, *Phóng To Nảy (Scale Bounce)*, *Sóng Nhấp Nhô (Wave)*, *Xoay Xuất Hiện (Spin)*.
-4. **Point Tracking (Bám theo chuyển động)**:
-   - Kéo hồng tâm Tracking trực tiếp trên màn hình Preview để gán mốc chuyển động cho vật thể/gương mặt.
-   - Chữ hoặc sticker tự động bám dính theo quỹ đạo di chuyển xuyên suốt video.
-5. **Pre-comp (Gộp nhóm clip)**:
-   - Nút **📦 Gộp nhóm (Pre-comp)** gom nhiều clip thành một khối duy nhất, áp hiệu ứng và biến đổi chung qua kỹ thuật Offscreen Canvas.
-6. **Sticker Động (Trending Badges)**:
-   - Thư viện Sticker vector: *HOT Flame 🔥*, *NEW Badge ⚡*, *Follow Button ➕*, *Down Arrow ⬇️*, *Warning Alert ⚠️*, *100% Top ⭐*.
-7. **Text-To-Speech (Giọng đọc AI bằng Web Speech API)**:
-   - Chuyển văn bản tiếng Việt thành giọng đọc lồng tiếng trực tiếp, tùy chỉnh tốc độ và tự động nạp clip âm thanh vào timeline.
-8. **Pan & Scan (Crop theo Keyframe biến 16:9 thành 9:16)**:
-   - Chế độ căn khung `Pan & Scan`: Cho phép keyframe trục ngang `Crop Pan X` (0% đến 100%) để camera tự động lia theo chủ thể chuyển động trong video ngang 16:9 mà không bị mất người.
+## 🤖 Cách thêm API Key AI (OpenAI / Gemini)
+
+Dự án tích hợp trợ lý biên tập thông minh **EditPilot** và công cụ **AI Image**. Bạn có thể dùng tính năng AI theo 2 cách:
+
+### Cách 1: Thêm trực tiếp trên giao diện (Khuyên dùng)
+1. Bấm vào biểu tượng **Bánh răng (Settings)** ở góc trên bên phải màn hình.
+2. Tìm mục **AI API Key (Tùy chọn)**.
+3. Dán OpenAI API Key (`sk-...`) hoặc Google Gemini API Key của bạn vào ô nhập.
+4. Bấm **Lưu cài đặt** (khóa API được lưu cục bộ trong `localStorage` của trình duyệt, không bao giờ gửi ra máy chủ trung gian).
+
+### Cách 2: Dùng chế độ phân tích cục bộ (Không cần API Key)
+Nếu không nhập API Key, EditPilot vẫn hoạt động bình thường nhờ bộ phân tích ngôn ngữ tự nhiên tích hợp sẵn (`lib/ai.ts`). Bạn có thể gõ trực tiếp các lệnh tiếng Việt hoặc tiếng Anh:
+- `"cắt 2 giây đầu"`
+- `"tăng tốc 2x"` hoặc `"tăng tốc video"`
+- `"thêm chữ Xin chào"`
+- `"bộ lọc cinematic"`
+- `"tắt tiếng video"`
+- `"xuất video"`
+
+---
+
+## ⌨️ Phím tắt biên tập (Hotkeys)
+
+| Phím tắt | Chức năng |
+| :--- | :--- |
+| `Space` | Phát / Tạm dừng video (Play / Pause) |
+| `S` | Tách clip tại vị trí con trỏ (Split at Playhead) |
+| `Delete` / `Backspace` | Xóa clip đang chọn |
+| `Ctrl + Z` / `Cmd + Z` | Hoàn tác thao tác trước (Undo) |
+| `Ctrl + Shift + Z` / `Ctrl + Y` | Làm lại thao tác (Redo) |
+| `+` / `=` | Phóng to dòng thời gian (Zoom In Timeline) |
+| `-` / `_` | Thu nhỏ dòng thời gian (Zoom Out Timeline) |
+| `Shift + S` | Bật / tắt hiển thị Vùng an toàn 9:16 (Safe Zone) |
+
+---
+
+## 🛡️ Xử lý lỗi & Tương thích trình duyệt
+
+1. **Tệp không được hỗ trợ**:
+   - Nếu bạn chọn file ngoài các định dạng `mp4, mov, webm, jpg, png, mp3, wav`, hệ thống sẽ hiển thị thông báo lỗi rõ ràng và từ chối nạp để tránh hỏng dữ liệu.
+2. **Hết dung lượng lưu trữ (Quota Exceeded)**:
+   - Module `lib/db.ts` tự động theo dõi dung lượng qua `navigator.storage.estimate()`. Khi dung lượng đạt ngưỡng 90%, hệ thống sẽ cảnh báo bạn dọn dẹp Thùng rác hoặc xuất file dự án `.capproj` ra máy tính.
+3. **Thiếu API trình duyệt**:
+   - **Web Speech API**: Nếu trình duyệt không hỗ trợ nhận diện giọng nói tự động (ví dụ: một số bản Firefox cũ), ứng dụng sẽ hướng dẫn bạn dùng tính năng **Nhập tay** hoặc **Import SRT**.
+   - **MediaRecorder / Canvas Stream**: Nếu trình duyệt thiếu tính năng ghi canvas, hệ thống sẽ hiện thông báo yêu cầu cập nhật phiên bản trình duyệt mới nhất.
+4. **Responsive từ 1280px và Tablet**:
+   - Trên desktop màn hình rộng (≥ 1280px), toàn bộ 3 panel Media, Canvas và Inspector hiển thị đầy đủ song song.
+   - Trên máy tính bảng (Tablet 768px – 1024px), bảng Inspector có thể thu gọn/mở ra qua nút bấm chuyên dụng để ưu tiên không gian cho Canvas và Timeline.

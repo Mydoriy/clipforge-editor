@@ -3,6 +3,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { audioManager } from '../utils/audio';
 import { db, type MediaEntity } from '../db';
+import { safeAddMedia } from '../lib/db';
 import confetti from 'canvas-confetti';
 import {
   FolderOpen,
@@ -82,7 +83,7 @@ export const CategoryPanel: React.FC = () => {
     const isImage = file.type.startsWith('image') || ['jpg', 'jpeg', 'png'].includes(ext);
 
     if (!isVideo && !isAudio && !isImage && !validExts.includes(ext)) {
-      showToast('Định dạng không được hỗ trợ. Vui lòng chọn mp4, mov, webm, jpg, png, mp3, wav', 'warning');
+      showToast(t.errUnsupportedFile, 'warning');
       return;
     }
 
@@ -91,8 +92,8 @@ export const CategoryPanel: React.FC = () => {
       const mediaType = isVideo ? 'video' : isAudio ? 'audio' : 'image';
       const fileUrl = URL.createObjectURL(file);
 
-      // Save to Dexie IndexedDB
-      await db.media.add({
+      // Save to Dexie IndexedDB with QuotaExceededError protection
+      const saveRes = await safeAddMedia({
         id: mediaId,
         name: file.name,
         type: mediaType,
@@ -100,6 +101,15 @@ export const CategoryPanel: React.FC = () => {
         size: file.size,
         createdAt: Date.now()
       });
+
+      if (!saveRes.success) {
+        if (saveRes.error === 'QUOTA_EXCEEDED') {
+          showToast(t.errStorageQuota, 'error');
+          return;
+        }
+        showToast('Lỗi lưu trữ: ' + saveRes.error, 'error');
+        return;
+      }
 
       // Add to timeline
       addClip({
@@ -114,7 +124,11 @@ export const CategoryPanel: React.FC = () => {
       await loadMedia();
       showToast(`Đã import và lưu IndexedDB: ${file.name}`, 'success');
     } catch (err: any) {
-      showToast('Lỗi khi lưu file: ' + err.message, 'error');
+      if (err.name === 'QuotaExceededError' || err.code === 22) {
+        showToast(t.errStorageQuota, 'error');
+      } else {
+        showToast('Lỗi khi lưu file: ' + err.message, 'error');
+      }
     }
   };
 
@@ -153,10 +167,8 @@ export const CategoryPanel: React.FC = () => {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setSpeechError(
-        'Trình duyệt này chưa hỗ trợ Web Speech API trực tiếp. Vui lòng sử dụng Google Chrome / Microsoft Edge hoặc dùng mục "Nhập tay" / "Import SRT" bên dưới!'
-      );
-      showToast('Trình duyệt chưa hỗ trợ Web Speech API. Vui lòng dùng Chrome/Edge hoặc import SRT!', 'warning');
+      setSpeechError(t.errNoSpeechApi);
+      showToast(t.errNoSpeechApi, 'warning');
       return;
     }
 

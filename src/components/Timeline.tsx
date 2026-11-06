@@ -215,7 +215,7 @@ export const Timeline: React.FC = () => {
             title="Tách clip tại playhead (Phím tắt: S)"
           >
             <Scissors className="w-3.5 h-3.5" />
-            <span>Tách (S)</span>
+            <span>{t.split} (S)</span>
           </button>
 
           {/* Duplicate */}
@@ -230,7 +230,7 @@ export const Timeline: React.FC = () => {
             title="Nhân bản clip đã chọn"
           >
             <Copy className="w-3.5 h-3.5" />
-            <span>Nhân bản</span>
+            <span>{t.duplicate}</span>
           </button>
 
           {/* Delete (Del) */}
@@ -261,7 +261,7 @@ export const Timeline: React.FC = () => {
             }`}
           >
             <Magnet className="w-3.5 h-3.5" />
-            <span>Snap</span>
+            <span>{t.snap}</span>
           </button>
         </div>
 
