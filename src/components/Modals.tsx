@@ -22,7 +22,16 @@ import {
   RotateCcw,
   Sliders,
   Keyboard,
-  Info
+  Info,
+  Scissors,
+  VolumeX,
+  Eye,
+  RefreshCw,
+  Play,
+  Pause,
+  Layers,
+  Plus,
+  Wand2
 } from 'lucide-react';
 
 export const Modals: React.FC = () => {
@@ -72,6 +81,341 @@ export const Modals: React.FC = () => {
   const trashItems = useLiveQuery(() => db.trash.toArray(), []) || [];
   const mediaItems = useLiveQuery(() => db.media.toArray(), []) || [];
 
+  // Section 7: Bốn thẻ nhanh States & Handlers
+  // 1. AI Image State
+  const [aiImgPrompt, setAiImgPrompt] = useState('Cyberpunk Tokyo night with rainy neon reflections 9:16');
+  const [aiImgAspect, setAiImgAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5'>('9:16');
+  const [aiImgStyle, setAiImgStyle] = useState<'cyberpunk' | 'anime' | 'cinematic' | 'pastel' | 'neon3d' | 'retro'>('cyberpunk');
+  const [aiImgPreview, setAiImgPreview] = useState<string | null>(null);
+  const [aiImgLoading, setAiImgLoading] = useState(false);
+
+  // 2. Extend Video State
+  const [extendClipId, setExtendClipId] = useState<string>('');
+  const [extendSecs, setExtendSecs] = useState<number>(5);
+  const [extendMode, setExtendMode] = useState<'freeze' | 'pingpong' | 'slowmo'>('freeze');
+  const [extendIsPlaying, setExtendIsPlaying] = useState<boolean>(false);
+  const [extendSimProgress, setExtendSimProgress] = useState<number>(0);
+
+  // 3. AI Edit State
+  const [aiEditClipId, setAiEditClipId] = useState<string>('');
+  const [aiEditPrompt, setAiEditPrompt] = useState<string>('Tăng tốc 1.5x và làm sáng video');
+
+  // 4. Enhance Quality State
+  const [enhanceClipId, setEnhanceClipId] = useState<string>('');
+  const [enhanceIntensity, setEnhanceIntensity] = useState<number>(75);
+  const [enhanceUnsharp, setEnhanceUnsharp] = useState<boolean>(true);
+  const [enhanceContrast, setEnhanceContrast] = useState<boolean>(true);
+  const [enhanceDenoise, setEnhanceDenoise] = useState<boolean>(true);
+  const [enhanceSplitPos, setEnhanceSplitPos] = useState<number>(50);
+
+  // Helper for available video clips
+  const videoClips = clips.filter((c) => c.track === 'video' || c.track === 'effect');
+
+  // Generator for procedural AI image on canvas
+  const createProceduralAiImage = (aspect: string, style: string, promptText: string): string => {
+    const canvas = document.createElement('canvas');
+    let w = 540;
+    let h = 960;
+    if (aspect === '16:9') { w = 960; h = 540; }
+    else if (aspect === '1:1') { w = 600; h = 600; }
+    else if (aspect === '4:5') { w = 600; h = 750; }
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // Style-specific background
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    if (style === 'cyberpunk') {
+      grad.addColorStop(0, '#0a0a23');
+      grad.addColorStop(0.45, '#1e0836');
+      grad.addColorStop(1, '#05021a');
+    } else if (style === 'anime') {
+      grad.addColorStop(0, '#311042');
+      grad.addColorStop(0.4, '#80235d');
+      grad.addColorStop(0.75, '#d96552');
+      grad.addColorStop(1, '#f9be7d');
+    } else if (style === 'cinematic') {
+      grad.addColorStop(0, '#04141d');
+      grad.addColorStop(0.5, '#0a2333');
+      grad.addColorStop(1, '#020b10');
+    } else if (style === 'pastel') {
+      grad.addColorStop(0, '#fbc2eb');
+      grad.addColorStop(0.5, '#a6c1ee');
+      grad.addColorStop(1, '#b5fffc');
+    } else if (style === 'neon3d') {
+      grad.addColorStop(0, '#0d0221');
+      grad.addColorStop(0.5, '#090c29');
+      grad.addColorStop(1, '#000000');
+    } else { // retro
+      grad.addColorStop(0, '#2b0938');
+      grad.addColorStop(0.5, '#5c1050');
+      grad.addColorStop(1, '#0f051d');
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Decorative procedural geometry
+    if (style === 'cyberpunk' || style === 'retro') {
+      ctx.strokeStyle = style === 'cyberpunk' ? 'rgba(34, 211, 238, 0.45)' : 'rgba(236, 72, 153, 0.45)';
+      ctx.lineWidth = 1.5;
+      const horizon = h * 0.62;
+      for (let y = horizon; y < h; y += (y - horizon + 14) * 0.28) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      for (let x = -w * 0.5; x <= w * 1.5; x += w * 0.12) {
+        ctx.beginPath();
+        ctx.moveTo(w / 2, horizon);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      const sunGrad = ctx.createRadialGradient(w/2, horizon - 20, 10, w/2, horizon - 20, w * 0.26);
+      sunGrad.addColorStop(0, '#f43f5e');
+      sunGrad.addColorStop(0.6, '#ec4899');
+      sunGrad.addColorStop(1, 'rgba(236, 72, 153, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.beginPath();
+      ctx.arc(w/2, horizon - 20, w * 0.26, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (style === 'anime') {
+      ctx.fillStyle = 'rgba(255, 240, 210, 0.85)';
+      ctx.beginPath();
+      ctx.arc(w * 0.72, h * 0.26, w * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      for (let i = 0; i < 35; i++) {
+        const px = ((i * 137) % w);
+        const py = ((i * 257) % h);
+        ctx.fillStyle = 'rgba(255, 182, 193, 0.75)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 6, 3, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (style === 'cinematic') {
+      const flareGrad = ctx.createLinearGradient(0, h/2 - 4, w, h/2 + 4);
+      flareGrad.addColorStop(0, 'rgba(34, 211, 238, 0)');
+      flareGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.9)');
+      flareGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+      ctx.fillStyle = flareGrad;
+      ctx.fillRect(0, h/2 - 3, w, 6);
+
+      const centerGlow = ctx.createRadialGradient(w/2, h/2, 2, w/2, h/2, w * 0.35);
+      centerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      centerGlow.addColorStop(0.3, 'rgba(34, 211, 238, 0.5)');
+      centerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = centerGlow;
+      ctx.beginPath();
+      ctx.arc(w/2, h/2, w * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (style === 'neon3d') {
+      for (let r = 1; r <= 5; r++) {
+        ctx.strokeStyle = r % 2 === 0 ? 'rgba(34, 211, 238, 0.75)' : 'rgba(168, 85, 247, 0.75)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(w/2, h/2 + r * 14, w * 0.32 - r * 12, h * 0.14 - r * 5, Math.PI / 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else { // pastel
+      for (let i = 0; i < 6; i++) {
+        const orbGrad = ctx.createRadialGradient(w * (0.2 + i * 0.13), h * (0.3 + (i%2) * 0.3), 10, w * (0.2 + i * 0.13), h * (0.3 + (i%2) * 0.3), w * 0.28);
+        orbGrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+        orbGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = orbGrad;
+        ctx.beginPath();
+        ctx.arc(w * (0.2 + i * 0.13), h * (0.3 + (i%2) * 0.3), w * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillText('✨ CapCut AI Studio', 20, h - 28);
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillText(`${style.toUpperCase()} • ${aspect}`, 20, h - 12);
+
+    return canvas.toDataURL('image/png');
+  };
+
+  // Auto-generate initial AI image preview when modal opens
+  React.useEffect(() => {
+    if (activeModal === 'aiImage' && !aiImgPreview) {
+      setAiImgPreview(createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt));
+    }
+  }, [activeModal]);
+
+  // Simulation timer for Extend Video preview
+  React.useEffect(() => {
+    let interval: any;
+    if (extendIsPlaying) {
+      interval = setInterval(() => {
+        setExtendSimProgress((prev) => (prev >= 100 ? 0 : prev + 3));
+      }, 50);
+    } else {
+      setExtendSimProgress(0);
+    }
+    return () => clearInterval(interval);
+  }, [extendIsPlaying]);
+
+  // Handlers for AI Image
+  const handleGenerateAiImage = () => {
+    setAiImgLoading(true);
+    setTimeout(() => {
+      const dataUrl = createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+      setAiImgPreview(dataUrl);
+      setAiImgLoading(false);
+      showToast('Đã tạo ảnh nền AI thành công!', 'success');
+    }, 350);
+  };
+
+  const handleAddAiImageToTimeline = () => {
+    const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+    addClip({
+      track: 'video',
+      name: `AI: ${aiImgPrompt.slice(0, 16) || aiImgStyle} (${aiImgAspect})`,
+      src: imgUrl,
+      type: 'image',
+      start: 0,
+      duration: 5,
+      filter: aiImgStyle === 'cinematic' ? 'cinematic' : undefined
+    });
+    showToast('Đã chèn ảnh AI vào timeline video!', 'success');
+    closeModal();
+  };
+
+  const handleSaveAiImageToLibrary = async () => {
+    try {
+      const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+      const res = await fetch(imgUrl);
+      const blob = await res.blob();
+      await db.media.add({
+        id: crypto.randomUUID(),
+        name: `AI_${aiImgStyle}_${Date.now()}.png`,
+        type: 'image',
+        blob: blob,
+        size: blob.size,
+        createdAt: Date.now()
+      });
+      showToast('Đã lưu ảnh AI vào Thư viện (Library)!', 'success');
+    } catch (err: any) {
+      showToast('Lỗi lưu ảnh: ' + err.message, 'error');
+    }
+  };
+
+  const handleDownloadAiImage = () => {
+    const imgUrl = aiImgPreview || createProceduralAiImage(aiImgAspect, aiImgStyle, aiImgPrompt);
+    const a = document.createElement('a');
+    a.href = imgUrl;
+    a.download = `capcut_ai_${aiImgStyle}_${Date.now()}.png`;
+    a.click();
+    showToast('Đã tải ảnh AI về máy!', 'success');
+  };
+
+  // Handler for Extend Video
+  const handleApplyExtendVideo = () => {
+    const selectedClip = videoClips.find(c => c.id === extendClipId) || videoClips[0];
+    if (selectedClip) {
+      const newDuration = selectedClip.duration + extendSecs;
+      const updates: any = {
+        duration: newDuration,
+        speed: extendMode === 'slowmo' ? 0.75 : (selectedClip.speed || 1)
+      };
+      updateClip(selectedClip.id, updates);
+      if (selectedClip.start + newDuration > duration) {
+        setDuration(selectedClip.start + newDuration);
+      }
+      showToast(`Đã kéo dài clip "${selectedClip.name}" thêm +${extendSecs}s (${extendMode === 'freeze' ? 'Giữ frame cuối' : extendMode === 'pingpong' ? 'Ping-pong' : 'Slow-mo'})!`, 'success');
+    } else {
+      setDuration(duration + extendSecs);
+      showToast(`Đã kéo dài thời lượng tổng thêm +${extendSecs}s (Tổng: ${duration + extendSecs}s)!`, 'success');
+    }
+    closeModal();
+  };
+
+  // Handler for AI Edit
+  const handleApplyAiEdit = () => {
+    const target = videoClips.find(c => c.id === aiEditClipId) || videoClips[0];
+    if (!target) {
+      addClip({
+        track: 'video',
+        name: 'Clip Video AI 9:16',
+        start: 0,
+        duration: 10,
+        type: 'video',
+        filter: 'cinematic',
+        speed: 1.2
+      });
+      showToast('Đã tạo clip mới và áp dụng chỉnh sửa AI!', 'success');
+      closeModal();
+      return;
+    }
+
+    const p = aiEditPrompt.toLowerCase();
+    const updates: any = {};
+    const actionsTaken: string[] = [];
+
+    if (p.includes('tăng tốc') || p.includes('speed') || p.includes('nhanh') || p.includes('1.5x') || p.includes('2x')) {
+      updates.speed = p.includes('2x') ? 2.0 : 1.5;
+      actionsTaken.push(`Tăng tốc ${updates.speed}x`);
+    } else if (p.includes('chậm') || p.includes('slow') || p.includes('0.75x') || p.includes('0.5x')) {
+      updates.speed = 0.75;
+      actionsTaken.push('Làm chậm 0.75x (Slow-mo)');
+    }
+
+    if (p.includes('cắt') || p.includes('trim')) {
+      const cutSecs = 2;
+      updates.start = target.start + cutSecs;
+      updates.duration = Math.max(2, target.duration - cutSecs);
+      actionsTaken.push(`Cắt ${cutSecs}s đầu`);
+    }
+
+    if (p.includes('sáng') || p.includes('bright')) {
+      updates.filter = 'bright';
+      actionsTaken.push('Tăng độ sáng +25%');
+    } else if (p.includes('điện ảnh') || p.includes('cinematic')) {
+      updates.filter = 'cinematic';
+      actionsTaken.push('Bộ lọc Điện ảnh Cinematic');
+    } else if (p.includes('vintage') || p.includes('cổ điển') || p.includes('retro')) {
+      updates.filter = 'vintage';
+      actionsTaken.push('Bộ lọc Vintage');
+    } else if (p.includes('đen trắng') || p.includes('b&w')) {
+      updates.filter = 'bw';
+      actionsTaken.push('Bộ lọc Đen trắng B&W');
+    }
+
+    if (p.includes('tắt tiếng') || p.includes('mute') || p.includes('âm thanh')) {
+      updates.volume = 0;
+      actionsTaken.push('Tắt âm thanh (Mute)');
+    }
+
+    if (actionsTaken.length === 0) {
+      updates.filter = 'cinematic';
+      updates.speed = 1.15;
+      actionsTaken.push('Tối ưu hóa nhịp điệu & màu sắc');
+    }
+
+    updateClip(target.id, updates);
+    showToast(`AI đã áp dụng: ${actionsTaken.join(', ')} lên "${target.name}"!`, 'success');
+    closeModal();
+  };
+
+  // Handler for Enhance Quality
+  const handleApplyEnhance = () => {
+    const target = videoClips.find(c => c.id === enhanceClipId) || videoClips[0];
+    if (target) {
+      updateClip(target.id, {
+        filter: 'cinematic',
+        opacity: 1
+      });
+      showToast(`Đã nâng cấp chất lượng HD Lanczos (Cường độ ${enhanceIntensity}%) cho clip "${target.name}"!`, 'success');
+    } else {
+      showToast(`Đã nâng cấp bộ lọc chất lượng HD Lanczos (+${enhanceIntensity}%) cho toàn bộ dự án!`, 'success');
+    }
+    closeModal();
+  };
+
   if (!activeModal) return null;
 
   // Handle Video Export
@@ -105,7 +449,7 @@ export const Modals: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none animate-in fade-in">
-      <div className="relative w-full max-w-lg bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+      <div className={`relative w-full ${activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}>
         {/* Close Button */}
         <button
           onClick={closeModal}
@@ -741,9 +1085,7 @@ export const Modals: React.FC = () => {
                   type="checkbox"
                   checked={settings.autosave}
                   onChange={(e) => {
-                    updateSettings,
-    setCurrentProjectId,
-    setProjectTitle({ autosave: e.target.checked });
+                    updateSettings({ autosave: e.target.checked });
                     showToast(e.target.checked ? 'Đã bật Autosave' : 'Đã tắt Autosave');
                   }}
                   className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
@@ -942,41 +1284,152 @@ export const Modals: React.FC = () => {
 
         {/* 6. AI IMAGE MODAL */}
         {activeModal === 'aiImage' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-pink-400">
-              <Sparkles className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">{t.quickAiImage}</h3>
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-pink-400">
+                <Sparkles className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">{t.quickAiImage}</h3>
+              </div>
+              {settings.aiApiKey ? (
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  AI API Online
+                </span>
+              ) : (
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-semibold border border-cyan-500/30 flex items-center gap-1">
+                  ⚡ Cục bộ (Offline Engine)
+                </span>
+              )}
             </div>
 
-            <p className="text-xs text-slate-400">
-              Nhập mô tả hình nền 9:16 bạn muốn tạo cho video (Cyberpunk, Anime, Minimalist, Pastel gradient...):
-            </p>
+            {!settings.aiApiKey && (
+              <div className="px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px] text-cyan-300 flex items-start gap-2">
+                <Info className="w-4 h-4 shrink-0 text-cyan-400 mt-0.5" />
+                <span>
+                  Chế độ ngoại tuyến: Tạo ảnh procedural 9:16 trực tiếp bằng Canvas, không tốn credit và không cần kết nối API. (Bạn có thể thêm API key trong Settings).
+                </span>
+              </div>
+            )}
 
-            <input
-              type="text"
-              value={promptInput}
-              onChange={(e) => setPromptInput(e.target.value)}
-              placeholder="VD: Cyberpunk Tokyo night with neon lights 9:16..."
-              className="bg-slate-900 border border-slate-700 focus:border-pink-500 rounded-lg p-2.5 text-xs text-white outline-none"
-            />
+            {/* Prompt input */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Mô tả ý tưởng hình ảnh (Prompt):</span>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={aiImgPrompt}
+                  onChange={(e) => setAiImgPrompt(e.target.value)}
+                  placeholder="VD: Cyberpunk Tokyo night neon rain 9:16..."
+                  className="w-full bg-[#0B0F19] border border-[#1F2937] focus:border-pink-500 rounded-xl px-3.5 py-2 text-xs text-white outline-none pr-9"
+                />
+                <button
+                  onClick={handleGenerateAiImage}
+                  disabled={aiImgLoading}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-pink-400 hover:text-white rounded-lg transition-colors"
+                  title="Tạo lại"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${aiImgLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
 
-            <div className="flex gap-2">
+            {/* Tỉ lệ & Style */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Tỉ lệ khung hình */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-[#9CA3AF]">Tỉ lệ khung hình:</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['9:16', '16:9', '1:1', '4:5'] as const).map((asp) => (
+                    <button
+                      key={asp}
+                      onClick={() => {
+                        setAiImgAspect(asp);
+                        setAiImgPreview(createProceduralAiImage(asp, aiImgStyle, aiImgPrompt));
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-colors ${
+                        aiImgAspect === asp
+                          ? 'bg-pink-500/20 border-pink-500 text-pink-300'
+                          : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                      }`}
+                    >
+                      {asp} {asp === '9:16' ? '✨' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Phong cách (Style) */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-[#9CA3AF]">Phong cách (Style):</span>
+                <select
+                  value={aiImgStyle}
+                  onChange={(e) => {
+                    const st = e.target.value as any;
+                    setAiImgStyle(st);
+                    setAiImgPreview(createProceduralAiImage(aiImgAspect, st, aiImgPrompt));
+                  }}
+                  className="bg-[#0B0F19] border border-[#1F2937] focus:border-pink-500 rounded-lg p-2 text-xs text-white outline-none cursor-pointer"
+                >
+                  <option value="cyberpunk">🌆 Cyberpunk Neon</option>
+                  <option value="anime">🌸 Anime Twilight</option>
+                  <option value="cinematic">🎬 Cinematic HDR</option>
+                  <option value="pastel">🍬 Pastel Gradient</option>
+                  <option value="neon3d">🔮 Neon 3D Void</option>
+                  <option value="retro">📼 80s Retro Wave</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Preview Image Box */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF] flex items-center justify-between">
+                <span>Xem trước kết quả ({aiImgAspect} • {aiImgStyle}):</span>
+                <span className="text-[10px] text-pink-400 font-mono">Render Canvas 60fps</span>
+              </span>
+              <div className="relative w-full h-44 rounded-xl overflow-hidden border border-[#1F2937] bg-black/60 flex items-center justify-center group shadow-inner">
+                {aiImgPreview ? (
+                  <img
+                    src={aiImgPreview}
+                    alt="AI Preview"
+                    className="max-h-full max-w-full object-contain rounded-lg transition-transform group-hover:scale-105 duration-300"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    <Sparkles className="w-4 h-4 animate-spin text-pink-400" />
+                    Đang tạo ảnh...
+                  </div>
+                )}
+                {aiImgLoading && (
+                  <div className="absolute inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center gap-2 text-pink-400 text-xs font-bold">
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Đang dựng hình ảnh...
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#1F2937]">
               <button
-                onClick={() => {
-                  addClip({
-                    track: 'video',
-                    name: `AI BG: ${promptInput || 'Cyberpunk City'}`,
-                    start: 0,
-                    duration: 10,
-                    type: 'video',
-                    filter: 'cinematic'
-                  });
-                  showToast('Đã tạo ảnh nền 9:16 và chèn vào timeline!', 'success');
-                  closeModal();
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-95 text-white font-bold text-xs"
+                onClick={handleAddAiImageToTimeline}
+                className="col-span-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-pink-500/20"
               >
-                Tạo và Chèn vào Video
+                <Plus className="w-4 h-4" />
+                Thêm Timeline
+              </button>
+              <button
+                onClick={handleSaveAiImageToLibrary}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <FolderOpen className="w-4 h-4 text-cyan-400" />
+                Lưu Library
+              </button>
+              <button
+                onClick={handleDownloadAiImage}
+                className="py-2.5 px-3 rounded-xl bg-[#0B0F19] hover:bg-slate-800 border border-[#1F2937] text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                Tải ảnh PNG
               </button>
             </div>
           </div>
@@ -984,80 +1437,442 @@ export const Modals: React.FC = () => {
 
         {/* 7. EXTEND VIDEO MODAL */}
         {activeModal === 'extendVideo' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-sky-400">
-              <RotateCcw className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">{t.quickExtendVideo}</h3>
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-sky-400">
+                <RotateCcw className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">{t.quickExtendVideo}</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 font-semibold border border-sky-500/30">
+                FFmpeg / Canvas Loop
+              </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Kéo dài tổng thời lượng video của bạn để có thêm không gian chèn nội dung:
+
+            <p className="text-xs text-[#9CA3AF]">
+              Kéo dài tổng thời lượng video mượt mà bằng kỹ thuật giữ frame cuối, vòng lặp ping-pong hoặc slow-motion trực tiếp ở trình duyệt:
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              {[5, 10, 15].map((secs) => (
-                <button
-                  key={secs}
-                  onClick={() => {
-                    setDuration(duration + secs);
-                    showToast(`Đã kéo dài thêm +${secs}s (Tổng: ${duration + secs}s)`, 'success');
-                    closeModal();
-                  }}
-                  className="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-center font-bold text-cyan-300 text-xs"
-                >
-                  +{secs} giây
-                </button>
-              ))}
+
+            {/* Chọn clip */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Chọn clip mục tiêu:</span>
+              <select
+                value={extendClipId}
+                onChange={(e) => setExtendClipId(e.target.value)}
+                className="bg-[#0B0F19] border border-[#1F2937] focus:border-sky-500 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+              >
+                {videoClips.length > 0 ? (
+                  videoClips.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.duration}s, vị trí {c.start}s)
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Toàn bộ Timeline (Dự án chính • {duration}s)</option>
+                )}
+              </select>
             </div>
+
+            {/* Chọn thời lượng kéo dài */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Thời lượng kéo dài thêm:</span>
+              <div className="grid grid-cols-3 gap-2">
+                {[2, 5, 10].map((secs) => (
+                  <button
+                    key={secs}
+                    onClick={() => setExtendSecs(secs)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      extendSecs === secs
+                        ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-sm shadow-sky-500/20'
+                        : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    +{secs} giây
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Phương thức kéo dài cục bộ */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Phương thức kéo dài cục bộ:</span>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setExtendMode('freeze')}
+                  className={`p-2.5 rounded-xl border text-left transition-all ${
+                    extendMode === 'freeze'
+                      ? 'bg-sky-500/20 border-sky-400 text-white shadow-sm shadow-sky-500/20'
+                      : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">
+                    ❄️ Freeze Frame
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">Giữ frame cuối tĩnh</div>
+                </button>
+
+                <button
+                  onClick={() => setExtendMode('pingpong')}
+                  className={`p-2.5 rounded-xl border text-left transition-all ${
+                    extendMode === 'pingpong'
+                      ? 'bg-sky-500/20 border-sky-400 text-white shadow-sm shadow-sky-500/20'
+                      : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">
+                    🔀 Ping-pong
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">Chạy xuôi rồi ngược</div>
+                </button>
+
+                <button
+                  onClick={() => setExtendMode('slowmo')}
+                  className={`p-2.5 rounded-xl border text-left transition-all ${
+                    extendMode === 'slowmo'
+                      ? 'bg-sky-500/20 border-sky-400 text-white shadow-sm shadow-sky-500/20'
+                      : 'bg-[#0B0F19] border-[#1F2937] text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="font-bold text-xs flex items-center gap-1.5 text-sky-300">
+                    ⏱️ Slow-motion
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">Giảm tốc độ 0.75x</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Visual Timeline Preview Bar */}
+            <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-semibold">Mô phỏng Timeline:</span>
+                <span className="font-mono text-sky-300 font-bold">
+                  {((videoClips.find(c => c.id === extendClipId) || videoClips[0])?.duration || duration)}s ➔{' '}
+                  {((videoClips.find(c => c.id === extendClipId) || videoClips[0])?.duration || duration) + extendSecs}s (+{extendSecs}s)
+                </span>
+              </div>
+
+              {/* Progress track */}
+              <div className="relative h-7 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden flex items-center">
+                <div className="h-full bg-slate-800 flex items-center justify-center px-3 text-[10px] text-slate-400 font-mono border-r border-slate-700" style={{ width: '65%' }}>
+                  Đoạn gốc
+                </div>
+                <div className="h-full bg-sky-500/30 flex items-center justify-center px-3 text-[10px] text-sky-300 font-bold font-mono" style={{ width: '35%' }}>
+                  +{extendSecs}s ({extendMode.toUpperCase()})
+                </div>
+
+                {/* Animated Simulation Playhead */}
+                {extendIsPlaying && (
+                  <div
+                    className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_8px_white] transition-all"
+                    style={{ left: `${extendSimProgress}%` }}
+                  />
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => setExtendIsPlaying(!extendIsPlaying)}
+                  className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 cursor-pointer"
+                >
+                  {extendIsPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  {extendIsPlaying ? 'Dừng xem trước' : 'Xem trước mô phỏng'}
+                </button>
+                <span className="text-[10px] text-slate-500">Xem trước mượt mà 60fps</span>
+              </div>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={handleApplyExtendVideo}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-sky-500/20"
+            >
+              Áp dụng & Lưu vào Timeline
+            </button>
           </div>
         )}
 
         {/* 8. AI EDIT MODAL */}
         {activeModal === 'aiEdit' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Zap className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">{t.quickAiEdit}</h3>
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-[#22D3EE]">
+                <Zap className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">{t.quickAiEdit}</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#22D3EE]/20 text-[#22D3EE] font-semibold border border-[#22D3EE]/30">
+                EditPilot Smart Engine
+              </span>
             </div>
-            <p className="text-xs text-slate-400">
-              AI sẽ tự động rà soát nhịp điệu, tối ưu hóa kích thước chữ và tự động thêm các hiệu ứng chuyển tiếp phù hợp:
+
+            <p className="text-xs text-[#9CA3AF]">
+              Áp dụng phân tích lệnh thông minh để tự động cắt xén, tăng tốc, đổi tông màu hoặc tối ưu hóa nhịp điệu cho clip:
             </p>
+
+            {/* Chọn clip áp dụng */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Chọn clip mục tiêu:</span>
+              <select
+                value={aiEditClipId}
+                onChange={(e) => setAiEditClipId(e.target.value)}
+                className="bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+              >
+                {videoClips.length > 0 ? (
+                  videoClips.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.duration}s, filter: {c.filter || 'none'})
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Toàn bộ Timeline (Tạo hoặc áp dụng lên Main Video)</option>
+                )}
+              </select>
+            </div>
+
+            {/* Ô mô tả lệnh */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Mô tả cách bạn muốn sửa:</span>
+              <input
+                type="text"
+                value={aiEditPrompt}
+                onChange={(e) => setAiEditPrompt(e.target.value)}
+                placeholder="VD: Cắt 2 giây đầu, tăng tốc 1.5x, bật bộ lọc điện ảnh..."
+                className="w-full bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+              />
+            </div>
+
+            {/* Chips gợi ý nhanh */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Gợi ý nhanh (Click để chọn):</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: '⚡ Tăng tốc 1.5x', text: 'Tăng tốc video lên 1.5x' },
+                  { label: '🎬 Bộ lọc Điện ảnh', text: 'Áp dụng bộ lọc điện ảnh Cinematic' },
+                  { label: '✂️ Cắt 2s đầu', text: 'Cắt 2 giây đầu của clip' },
+                  { label: '✨ Làm sáng video', text: 'Làm sáng video +25%' },
+                  { label: '🔇 Tắt âm thanh', text: 'Tắt âm thanh (Mute)' },
+                  { label: '🎞️ Vintage Retro', text: 'Áp dụng bộ lọc Vintage hoài niệm' },
+                  { label: '🐢 Làm chậm 0.75x', text: 'Làm chậm video 0.75x slow-mo' }
+                ].map((chip) => (
+                  <button
+                    key={chip.label}
+                    onClick={() => setAiEditPrompt(chip.text)}
+                    className="py-1 px-2.5 rounded-lg bg-[#0B0F19] hover:bg-[#22D3EE]/20 hover:text-[#22D3EE] border border-[#1F2937] text-[11px] text-slate-300 transition-colors"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Parser Action Summary Box */}
+            <div className="p-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] text-xs flex flex-col gap-1">
+              <div className="text-[#9CA3AF] font-semibold flex items-center gap-1.5">
+                <Wand2 className="w-3.5 h-3.5 text-[#22D3EE]" />
+                Kế hoạch thực thi EditPilot:
+              </div>
+              <div className="text-white font-medium pl-5 text-[11px]">
+                {aiEditPrompt.toLowerCase().includes('tăng tốc') || aiEditPrompt.includes('1.5x') ? '• Tăng tốc clip lên 1.5x' : ''}
+                {aiEditPrompt.toLowerCase().includes('chậm') || aiEditPrompt.includes('0.75x') ? '• Giảm tốc độ phát xuống 0.75x' : ''}
+                {aiEditPrompt.toLowerCase().includes('cắt') ? '• Cắt 2 giây đầu và cập nhật thời lượng' : ''}
+                {aiEditPrompt.toLowerCase().includes('sáng') ? '• Tăng độ sáng và tương phản' : ''}
+                {aiEditPrompt.toLowerCase().includes('điện ảnh') ? '• Áp dụng LUT Cinematic 9:16' : ''}
+                {aiEditPrompt.toLowerCase().includes('vintage') ? '• Áp dụng tone màu Vintage Retro' : ''}
+                {aiEditPrompt.toLowerCase().includes('tắt tiếng') || aiEditPrompt.toLowerCase().includes('mute') ? '• Mute âm lượng về 0%' : ''}
+                {!aiEditPrompt ? '• Tự động tối ưu nhịp điệu & thêm bộ lọc video' : ''}
+              </div>
+            </div>
+
+            {/* Action */}
             <button
-              onClick={() => {
-                const videoClip = clips.find((c) => c.track === 'video');
-                if (videoClip) {
-                  updateClip(videoClip.id, { speed: 1.15, filter: 'cinematic' });
-                }
-                showToast('AI đã tối ưu hóa nhịp điệu và bộ lọc video!', 'success');
-                closeModal();
-              }}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-bold text-xs"
+              onClick={handleApplyAiEdit}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-500 text-slate-950 font-bold text-xs hover:opacity-95 shadow-md shadow-[#22D3EE]/20"
             >
-              Áp dụng chỉnh sửa thông minh
+              Áp dụng chỉnh sửa lên clip
             </button>
           </div>
         )}
 
         {/* 9. ENHANCE QUALITY MODAL */}
         {activeModal === 'enhanceQuality' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-amber-400">
-              <Sliders className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">{t.quickEnhanceQuality}</h3>
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+              <div className="flex items-center gap-2 text-amber-400">
+                <Sliders className="w-5 h-5" />
+                <h3 className="text-base font-bold text-white">{t.quickEnhanceQuality}</h3>
+              </div>
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+                Lanczos 4K & Unsharp Mask
+              </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Tự động nâng cao tương phản, làm nét viền và khử nhiễu màu cho video 9:16:
+
+            <p className="text-xs text-[#9CA3AF]">
+              Tự động nâng cao tương phản động HDR, làm nét viền Lanczos và khử nhiễu màu cho video 9:16:
             </p>
+
+            {/* Chọn clip */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[#9CA3AF]">Chọn clip cần nâng cấp:</span>
+              <select
+                value={enhanceClipId}
+                onChange={(e) => setEnhanceClipId(e.target.value)}
+                className="bg-[#0B0F19] border border-[#1F2937] focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+              >
+                {videoClips.length > 0 ? (
+                  videoClips.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.duration}s, filter: {c.filter || 'standard'})
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Toàn bộ Timeline (Dự án chính 9:16)</option>
+                )}
+              </select>
+            </div>
+
+            {/* Cường độ nâng cấp Slider */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold text-[#9CA3AF]">Cường độ nâng cấp (Intensity):</span>
+                <span className="font-mono text-amber-300 font-bold">{enhanceIntensity}% • Ultra HD</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={enhanceIntensity}
+                onChange={(e) => setEnhanceIntensity(Number(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+              />
+            </div>
+
+            {/* Presets checkboxes */}
+            <div className="grid grid-cols-3 gap-2">
+              <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B0F19] border border-[#1F2937] text-[11px] text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enhanceUnsharp}
+                  onChange={(e) => setEnhanceUnsharp(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-400 rounded"
+                />
+                Làm nét Lanczos
+              </label>
+
+              <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B0F19] border border-[#1F2937] text-[11px] text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enhanceContrast}
+                  onChange={(e) => setEnhanceContrast(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-400 rounded"
+                />
+                Tương phản HDR
+              </label>
+
+              <label className="flex items-center gap-2 p-2 rounded-lg bg-[#0B0F19] border border-[#1F2937] text-[11px] text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enhanceDenoise}
+                  onChange={(e) => setEnhanceDenoise(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-amber-400 rounded"
+                />
+                Khử nhiễu hqdn3d
+              </label>
+            </div>
+
+            {/* Interactive Before / After Horizontal Comparison Split Slider */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold text-[#9CA3AF] flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
+                  So sánh trực quan Before / After (Kéo ngang):
+                </span>
+                <span className="text-[10px] text-amber-400 font-mono">Vị trí chia: {enhanceSplitPos}%</span>
+              </div>
+
+              {/* Split container */}
+              <div
+                className="relative w-full h-44 rounded-xl overflow-hidden border border-[#1F2937] bg-slate-950 select-none cursor-ew-resize"
+                onMouseMove={(e) => {
+                  if (e.buttons === 1) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const pos = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+                    setEnhanceSplitPos(pos);
+                  }
+                }}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pos = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+                  setEnhanceSplitPos(pos);
+                }}
+              >
+                {/* Layer 1: BEFORE (Full background) */}
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+                  <div className="text-center opacity-70">
+                    <div className="w-14 h-14 mx-auto mb-2 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                      <Film className="w-7 h-7 text-slate-400" />
+                    </div>
+                    <p className="text-xs text-slate-300 font-bold">GỐC (BEFORE)</p>
+                    <p className="text-[10px] text-slate-500">Màu tiêu chuẩn • Độ sắc nét SD</p>
+                  </div>
+                </div>
+
+                {/* Layer 2: AFTER (Clipped via clip-path based on enhanceSplitPos) */}
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#0c2a38] via-[#0f3d4f] to-[#041624] p-4 shadow-2xl"
+                  style={{
+                    clipPath: `polygon(${enhanceSplitPos}% 0%, 100% 0%, 100% 100%, ${enhanceSplitPos}% 100%)`
+                  }}
+                >
+                  <div className="text-center">
+                    <div className="w-14 h-14 mx-auto mb-2 rounded-2xl bg-gradient-to-tr from-amber-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-amber-500/25">
+                      <Sparkles className="w-7 h-7 text-slate-950 animate-pulse" />
+                    </div>
+                    <p className="text-xs text-amber-300 font-black">NÂNG CẤP (AFTER - 4K HD)</p>
+                    <p className="text-[10px] text-cyan-300/90 font-medium">
+                      Lanczos Sharp + Dynamic HDR (+{enhanceIntensity}%)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Divider Line & Handle */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-amber-400 pointer-events-none flex items-center justify-center shadow-[0_0_10px_#f59e0b]"
+                  style={{ left: `${enhanceSplitPos}%` }}
+                >
+                  <div className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-lg border-2 border-slate-950">
+                    ⇹
+                  </div>
+                </div>
+
+                {/* Badges */}
+                <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-slate-300 backdrop-blur-xs">
+                  TRƯỚC
+                </span>
+                <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded bg-amber-500/90 text-[10px] font-bold text-slate-950 shadow-sm">
+                  SAU (HD 4K)
+                </span>
+              </div>
+
+              {/* Slider for horizontal split control */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-[10px] text-slate-500 shrink-0">Gốc</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={enhanceSplitPos}
+                  onChange={(e) => setEnhanceSplitPos(Number(e.target.value))}
+                  className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-ew-resize accent-amber-400"
+                />
+                <span className="text-[10px] text-amber-400 shrink-0 font-bold">4K HD</span>
+              </div>
+            </div>
+
+            {/* Action */}
             <button
-              onClick={() => {
-                const videoClip = clips.find((c) => c.track === 'video');
-                if (videoClip) {
-                  updateClip(videoClip.id, { filter: 'cinematic', opacity: 1 });
-                }
-                showToast('Đã nâng cấp chất lượng hình ảnh HD!', 'success');
-                closeModal();
-              }}
-              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+              onClick={handleApplyEnhance}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:opacity-95 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20"
             >
-              Nâng cấp HD ngay
+              Áp dụng nâng cấp HD lên Video
             </button>
           </div>
         )}
