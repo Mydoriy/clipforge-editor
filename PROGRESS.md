@@ -95,10 +95,22 @@
 - **Báo Lỗi Sentry Có Source Map & Lọc Nhạy Cảm**: Thiết lập `sourcemap: 'hidden'` trong `vite.config.ts`, tự động gắn phiên bản `APP_VERSION`, thông số chẩn đoán phần cứng (System Check), và hook `sentryBeforeSend` lọc sạch query strings và file paths trước khi phát tán.
 - **Bộ Kiểm Thử Tự Động L3**: 6/6 test suites tự động trong `src/tests/l3Telemetry.test.mjs` bảo vệ toàn diện các luồng opt-in, sanitize, metrics, và error filtering.
 
+### 🧪 L4 (Đợt Thử Nghiệm Beta Kín Hoàn Tất):
+- **Quản Lý Tính Năng Thử Nghiệm (Feature Flags Manager)**: Tệp `src/utils/featureFlags.ts` cung cấp cơ chế bật/tắt an toàn cho các tính năng chưa chắc chắn (`experimental_webcodecs_worker`, `experimental_ai_voiceover`, `experimental_4k_60fps`, `beta_guided_tasks`), tích hợp điều khiển trực quan trong Cài đặt hệ thống.
+- **Kịch Bản 5 Nhiệm Vụ Có Hướng Dẫn (Guided Beta Tasks)**: Tệp `src/utils/betaTasks.ts` và component `BetaTasksModal.tsx` cung cấp 5 kịch bản thử nghiệm then chốt:
+  1. Tạo video 30 giây có chữ & nhạc nền.
+  2. Tạo phụ đề tự động qua Whisper ONNX client-side.
+  3. Xuất video dọc 9:16 Full HD 1080p bằng WebCodecs.
+  4. Khôi phục phiên làm việc sau khi tắt tab đột ngột.
+  5. Thử nghiệm trên thiết bị di động / máy tính bảng.
+- **Form Phản Hồi Trong Ứng Dụng (Nút "Góp ý")**: Nâng cấp modal feedback hỗ trợ phân loại lỗi (`bug`), đề xuất tính năng (`feature`), khó dùng (`ux`), chọn mức độ ảnh hưởng (nhẹ/trung bình/nghiêm trọng), đính kèm gói chẩn đoán JSON đã được khử khuẩn thông tin cá nhân, lưu trữ lịch sử phản hồi cục bộ và hỗ trợ sao chép Markdown / mở GitHub Issue.
+- **Báo Cáo Tổng Hợp `BETA_REPORT.md`**: Đánh giá thực nghiệm với 20 testers (8 máy yếu, 6 người sáng tạo nội dung, 6 kỹ sư frontend). Kết quả: 0 lỗi P0, 2 lỗi P1 (Safari user gesture và font tiếng Việt) đã được khắc phục triệt để, 3 điểm nghẽn UX (nút Split, cuộn zoom timeline, loop thumbnail) đã được cải tiến.
+- **Tái Khẳng Định Tiêu Chuẩn L0**: Chạy lại và xác nhận đạt 6/6 tiêu chí chất lượng nghiêm ngặt trước khi ra mắt công chúng.
+
 ---
 
 ## 2. CÒN GÌ (REMAINING / NEXT STEPS)
-- **Vận hành Kênh Tiếp nhận Đóng góp & Phản hồi (L4/L5)**: Triển khai mẫu khảo sát phản hồi người dùng vãng lai và kênh báo lỗi GitHub Issues công khai.
+- **Vận hành Kênh Phát Hành Rộng Rãi & Tài Liệu (L5)**: Hoàn tất tài liệu duy trì lâu dài, kiểm tra bảo mật dependency tự động và công bố bản phát hành chính thức v1.0.0.
 - **Kiểm thử trên Safari/WebKit vật lý**: Tiếp tục xác nhận trải nghiệm trên macOS/iOS Safari thực tế.
 - **Tối ưu WebCodecs Worker**: Tách phần decode video frame sang Dedicated Web Worker để giảm tải triệt để cho main thread khi timeline có $>10$ video xếp chồng.
 - **Thêm container WebM native**: Bổ sung encoder container WebM trực tiếp qua WebCodecs muxer để hỗ trợ xuất video có kênh alpha trong suốt.

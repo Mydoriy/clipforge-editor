@@ -32,8 +32,11 @@ import {
 import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import { APP_VERSION, APP_NAME, APP_BUILD_DATE } from '../constants/version';
 import { SystemCheckModal } from './SystemCheckModal';
+import { BetaTasksModal } from './BetaTasksModal';
 import { isIosSafari, isStandaloneMode, installPwaApp, applyPwaUpdate } from '../utils/pwa';
 import { trackEvent, getTelemetryConsent, setTelemetryConsent } from '../utils/telemetry';
+import { getFeatureFlags, setFeatureFlag, type FeatureFlags } from '../utils/featureFlags';
+import { getBetaTasksProgress } from '../utils/betaTasks';
 import {
   X,
   Crown,
@@ -69,6 +72,8 @@ import {
   Upload,
   AlertTriangle,
   Activity,
+  Flame,
+  Send,
   FileText,
   Image as ImageIcon,
   SlidersHorizontal,
@@ -142,10 +147,12 @@ export const Modals: React.FC = () => {
   const [sentryConsent, setSentryConsent] = useState<boolean>(
     () => typeof window !== 'undefined' && localStorage.getItem('clipforge_sentry_consent') === 'true'
   );
-  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'perf'>('bug');
+  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'ux'>('bug');
+  const [feedbackSeverity, setFeedbackSeverity] = useState<'low' | 'medium' | 'high'>('medium');
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackDesc, setFeedbackDesc] = useState('');
   const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
+  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlags>(getFeatureFlags);
 
   useEffect(() => {
     if (activeModal === 'cloud' || activeModal === 'projectSync' || activeModal === 'storage') {
@@ -2819,6 +2826,60 @@ export const Modals: React.FC = () => {
                 </a>
               </div>
 
+              {/* Kịch bản Closed Beta */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
+                <div>
+                  <span className="font-semibold block flex items-center gap-1.5 text-amber-300">
+                    <Flame className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Nhiệm vụ Thử nghiệm Beta Kín (5 kịch bản)</span>
+                  </span>
+                  <span className="text-[10px] text-[#9CA3AF]">
+                    Thử 5 kịch bản (video 30s, phụ đề, xuất 9:16, đóng tab khôi phục, mobile)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openModal('betaTasks')}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Xem kịch bản</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Feature Flags Thử nghiệm */}
+              <div className="flex flex-col gap-2 pt-2 border-t border-[#1F2937]">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold block text-white text-xs">
+                    Tính năng thử nghiệm (Feature Flags):
+                  </span>
+                  <span className="text-[10px] text-cyan-400 font-mono">Bản thử nghiệm</span>
+                </div>
+                <div className="space-y-1.5 text-[11px] text-[#CBD5E1]">
+                  {[
+                    { key: 'experimental_webcodecs_worker', label: 'Dedicated WebCodecs Worker (Tách render ngầm)' },
+                    { key: 'experimental_ai_voiceover', label: 'AI Voiceover Studio (Đọc văn bản thành giọng nói)' },
+                    { key: 'experimental_4k_60fps', label: 'Mở khóa xuất 4K 60fps trên thiết bị phổ thông' },
+                    { key: 'beta_guided_tasks', label: 'Bật hướng dẫn nhiệm vụ Beta trên thanh công cụ' }
+                  ].map((flag) => (
+                    <label key={flag.key} className="flex items-center justify-between p-2 rounded-lg bg-[#0B0F19] border border-[#1F2937] cursor-pointer hover:border-[#22D3EE]/30">
+                      <span>{flag.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={featureFlags[flag.key as keyof FeatureFlags]}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setFeatureFlag(flag.key as keyof FeatureFlags, val);
+                          setFeatureFlagsState(getFeatureFlags());
+                          showToast(`Đã ${val ? 'bật' : 'tắt'} tính năng thử nghiệm!`, 'info');
+                        }}
+                        className="w-3.5 h-3.5 accent-[#22D3EE] cursor-pointer"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* Trang Privacy link */}
               <div className="flex items-center justify-between pt-2 border-t border-[#1F2937]">
                 <div>
@@ -5103,26 +5164,56 @@ export const Modals: React.FC = () => {
 
             <div className="flex flex-col gap-3">
               {/* Type selector */}
-              <div className="flex items-center gap-2">
-                {[
-                  { id: 'bug', label: 'Báo lỗi', icon: Bug },
-                  { id: 'feature', label: 'Góp ý tính năng', icon: Sparkles },
-                  { id: 'perf', label: 'Hiệu năng', icon: Zap }
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setFeedbackType(t.id as any)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      feedbackType === t.id
-                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-[#22D3EE]'
-                        : 'bg-[#0B0F19] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                    }`}
-                  >
-                    <t.icon className="w-3.5 h-3.5" />
-                    <span>{t.label}</span>
-                  </button>
-                ))}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-[#E5E7EB]">Phân loại phản hồi:</span>
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: 'bug', label: 'Báo lỗi (Bug)', icon: Bug },
+                    { id: 'feature', label: 'Đề xuất (Feature)', icon: Sparkles },
+                    { id: 'ux', label: 'Khó dùng (UX)', icon: Zap }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setFeedbackType(t.id as any)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        feedbackType === t.id
+                          ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-[#22D3EE]'
+                          : 'bg-[#0B0F19] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                      }`}
+                    >
+                      <t.icon className="w-3.5 h-3.5" />
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Severity selector */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-[#E5E7EB]">Mức độ ảnh hưởng:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'low', label: 'Nhẹ (Tiểu tiết)' },
+                    { id: 'medium', label: 'Trung bình (Bất tiện)' },
+                    { id: 'high', label: 'Nghiêm trọng (Chặn dùng)' }
+                  ].map((sev) => (
+                    <button
+                      key={sev.id}
+                      type="button"
+                      onClick={() => setFeedbackSeverity(sev.id as any)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold border text-center transition-all cursor-pointer ${
+                        feedbackSeverity === sev.id
+                          ? sev.id === 'high'
+                            ? 'bg-rose-500/20 border-rose-500 text-rose-300'
+                            : 'bg-amber-500/20 border-amber-500 text-amber-300'
+                          : 'bg-[#0B0F19] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                      }`}
+                    >
+                      {sev.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Title input */}
@@ -5212,14 +5303,44 @@ export const Modals: React.FC = () => {
                     <span>Sao chép</span>
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!feedbackTitle.trim()) {
+                        showToast('Vui lòng nhập tiêu đề góp ý!', 'warning');
+                        return;
+                      }
+                      const feedbackItem = {
+                        id: 'fb_' + Date.now(),
+                        type: feedbackType,
+                        severity: feedbackSeverity,
+                        title: feedbackTitle.trim(),
+                        description: feedbackDesc.trim(),
+                        timestamp: new Date().toISOString()
+                      };
+                      try {
+                        const list = JSON.parse(localStorage.getItem('clipforge_user_feedback') || '[]');
+                        list.unshift(feedbackItem);
+                        localStorage.setItem('clipforge_user_feedback', JSON.stringify(list));
+                      } catch {}
+                      trackEvent('feature_used', { feature_name: `feedback_${feedbackType}` });
+                      showToast('Cảm ơn bạn! Phản hồi đã được ghi nhận thành công.', 'success');
+                      closeModal();
+                    }}
+                    className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-[#22D3EE] to-sky-500 hover:opacity-90 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Gửi góp ý</span>
+                  </button>
+
                   <a
                     href={`https://github.com/Mydoriy/clipforge-editor/issues/new?title=${encodeURIComponent(`[${feedbackType.toUpperCase()}] ${feedbackTitle}`)}&body=${encodeURIComponent(feedbackDesc)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-[#22D3EE] to-sky-500 hover:opacity-90 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
+                    className="px-3 py-1.5 rounded-lg bg-[#141B2D] hover:bg-[#1E2842] text-[#CBD5E1] font-semibold text-xs border border-[#232F4A] flex items-center gap-1.5"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Mở GitHub Issue</span>
+                    <span>GitHub Issue</span>
                   </a>
                 </div>
               </div>
@@ -5229,6 +5350,11 @@ export const Modals: React.FC = () => {
 
         {/* 16. SYSTEM CHECK MODAL */}
         {activeModal === 'systemCheck' && <SystemCheckModal />}
+
+        {/* 17. CLOSED BETA GUIDED TASKS MODAL */}
+        {activeModal === 'betaTasks' && (
+          <BetaTasksModal onClose={closeModal} onOpenFeedback={() => openModal('feedback')} />
+        )}
       </div>
     </div>
   );
