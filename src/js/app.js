@@ -538,7 +538,7 @@ function init() {
       document.querySelectorAll(".drawer-tab").forEach(t => t.classList.remove("active"));
       tab.classList.add("active");
       const target = tab.dataset.tab;
-      const allPanels = ["media", "text", "fx", "trans", "hook", "caption", "template", "sticker", "shape", "particle", "tts"];
+      const allPanels = ["media", "audio", "text", "fx", "trans", "hook", "caption", "filter", "adj", "template", "sticker", "shape", "particle", "tts"];
       allPanels.forEach(p => {
         const panelEl = document.getElementById("panel" + p.charAt(0).toUpperCase() + p.slice(1));
         if (panelEl) panelEl.classList.toggle("hidden", target !== p);
@@ -1407,6 +1407,342 @@ function init() {
       document.getElementById("onboardingBanner").classList.add("hidden");
     });
   }
+  // CapCut Desktop View Navigation & EditPilot AI
+  bindCapCutViewNavigation();
+  renderHomeProjects();
+  bindEditPilotAI();
+}
+
+function switchView(viewName) {
+  const homeView = document.getElementById("viewHome");
+  const editorView = document.getElementById("viewEditor");
+  if (viewName === "editor") {
+    if (homeView) homeView.classList.remove("active");
+    if (editorView) editorView.classList.add("active");
+    setTimeout(() => {
+      fitPreviewCanvas();
+      renderTimeline();
+      updateInspector();
+      drawPreview();
+    }, 50);
+  } else {
+    if (editorView) editorView.classList.remove("active");
+    if (homeView) homeView.classList.add("active");
+    renderHomeProjects();
+  }
+}
+
+function bindCapCutViewNavigation() {
+  const btnHeroCreate = document.getElementById("btnHeroCreateProject");
+  if (btnHeroCreate) {
+    btnHeroCreate.addEventListener("click", () => {
+      switchView("editor");
+    });
+  }
+
+  const btnEditorHome = document.getElementById("btnEditorLogoHome");
+  if (btnEditorHome) {
+    btnEditorHome.addEventListener("click", () => {
+      switchView("home");
+    });
+  }
+
+  const btnHomeBrand = document.getElementById("btnHomeBrand");
+  if (btnHomeBrand) {
+    btnHomeBrand.addEventListener("click", () => {
+      switchView("home");
+    });
+  }
+
+  const navHome = document.getElementById("navHome");
+  if (navHome) navHome.addEventListener("click", () => switchView("home"));
+
+  const navTemplates = document.getElementById("navTemplates");
+  if (navTemplates) {
+    navTemplates.addEventListener("click", () => {
+      switchView("editor");
+      const tabTpl = document.getElementById("tabTemplate");
+      if (tabTpl) tabTpl.click();
+    });
+  }
+
+  const navVideoStudio = document.getElementById("navVideoStudio");
+  if (navVideoStudio) {
+    navVideoStudio.addEventListener("click", () => switchView("editor"));
+  }
+
+  const navDesignStudio = document.getElementById("navDesignStudio");
+  if (navDesignStudio) {
+    navDesignStudio.addEventListener("click", () => switchView("editor"));
+  }
+
+  const navLibrary = document.getElementById("navLibrary");
+  if (navLibrary) {
+    navLibrary.addEventListener("click", () => {
+      switchView("editor");
+      const tabMedia = document.getElementById("tabMedia");
+      if (tabMedia) tabMedia.click();
+    });
+  }
+
+  const navSupabaseCloud = document.getElementById("navSupabaseCloud");
+  if (navSupabaseCloud) {
+    navSupabaseCloud.addEventListener("click", () => {
+      if (typeof openSupabaseModal === "function") openSupabaseModal();
+    });
+  }
+
+  const btnSubnavImport = document.getElementById("btnSubnavImport");
+  if (btnSubnavImport) {
+    btnSubnavImport.addEventListener("click", () => {
+      const inp = document.getElementById("inputFileMedia");
+      if (inp) inp.click();
+    });
+  }
+
+  const btnPanelBeatSync = document.getElementById("btnPanelBeatSync");
+  if (btnPanelBeatSync) {
+    btnPanelBeatSync.addEventListener("click", () => {
+      const btn = document.getElementById("btnOpenBeatSync");
+      if (btn) btn.click();
+    });
+  }
+
+  const btnLoadAudioSampleQuick = document.getElementById("btnLoadAudioSampleQuick");
+  if (btnLoadAudioSampleQuick) {
+    btnLoadAudioSampleQuick.addEventListener("click", () => {
+      const btn = document.getElementById("btnLoadSampleAssets");
+      if (btn) btn.click();
+    });
+  }
+
+  const btnHomeJoinPro = document.getElementById("btnHomeJoinPro");
+  if (btnHomeJoinPro) {
+    btnHomeJoinPro.addEventListener("click", () => {
+      if (typeof openAuthModal === "function") openAuthModal();
+    });
+  }
+
+  const btnUnlockPro = document.getElementById("btnUnlockPro");
+  if (btnUnlockPro) {
+    btnUnlockPro.addEventListener("click", () => {
+      if (typeof openAuthModal === "function") openAuthModal();
+    });
+  }
+
+  const btnFullscreen = document.getElementById("btnFullscreenPlayer");
+  if (btnFullscreen) {
+    btnFullscreen.addEventListener("click", () => {
+      const phoneBox = document.getElementById("phoneBox");
+      if (phoneBox) {
+        if (!document.fullscreenElement) {
+          phoneBox.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+  }
+
+  const btnCapcutMenu = document.getElementById("btnCapcutMenu");
+  if (btnCapcutMenu) {
+    btnCapcutMenu.addEventListener("click", () => {
+      const choice = prompt("CapCut Menu:\n1. Về trang chủ (Home)\n2. Lưu dự án JSON\n3. Mở dự án JSON\n4. Quản lý Supabase\n\nNhập số (1-4):", "1");
+      if (choice === "1") switchView("home");
+      else if (choice === "2") document.getElementById("btnProjectExport").click();
+      else if (choice === "3") document.getElementById("btnProjectImport").click();
+      else if (choice === "4") openSupabaseModal();
+    });
+  }
+}
+
+function renderHomeProjects() {
+  const container = document.getElementById("homeProjectsGrid");
+  if (!container) return;
+
+  const projectsList = [
+    {
+      id: project.id || "current",
+      title: project.name || "0917",
+      duration: (project.duration || 15.0).toFixed(1) + "s",
+      ratio: "9:16",
+      date: "Vừa chỉnh sửa",
+      gradient: "linear-gradient(135deg, #0e7490, #0891b2)",
+      badge: "Đang mở"
+    },
+    {
+      id: "demo-dance",
+      title: "TikTok Dance Challenge",
+      duration: "18.5s",
+      ratio: "9:16",
+      date: "2 giờ trước",
+      gradient: "linear-gradient(135deg, #d97706, #dc2626)",
+      badge: "Template"
+    },
+    {
+      id: "demo-vlog",
+      title: "Saigon Street Food Vlog",
+      duration: "30.0s",
+      ratio: "9:16",
+      date: "Hôm qua",
+      gradient: "linear-gradient(135deg, #7c3aed, #db2777)",
+      badge: "Dự án"
+    },
+    {
+      id: "demo-cyber",
+      title: "Glitch Cyberpunk Edit",
+      duration: "12.0s",
+      ratio: "9:16",
+      date: "04/11/2026",
+      gradient: "linear-gradient(135deg, #0284c7, #2563eb)",
+      badge: "Template"
+    },
+    {
+      id: "demo-product",
+      title: "Product Showcase 60fps",
+      duration: "15.0s",
+      ratio: "9:16",
+      date: "02/11/2026",
+      gradient: "linear-gradient(135deg, #059669, #047857)",
+      badge: "Dự án"
+    }
+  ];
+
+  container.innerHTML = "";
+  projectsList.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "capcut-project-item";
+    card.innerHTML = `
+      <div class="project-item-thumb" style="background:${p.gradient};">
+        <span style="font-size:32px;">🎬</span>
+        <div class="project-duration-badge">${p.duration}</div>
+        ${p.badge ? `<div style="position:absolute; top:6px; left:6px; font-size:10px; background:rgba(0,0,0,0.65); padding:1px 6px; border-radius:4px; color:var(--capcut-cyan); font-weight:600;">${p.badge}</div>` : ''}
+      </div>
+      <div class="project-item-info">
+        <div class="project-item-title">${escapeHtml(p.title)}</div>
+        <div class="project-item-date">${p.date} • ${p.ratio}</div>
+      </div>
+    `;
+
+    card.addEventListener("click", () => {
+      if (p.id !== "current" && p.id !== project.id) {
+        project.name = p.title;
+        const inp = document.getElementById("projectNameInput");
+        if (inp) inp.value = p.title;
+      }
+      switchView("editor");
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function bindEditPilotAI() {
+  const btnFloat = document.getElementById("btnOpenEditPilotFloat");
+  const drawer = document.getElementById("editPilotDrawer");
+  const btnClose = document.getElementById("btnCloseEditPilotDrawer");
+  const inpDrawer = document.getElementById("inpEditPilotDrawer");
+  const btnSubmitDrawer = document.getElementById("btnSubmitEditPilotDrawer");
+  const respBox = document.getElementById("editPilotResponseBox");
+
+  const openDrawer = () => {
+    if (drawer) drawer.classList.add("open");
+  };
+  const closeDrawer = () => {
+    if (drawer) drawer.classList.remove("open");
+  };
+
+  if (btnFloat) btnFloat.addEventListener("click", openDrawer);
+  if (btnClose) btnClose.addEventListener("click", closeDrawer);
+
+  const inpHome = document.getElementById("inpHomeEditPilot");
+  const btnSubmitHome = document.getElementById("btnHomeEditPilotSubmit");
+
+  const handlePrompt = (promptText) => {
+    if (!promptText) return;
+    switchView("editor");
+    openDrawer();
+
+    if (respBox) {
+      respBox.style.display = "block";
+      respBox.innerHTML = `
+        <div style="color:var(--capcut-cyan); font-weight:700; margin-bottom:6px;">✨ EditPilot AI đang phân tích...</div>
+        <div>Đang xử lý yêu cầu: <em>"${escapeHtml(promptText)}"</em></div>
+      `;
+
+      setTimeout(() => {
+        let aiAdvice = "";
+        const lower = promptText.toLowerCase();
+        if (lower.includes("hook")) {
+          aiAdvice = `
+            <strong>🎯 3 Hook triệu view mở đầu video:</strong><br/>
+            1. <em>"Dừng lại 3 giây nếu bạn không muốn bỏ lỡ điều này..."</em> (Áp dụng Zoom Punch + Flash)<br/>
+            2. <em>"Bí mật mà 99% creator TikTok không nói cho bạn biết!"</em> (Áp dụng RGB Split + Text nảy)<br/>
+            3. <em>"Cách mình làm video triệu view chỉ trong 5 phút!"</em> (Áp dụng Whip Pan + Âm thanh whoosh)<br/>
+            <button class="btn btn-sm btn-primary" onclick="document.getElementById('tabHook').click()" style="margin-top:8px; background:var(--capcut-cyan); color:#000; font-weight:700;">Áp dụng Hook Lab ngay</button>
+          `;
+        } else if (lower.includes("kịch bản") || lower.includes("script")) {
+          aiAdvice = `
+            <strong>📝 Cấu trúc kịch bản TikTok 15s chuẩn xu hướng:</strong><br/>
+            • <strong>0-3s:</strong> Đặt câu hỏi kích thích tò mò gây sốc.<br/>
+            • <strong>3-10s:</strong> Hướng dẫn giải pháp 2 bước cực nhanh.<br/>
+            • <strong>10-15s:</strong> Kêu gọi hành động (Follow/Save) + Loop quay lại đầu video.<br/>
+            <button class="btn btn-sm btn-primary" onclick="document.getElementById('tabCaption').click()" style="margin-top:8px; background:var(--capcut-cyan); color:#000; font-weight:700;">Mở Caption Studio</button>
+          `;
+        } else if (lower.includes("phụ đề") || lower.includes("karaoke") || lower.includes("caption")) {
+          aiAdvice = `
+            <strong>⚡ Khuyến nghị phụ đề TikTok:</strong><br/>
+            Style <em>Karaoke sáng từng từ</em> hoặc <em>Viền Neon phát sáng</em> tăng 42% tỷ lệ xem hết video.<br/>
+            <button class="btn btn-sm btn-primary" onclick="document.getElementById('tabCaption').click()" style="margin-top:8px; background:var(--capcut-cyan); color:#000; font-weight:700;">Tạo Phụ Đề Tự Động</button>
+          `;
+        } else {
+          aiAdvice = `
+            <strong>✨ Trợ lý EditPilot sẵn sàng hỗ trợ:</strong><br/>
+            • Dự án đang ở chuẩn <strong>TikTok 9:16 (1080×1920 30fps)</strong>.<br/>
+            • Bấm <strong>Beat Sync</strong> ở toolbar dưới để cắt clip theo nhịp trống.<br/>
+            • Bấm <strong>Pre-comp</strong> để gộp nhóm hiệu ứng chung.<br/>
+            • Bấm <strong>Export</strong> góc trên bên phải để xuất file MP4 Full HD.
+          `;
+        }
+        respBox.innerHTML = aiAdvice;
+      }, 600);
+    }
+  };
+
+  if (btnSubmitHome) {
+    btnSubmitHome.addEventListener("click", () => {
+      if (inpHome && inpHome.value.trim()) handlePrompt(inpHome.value.trim());
+    });
+  }
+  if (inpHome) {
+    inpHome.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && inpHome.value.trim()) handlePrompt(inpHome.value.trim());
+    });
+  }
+
+  if (btnSubmitDrawer) {
+    btnSubmitDrawer.addEventListener("click", () => {
+      if (inpDrawer && inpDrawer.value.trim()) {
+        handlePrompt(inpDrawer.value.trim());
+        inpDrawer.value = "";
+      }
+    });
+  }
+  if (inpDrawer) {
+    inpDrawer.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && inpDrawer.value.trim()) {
+        handlePrompt(inpDrawer.value.trim());
+        inpDrawer.value = "";
+      }
+    });
+  }
+
+  document.querySelectorAll(".editpilot-suggestion-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const p = chip.dataset.prompt;
+      if (p) handlePrompt(p);
+    });
+  });
 }
 
 // Run on DOM ready

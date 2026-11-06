@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClipForge - Trình dựng video ngắn dọc 9:16 cho TikTok & Reels</title>
+  <title>CapCut Video Editor - Trình Dựng Video Ngắn Dọc 9:16 Chuyên Nghiệp</title>
   <!-- Google Fonts: UI font + 9 Vietnamese Display Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,332 +12,434 @@
   <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.4/build/mp4-muxer.min.js"></script>
   <!-- Supabase JS Client (v2) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- ClipForge Global Stylesheet -->
+  <!-- CapCut Global Stylesheet -->
   <link rel="stylesheet" href="src/css/style.css">
 </head>
 <body>
 
   <!-- ==========================================================================
-       HEADER
+       VIEW 1: CAPCUT HOME DASHBOARD (HÌNH 1)
+       Trang chủ quản lý dự án, công cụ AI và tạo dự án mới
        ========================================================================== -->
-  <header class="app-header">
-    <div class="brand-section">
-      <div class="brand-logo">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-coral);">
-          <polygon points="23 7 16 12 23 17 23 7"></polygon>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-        </svg>
-        <span>ClipForge</span>
-        <span class="brand-badge">9:16</span>
-      </div>
-      <input type="text" id="projectNameInput" class="project-name-input" value="Dự án TikTok #1" title="Đổi tên dự án" />
-    </div>
-
-    <div class="header-center">
-      <button class="btn btn-icon btn-sm" id="btnUndo" title="Hoàn tác (Ctrl+Z)" disabled>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
-      </button>
-      <button class="btn btn-icon btn-sm" id="btnRedo" title="Làm lại (Ctrl+Y)" disabled>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>
-      </button>
-
-      <div class="storage-status" id="storageStatus">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="statusText">Đã lưu</span>
+  <div id="viewHome" class="capcut-view active">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="capcut-home-sidebar">
+      <div class="capcut-logo-brand" id="btnHomeBrand">
+        <div class="capcut-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--capcut-cyan);">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </div>
+        <span>CapCut</span>
       </div>
 
-      <button class="btn btn-sm" id="btnToggleSafeZone" title="Bật/Tắt lớp phủ vùng an toàn TikTok">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span id="lblSafeZone">Vùng an toàn TikTok</span>
-      </button>
-    </div>
-
-    <div class="header-actions">
-      <button class="btn btn-sm" id="btnLangToggle" title="Chuyển đổi ngôn ngữ">🇻🇳 VI</button>
-      <button class="btn btn-sm btn-supabase" id="btnSupabaseModal" title="Quản lý cơ sở dữ liệu Supabase">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--supabase-green);"><path d="M12 2L3 14h9l-1 8 10-13h-9z"/></svg>
-        <span id="lblSupabaseStatus">Supabase</span>
-      </button>
-      <div class="user-auth-badge" id="userAuthBadge" style="display:none; align-items:center; gap:6px;">
-        <span id="userEmailSpan" style="font-size:11px; color:var(--text-muted); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-        <button class="btn btn-sm" id="btnSignOut" title="Đăng xuất khỏi Supabase" style="font-size:11px; padding:2px 6px; color:var(--accent-coral);">Đăng xuất</button>
+      <!-- User Profile Box -->
+      <div class="capcut-user-profile-box">
+        <div class="capcut-profile-row">
+          <div class="capcut-avatar">👤</div>
+          <span id="homeUserEmailSpan" style="font-size:12px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Sign in</span>
+        </div>
+        <button class="btn-join-pro" id="btnHomeJoinPro">Join Pro</button>
       </div>
-      <button class="btn btn-sm" id="btnOpenAuthModal" title="Đăng nhập tài khoản Supabase">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span>Đăng nhập</span>
-      </button>
-      <button class="btn btn-sm" id="btnProjectExport" title="Lưu file dự án .clipforge về máy">Lưu JSON</button>
-      <button class="btn btn-sm" id="btnProjectImport" title="Mở file dự án .clipforge">Mở JSON</button>
-      <input type="file" id="inputImportJson" accept=".json,.clipforge" class="hidden" />
-      <button class="btn btn-primary" id="btnExportVideo" title="Xuất video MP4 định dạng 9:16">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span id="lblExportAction">Xuất video</span>
-      </button>
-    </div>
-  </header>
+
+      <!-- Main Navigation Links -->
+      <div class="capcut-nav-group">
+        <div class="capcut-nav-item active" id="navHome">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <span>Home</span>
+        </div>
+        <div class="capcut-nav-item" id="navTemplates">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          <span>Templates</span>
+        </div>
+      </div>
+
+      <!-- Create with AI -->
+      <div class="capcut-nav-group">
+        <div class="capcut-group-title">Create with AI</div>
+        <div class="capcut-nav-item" id="navVideoStudio">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <span>Video Studio</span>
+        </div>
+        <div class="capcut-nav-item" id="navDesignStudio">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          <span>Design Studio</span>
+        </div>
+      </div>
+
+      <!-- More Tools -->
+      <div class="capcut-nav-group">
+        <div class="capcut-group-title">More tools</div>
+        <div class="capcut-nav-item" id="navCreateAi">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L3 14h9l-1 8 10-13h-9z"/></svg>
+          <span>Create with AI</span>
+        </div>
+        <div class="capcut-nav-item" id="navMarketing">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/></svg>
+          <span>Marketing tools</span>
+        </div>
+      </div>
+
+      <!-- Management -->
+      <div class="capcut-nav-group" style="margin-top:auto;">
+        <div class="capcut-group-title">Management</div>
+        <div class="capcut-nav-item" id="navLibrary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          <span>Library</span>
+        </div>
+        <div class="capcut-nav-item" id="navSupabaseCloud" style="color:var(--supabase-green);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
+          <span>Supabase Cloud</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Dashboard -->
+    <main class="capcut-home-main">
+      
+      <!-- Top Window Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+        <div style="font-size:12px; color:#888;">CapCut Desktop Web v3.0 • 9:16 Vertical Video Studio</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-icon btn-sm" id="btnHomeLang" title="Chuyển đổi ngôn ngữ">🇻🇳</button>
+          <button class="btn btn-icon btn-sm" title="Thông báo">🔔</button>
+          <button class="btn btn-icon btn-sm" title="Cài đặt">⚙️</button>
+          <div style="display:flex; gap:6px; margin-left:6px;">
+            <div style="width:10px; height:10px; border-radius:50%; background:#2e3340;"></div>
+            <div style="width:10px; height:10px; border-radius:50%; background:#2e3340;"></div>
+            <div style="width:10px; height:10px; border-radius:50%; background:#2e3340;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Banner: Create project (Giao diện chuẩn Hình 1) -->
+      <div class="capcut-hero-banner" id="btnHeroCreateProject" title="Bắt đầu tạo dự án video mới">
+        <div class="btn-create-project-hero">
+          <div class="create-project-plus">+</div>
+          <span>Create project</span>
+        </div>
+      </div>
+
+      <!-- EditPilot AI Prompt Section + 4 Quick Tools -->
+      <div class="capcut-editpilot-section">
+        <!-- EditPilot Prompt Box -->
+        <div class="editpilot-prompt-card">
+          <div class="editpilot-prompt-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L3 14h9l-1 8 10-13h-9z"/></svg>
+            <span>EditPilot</span>
+          </div>
+          <div class="editpilot-prompt-title">How can I help you edit today?</div>
+          <div class="editpilot-input-row">
+            <input type="text" class="editpilot-input-field" id="inpHomeEditPilot" placeholder="Describe what you'd like to edit..." />
+            <button class="btn-editpilot-submit" id="btnHomeEditPilotSubmit" title="Gửi yêu cầu tới EditPilot">→</button>
+          </div>
+        </div>
+
+        <!-- 4 Quick Tool Cards -->
+        <div class="capcut-quick-tools">
+          <div class="quick-tool-card" id="btnToolAiImage">
+            <div class="quick-tool-icon">🖼️</div>
+            <div class="quick-tool-name">AI image</div>
+            <div class="quick-tool-desc">Turn Ideas into Imagery</div>
+          </div>
+          <div class="quick-tool-card" id="btnToolExtendVideo">
+            <div class="quick-tool-icon">⏳</div>
+            <div class="quick-tool-name">Extend video</div>
+            <div class="quick-tool-desc">Seamlessly extend any clip</div>
+          </div>
+          <div class="quick-tool-card" id="btnToolAiEdit">
+            <div class="quick-tool-icon">🪄</div>
+            <div class="quick-tool-name">AI edit</div>
+            <div class="quick-tool-desc">Edit clips by describing it</div>
+          </div>
+          <div class="quick-tool-card" id="btnToolEnhanceQuality">
+            <div class="quick-tool-icon">HD</div>
+            <div class="quick-tool-name">Enhance quality</div>
+            <div class="quick-tool-desc">Get sharper results instantly</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI-powered creative suite (Giao diện chuẩn Hình 1) -->
+      <div class="capcut-suite-section">
+        <div class="capcut-section-title">
+          <span>AI-powered creative suite</span>
+        </div>
+        <div class="capcut-suite-grid">
+          <div class="suite-card" id="btnSuiteVideoStudio">
+            <div class="suite-card-preview" style="background:linear-gradient(135deg, #1e3a8a, #06b6d4);">
+              <span style="font-size:32px;">🎬</span>
+            </div>
+            <div class="suite-card-info">
+              <div class="suite-card-name">Video Studio</div>
+              <div class="suite-card-desc">Make 30-second videos with Seedance 2.5</div>
+            </div>
+          </div>
+
+          <div class="suite-card" id="btnSuiteDesignStudio">
+            <div class="suite-card-preview" style="background:linear-gradient(135deg, #4f46e5, #a855f7);">
+              <span style="font-size:32px;">🎨</span>
+            </div>
+            <div class="suite-card-info">
+              <div class="suite-card-name">Design Studio</div>
+              <div class="suite-card-desc">Bring your imagination to life in the easiest way</div>
+            </div>
+          </div>
+
+          <div class="suite-card" id="btnSuiteAiAdMaker">
+            <div class="suite-card-preview" style="background:linear-gradient(135deg, #2563eb, #60a5fa);">
+              <span style="font-size:32px;">📢</span>
+            </div>
+            <div class="suite-card-info">
+              <div class="suite-card-name">AI ad maker</div>
+              <div class="suite-card-desc">Create winning ads, scale fast with variants</div>
+            </div>
+          </div>
+
+          <div class="suite-card" id="btnSuiteLongToShorts">
+            <div class="suite-card-preview" style="background:linear-gradient(135deg, #0284c7, #38bdf8);">
+              <span style="font-size:32px;">⚡</span>
+            </div>
+            <div class="suite-card-info">
+              <div class="suite-card-name">Long video to shorts</div>
+              <div class="suite-card-desc">Turn long videos into polished shorts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projects Section (Giao diện chuẩn Hình 1) -->
+      <div class="capcut-projects-section">
+        <div class="capcut-projects-toolbar">
+          <div class="capcut-section-title">Projects</div>
+          <div class="capcut-projects-actions">
+            <input type="text" class="capcut-search-input" id="inpSearchProjects" placeholder="🔍 Search projects..." />
+            <button class="btn btn-sm btn-icon" title="Chế độ Lưới">▦</button>
+            <button class="btn btn-sm btn-icon" title="Chế độ Danh sách">☰</button>
+            <button class="btn btn-sm" id="btnHomeTrash">🗑️ Trash</button>
+            <button class="btn btn-sm btn-primary" id="btnHomeProjectSync" style="background:#1d4ed8; color:#fff;">☁️ Project sync</button>
+          </div>
+        </div>
+
+        <div class="capcut-projects-grid" id="homeProjectsGrid">
+          <!-- Dynamic Project Cards Rendered via JS -->
+        </div>
+      </div>
+
+    </main>
+  </div>
+
 
   <!-- ==========================================================================
-       WORKSPACE
+       VIEW 2: CAPCUT EDITOR WORKSPACE (HÌNH 2)
+       Trình biên tập video đa rãnh, preview dọc 9:16, Inspector và timeline
        ========================================================================== -->
-  <div class="workspace-main">
-    
-    <!-- LEFT PANEL: TABS (MEDIA, TEXT, EFFECTS, TRANSITIONS) -->
-    <aside class="drawer-panel">
-      <div class="drawer-tabs">
-        <button class="drawer-tab active" data-tab="media" id="tabMedia">Media</button>
-        <button class="drawer-tab" data-tab="text" id="tabText">Chữ</button>
-        <button class="drawer-tab" data-tab="fx" id="tabFx">Hiệu ứng</button>
-        <button class="drawer-tab" data-tab="trans" id="tabTrans">Chuyển cảnh</button>
-        <button class="drawer-tab" data-tab="hook" id="tabHook">Hook Lab</button>
-        <button class="drawer-tab" data-tab="caption" id="tabCaption">Phụ đề</button>
-        <button class="drawer-tab" data-tab="template" id="tabTemplate">Template</button>
-        <button class="drawer-tab" data-tab="sticker" id="tabSticker">Sticker</button>
-        <button class="drawer-tab" data-tab="shape" id="tabShape">Hình khối</button>
-        <button class="drawer-tab" data-tab="particle" id="tabParticle">Hạt (FX)</button>
-        <button class="drawer-tab" data-tab="tts" id="tabTts">Giọng AI</button>
-      </div>
+  <div id="viewEditor" class="capcut-view">
 
-      <!-- TAB: MEDIA -->
-      <div class="drawer-content" id="panelMedia">
-        <div class="dropzone-box" id="dropzoneMedia">
-          <span class="dropzone-icon">📁</span>
-          <div class="dropzone-text" id="lblDropPrompt">Kéo thả Video / Ảnh / Âm thanh vào đây</div>
-          <div class="dropzone-sub">hoặc nhấp chuột để chọn tệp từ máy tính</div>
-          <input type="file" id="inputFileMedia" multiple accept="video/*,image/*,audio/*" class="hidden" />
+    <!-- Topbar: Menu, Project Title, Safe Zone, Supabase, Share & Export (Hình 2) -->
+    <header class="capcut-editor-topbar">
+      <div class="topbar-left">
+        <div class="capcut-logo-brand" id="btnEditorLogoHome" title="Quay về màn hình chính (Home)">
+          <div class="capcut-logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--capcut-cyan);"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          </div>
+          <span>CapCut</span>
         </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:700; font-size:11px; text-transform:uppercase; color:var(--text-muted);" id="lblAssetListHeader">Tài sản dự án</span>
-          <button class="btn btn-sm" id="btnLoadSampleAssets">Tải mẫu</button>
-        </div>
-
-        <div class="asset-grid" id="assetGrid">
-          <!-- Rendered dynamically -->
-        </div>
-      </div>
-
-      <!-- TAB: TEXT -->
-      <div class="drawer-content hidden" id="panelText">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
-          Chọn mẫu chữ để thêm vào video:
-        </div>
-        <button class="btn btn-primary" id="btnAddTextQuick" style="width:100%; justify-content:center;">
-          + Thêm Chữ Mặc Định
+        
+        <button class="btn-capcut-menu" id="btnCapcutMenu">
+          <span>Menu</span>
+          <span style="font-size:9px;">▾</span>
         </button>
 
-        <div class="fx-list" style="margin-top:10px;">
-          <div class="fx-item preset-text-btn" data-preset="hook">
-            <div class="fx-item-left">
-              <div class="fx-icon-box" style="background:rgba(217, 119, 6, 0.2); color:#f59e0b;">H</div>
-              <div>
-                <div class="fx-name">TikTok Hook Nảy</div>
-                <div class="fx-desc">Font Anton to, viền đen, animation Bounce</div>
-              </div>
-            </div>
-          </div>
-          <div class="fx-item preset-text-btn" data-preset="sub">
-            <div class="fx-item-left">
-              <div class="fx-icon-box" style="background:rgba(8, 145, 178, 0.2); color:#06b6d4;">P</div>
-              <div>
-                <div class="fx-name">Phụ đề Nền Tối</div>
-                <div class="fx-desc">Montserrat, nền mờ đen chữ trắng</div>
-              </div>
-            </div>
-          </div>
-          <div class="fx-item preset-text-btn" data-preset="typewriter">
-            <div class="fx-item-left">
-              <div class="fx-icon-box" style="background:rgba(124, 58, 237, 0.2); color:#a78bfa;">T</div>
-              <div>
-                <div class="fx-name">Chữ Đánh Máy</div>
-                <div class="fx-desc">Hiện từng ký tự theo thời gian</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <input type="text" id="projectNameInput" class="project-name-input" value="0917" title="Nhấp để đổi tên dự án" />
       </div>
 
-      <!-- TAB: EFFECTS -->
-      <div class="drawer-content hidden" id="panelFx">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
-          Hiệu ứng thuần thủ tục (Áp dụng cho clip đang chọn):
-        </div>
-        <div class="fx-list" id="fxLibraryList">
-          <!-- Populated in JS: Zoom Punch, Shake, RGB Split, Glitch, VHS, Film Grain, Vignette, Glow, Flash -->
-        </div>
-      </div>
+      <div class="topbar-center">
+        <button class="btn btn-icon btn-sm" id="btnUndo" title="Hoàn tác (Ctrl+Z)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+        </button>
+        <button class="btn btn-icon btn-sm" id="btnRedo" title="Làm lại (Ctrl+Y)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>
+        </button>
 
-      <!-- TAB: TRANSITIONS -->
-      <div class="drawer-content hidden" id="panelTrans">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
-          Hiệu ứng chuyển cảnh đầu clip (Áp dụng cho clip đang chọn):
-        </div>
-        <div class="fx-list" id="transLibraryList">
-          <!-- Populated in JS: Dissolve, Slide, Zoom, Flash, Glitch -->
-        </div>
-      </div>
-
-      <!-- TAB: HOOK LAB (8 PRESETS CHO 3S ĐẦU) -->
-      <div class="drawer-content hidden" id="panelHook">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">
-          Giữ chân người xem trong 3 giây đầu tiên với các hiệu ứng trend TikTok:
-        </div>
-        <div class="hook-grid" id="hookPresetsList">
-          <!-- Populated in JS: 8 Hook Presets -->
-        </div>
-      </div>
-
-      <!-- TAB: CAPTION STUDIO -->
-      <div class="drawer-content hidden" id="panelCaption">
-        <div style="font-weight:700; font-size:12px; color:var(--accent-coral);">CAPTION & KARAOKE STUDIO</div>
-        <div style="font-size:11px; color:var(--text-muted);">Dán kịch bản hoặc nhập file .SRT:</div>
-        
-        <textarea id="captionScriptInput" class="prop-input-text" rows="3" placeholder="Dán lời kịch bản hoặc lời bài hát vào đây..."></textarea>
-        
-        <div style="display:flex; gap:6px;">
-          <button class="btn btn-sm" id="btnImportSrtFile" style="flex:1;">Nhập file .SRT</button>
-          <input type="file" id="inputSrtFile" accept=".srt,.txt" class="hidden" />
-          <button class="btn btn-sm" id="btnAutoDivideWords" style="flex:1;">Tự chia nhịp từ</button>
+        <div class="storage-status" id="storageStatus">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Đã lưu</span>
         </div>
 
-        <div style="font-weight:600; font-size:11px; margin-top:6px;">Chọn kiểu chữ phụ đề (6 Styles):</div>
-        <div class="caption-style-grid">
-          <div class="caption-style-card selected" data-style="karaoke">
-            <div class="caption-style-preview" style="color:#ffeb3b;">Karaoke Sáng</div>
-            <div style="font-size:10px; color:var(--text-dim);">Từ đang đọc sáng lên</div>
-          </div>
-          <div class="caption-style-card" data-style="dark_box">
-            <div class="caption-style-preview" style="background:#000; color:#fff; border-radius:3px; padding:1px;">Hộp Nền Đen</div>
-            <div style="font-size:10px; color:var(--text-dim);">Khối mờ sau chữ</div>
-          </div>
-          <div class="caption-style-card" data-style="neon">
-            <div class="caption-style-preview" style="color:#00ffff; text-shadow:0 0 6px #00ffff;">Viền Neon</div>
-            <div style="font-size:10px; color:var(--text-dim);">Phát sáng rực rỡ</div>
-          </div>
-          <div class="caption-style-card" data-style="pop_in">
-            <div class="caption-style-preview" style="color:#ff3b5c;">Pop-In Nảy</div>
-            <div style="font-size:10px; color:var(--text-dim);">Từng từ nảy xuất hiện</div>
-          </div>
-          <div class="caption-style-card" data-style="typewriter">
-            <div class="caption-style-preview" style="color:#10b981;">Máy Đánh Chữ</div>
-            <div style="font-size:10px; color:var(--text-dim);">Hiện ký tự + con trỏ</div>
-          </div>
-          <div class="caption-style-card" data-style="pill">
-            <div class="caption-style-preview" style="background:#fff; color:#000; border-radius:10px; padding:1px 6px;">TikTok Pill</div>
-            <div style="font-size:10px; color:var(--text-dim);">Viên thuốc trắng đen</div>
-          </div>
-        </div>
+        <button class="btn btn-sm" id="btnToggleSafeZone" title="Bật/Tắt lớp phủ vùng an toàn TikTok 9:16">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="lblSafeZone">TikTok 9:16 Safe Zone</span>
+        </button>
 
-        <button class="btn btn-primary" id="btnGenerateCaptionsToTimeline" style="width:100%; justify-content:center; margin-top:6px;">
-          + Tạo Phụ Đề Vào Timeline
+        <button class="btn btn-sm btn-supabase" id="btnSupabaseModal" title="Quản lý cơ sở dữ liệu Supabase">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--supabase-green);"><path d="M12 2L3 14h9l-1 8 10-13h-9z"/></svg>
+          <span id="lblSupabaseStatus">Supabase</span>
         </button>
       </div>
 
-      <!-- TAB: TEMPLATES -->
-      <div class="drawer-content hidden" id="panelTemplate">
-        <div style="font-weight:700; font-size:12px; color:var(--accent-coral);">MẪU DỰ ÁN (TEMPLATES)</div>
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
-          Lưu dự án hiện tại thành template với các ô Media Slot để tái sử dụng với video/ảnh mới:
+      <div class="topbar-right">
+        <div class="user-auth-badge" id="userAuthBadge" style="display:none; align-items:center; gap:6px;">
+          <span id="userEmailSpan" style="font-size:11px; color:var(--text-muted); max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+          <button class="btn btn-sm" id="btnSignOut" title="Đăng xuất" style="font-size:10px; padding:2px 5px; color:var(--accent-coral);">Đăng xuất</button>
         </div>
-
-        <button class="btn btn-primary" id="btnSaveAsTemplate" style="width:100%; justify-content:center; margin-bottom:8px;">
-          💾 Lưu Thành Template (.clipforge.template)
+        <button class="btn btn-sm" id="btnOpenAuthModal" title="Đăng nhập tài khoản Supabase">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Sign In</span>
         </button>
 
-        <button class="btn" id="btnOpenTemplateFile" style="width:100%; justify-content:center; margin-bottom:12px;">
-          📂 Mở File Template Đã Có
+        <button class="btn btn-sm" id="btnLangToggle" title="Chuyển đổi ngôn ngữ">🇻🇳 VI</button>
+        <button class="btn btn-sm" id="btnProjectExport" title="Lưu JSON">Lưu JSON</button>
+        <button class="btn btn-sm" id="btnProjectImport" title="Mở JSON">Mở JSON</button>
+        <input type="file" id="inputImportJson" accept=".json,.clipforge" class="hidden" />
+
+        <button class="btn btn-sm" id="btnUnlockPro" style="background:#3b2d54; color:#d8b4fe; font-size:11px; border:1px solid #6b21a8; font-weight:600;">💎 Unlock Pro</button>
+        <button class="btn btn-sm" id="btnShareProject">Share</button>
+
+        <!-- Bright Cyan Export Button (Hình 2) -->
+        <button class="btn-capcut-export" id="btnExportVideo" title="Xuất video MP4 định dạng dọc 9:16">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span id="lblExportAction">Export</span>
         </button>
-        <input type="file" id="inputTemplateFile" accept=".template,.json" class="hidden" />
-
-        <div style="font-weight:600; font-size:11px; margin-bottom:6px;">Các ô Media Slot trong dự án:</div>
-        <div id="templateSlotsContainer" style="display:flex; flex-direction:column; gap:6px;">
-          <!-- Populated in JS -->
-        </div>
       </div>
+    </header>
 
-      <!-- TAB: STICKER -->
-      <div class="drawer-content hidden" id="panelSticker">
-        <div style="font-weight:700; font-size:12px; color:var(--accent-coral);">STICKER & BADGES TIKTOK</div>
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">Nhấp để chèn sticker động vào video:</div>
-        <div class="sticker-grid" id="stickerLibraryList">
-          <!-- Populated in JS: Hot, New, Follow, Arrow, Warning, 100% -->
-        </div>
-      </div>
+    <!-- Horizontal Category Tabs Bar (Chuẩn Hình 2) -->
+    <div class="capcut-category-tabs-bar">
+      <button class="category-tab-btn drawer-tab active" data-tab="media" id="tabMedia">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <span>Media</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="audio" id="tabAudio">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span>Audio</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="text" id="tabText">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        <span>Text</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="sticker" id="tabSticker">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        <span>Stickers</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="fx" id="tabFx">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span>Effects</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="trans" id="tabTrans">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>
+        <span>Transitions</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="caption" id="tabCaption">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="15" x2="11" y2="15"/><line x1="13" y1="15" x2="17" y2="15"/></svg>
+        <span>Captions</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="hook" id="tabHook">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Hook Lab</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="shape" id="tabShape">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        <span>Shapes</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="particle" id="tabParticle">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="5" r="1.5"/><circle cx="5" cy="19" r="1.5"/></svg>
+        <span>Particles</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="tts" id="tabTts">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg>
+        <span>AI Voice</span>
+      </button>
+      <button class="category-tab-btn drawer-tab" data-tab="template" id="tabTemplate">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Templates</span>
+      </button>
+    </div>
 
-      <!-- TAB: SHAPE LAYER & TRIM PATH -->
-      <div class="drawer-content hidden" id="panelShape">
-        <div style="font-weight:700; font-size:12px; color:var(--accent-coral);">HÌNH KHỐI (SHAPE LAYER)</div>
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">Tạo hình vector & hiệu ứng vẽ viền (Trim Path):</div>
-        
-        <div class="sticker-grid">
-          <div class="sticker-card btn-add-shape" data-shape="rect">
-            <div class="sticker-preview-box">⬛</div>
-            <div style="font-size:11px; font-weight:600;">Chữ Nhật</div>
+    <!-- Main Workspace Layout (Left Resources + Center Player + Right Details) -->
+    <div class="workspace-main">
+      
+      <!-- Left Resource Drawer -->
+      <aside class="drawer-panel" style="width:340px; min-width:340px; display:flex;">
+        <div class="capcut-resource-layout">
+          
+          <!-- Sub-navigation Column (Hình 2) -->
+          <div class="capcut-resource-subnav">
+            <button class="subnav-import-btn" id="btnSubnavImport" title="Nhập video, ảnh, âm thanh">
+              <span>+</span>
+              <span>Import</span>
+            </button>
+            <div class="subnav-item active">📁 Media</div>
+            <div class="subnav-item" id="btnSubnavYours">👤 Yours ▾</div>
+            <div class="subnav-item" id="btnSubnavGenerate">🪄 Generate</div>
+            <div class="subnav-item" id="btnSubnavSpaces">🌐 Spaces ▾</div>
+            <div class="subnav-item" id="btnSubnavLibrary">📚 Library ▾</div>
           </div>
-          <div class="sticker-card btn-add-shape" data-shape="rounded_rect">
-            <div class="sticker-preview-box">▢</div>
-            <div style="font-size:11px; font-weight:600;">Bo Góc</div>
-          </div>
-          <div class="sticker-card btn-add-shape" data-shape="circle">
-            <div class="sticker-preview-box">⚪</div>
-            <div style="font-size:11px; font-weight:600;">Hình Tròn</div>
-          </div>
-          <div class="sticker-card btn-add-shape" data-shape="star">
-            <div class="sticker-preview-box">⭐</div>
-            <div style="font-size:11px; font-weight:600;">Ngôi Sao</div>
-          </div>
-          <div class="sticker-card btn-add-shape" data-shape="arrow">
-            <div class="sticker-preview-box">➔</div>
-            <div style="font-size:11px; font-weight:600;">Mũi Tên</div>
-          </div>
-          <div class="sticker-card btn-add-shape" data-shape="line">
-            <div class="sticker-preview-box">━</div>
-            <div style="font-size:11px; font-weight:600;">Đường Kẻ</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- TAB: PARTICLE EFFECTS -->
-      <div class="drawer-content hidden" id="panelParticle">
-        <div style="font-weight:700; font-size:12px; color:var(--accent-coral);">HIỆU ỨNG HẠT (PARTICLES)</div>
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">Hạt rơi thủ tục 60fps không dùng asset nặng:</div>
-        
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <div class="fx-item btn-add-particle" data-particle="confetti">
-            <div class="fx-item-left">
-              <div class="fx-icon-box" style="background:rgba(245, 158, 11, 0.2); color:#f59e0b;">🎉</div>
-              <div>
-                <div class="fx-name">Pháo Giấy (Confetti)</div>
-                <div class="fx-desc">Mảnh giấy nhiều màu rơi xoay bay lượn</div>
+          <!-- Drawer Content Area -->
+          <div style="flex:1; display:flex; flex-direction:column; overflow-y:auto; background:#181a1f;">
+            
+            <!-- TAB: MEDIA (Hình 2) -->
+            <div class="drawer-content capcut-dropzone-box" id="panelMedia">
+              <div class="capcut-dashed-dropzone" id="dropzoneMedia">
+                <div class="dropzone-cyan-circle">+</div>
+                <div style="font-weight:700; font-size:13px; color:#fff;" id="lblDropPrompt">Import</div>
+                <div style="font-size:11px; color:#7d8597;" class="dropzone-sub">Drag and drop videos, photos, and audio files here</div>
+                <input type="file" id="inputFileMedia" multiple accept="video/*,image/*,audio/*" class="hidden" />
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                <span style="font-weight:700; font-size:11px; text-transform:uppercase; color:var(--text-muted);" id="lblAssetListHeader">Tài sản dự án</span>
+                <button class="btn btn-sm" id="btnLoadSampleAssets">Tải mẫu</button>
+              </div>
+
+              <div class="asset-grid" id="assetGrid" style="flex:1; overflow-y:auto;">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Quick create buttons (Hình 2: Generate, AI avatars, Record) -->
+              <div class="capcut-quick-create-row">
+                <button class="quick-create-btn" id="btnQuickGenerate">
+                  <span>🪄</span>
+                  <span>Generate</span>
+                </button>
+                <button class="quick-create-btn" id="btnQuickAvatars">
+                  <span>👤</span>
+                  <span>AI avatars</span>
+                </button>
+                <button class="quick-create-btn" id="btnQuickRecord">
+                  <span>🎙️</span>
+                  <span>Record</span>
+                </button>
               </div>
             </div>
-            <button class="btn btn-sm btn-primary">+ Thêm</button>
-          </div>
 
-          <div class="fx-item btn-add-particle" data-particle="sparkles">
-            <div class="fx-item-left">
-              <div class="fx-icon-box" style="background:rgba(6, 182, 212, 0.2); color:#06b6d4;">✨</div>
-              <div>
-                <div class="fx-name">Bụi Sáng (Sparkles)</div>
-                <div class="fx-desc">Đốm sáng lấp lánh bay nhẹ lên trên</div>
-              </div>
+            <!-- TAB: AUDIO -->
+            <div class="drawer-content hidden" id="panelAudio" style="padding:14px; display:flex; flex-direction:column; gap:10px;">
+              <div style="font-size:13px; font-weight:700; color:#fff;">Thư viện Âm thanh & Beat Sync</div>
+              <p style="font-size:11.5px; color:var(--text-muted); line-height:1.4;">
+                Đồng bộ clip theo nhịp trống kick, tạo hiệu ứng giật nảy hoặc lồng tiếng AI cho video ngắn:
+              </p>
+              <button class="btn btn-primary" id="btnPanelBeatSync" style="justify-content:center; background:linear-gradient(90deg, #059669, #10b981);">
+                🎵 Mở Beat Sync (Phân Tích Nhịp Nhạc)
+              </button>
+              <button class="btn" id="btnLoadAudioSampleQuick" style="justify-content:center;">
+                ⚡ Nạp Đoạn Beat Nhạc Mẫu (120 BPM)
+              </button>
             </div>
-            <button class="btn btn-sm btn-primary">+ Thêm</button>
-          </div>
 
-          <div class="fx-item btn-add-particle" data-particle="hearts">
-            <div class="fx-item-left">
-              <div class="fx-icon-box" style="background:rgba(255, 59, 92, 0.2); color:#ff3b5c;">❤️</div>
-              <div>
-                <div class="fx-name">Tim Bay (Floating Hearts)</div>
-                <div class="fx-desc">Trái tim bay lượn dâng trào như livestream</div>
-              </div>
-            </div>
-            <button class="btn btn-sm btn-primary">+ Thêm</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB: TEXT-TO-SPEECH (TTS) -->
+            <!-- Other Extracted Panels (Text, Effects, Transitions, etc.) -->
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <!-- TAB: TEXT-TO-SPEECH (TTS) -->
       <div class="drawer-content hidden" id="panelTts">
         <div style="font-weight:700; font-size:12px; color:var(--accent-coral);">GIỌNG ĐỌC AI (TEXT-TO-SPEECH)</div>
         <div style="font-size:11px; color:var(--text-muted);">Tạo giọng đọc lồng tiếng trực tiếp bằng Web Speech:</div>
@@ -362,172 +464,208 @@
           <button class="btn btn-primary" id="btnGenerateTtsClip" style="flex:1;">+ Thêm Vào Timeline</button>
         </div>
       </div>
-    </aside>
+    
 
-    <!-- CENTER PREVIEW MONITOR -->
-    <main class="viewport-center">
-      <!-- 3-Step Onboarding Guide Banner -->
-      <div class="onboarding-banner" id="onboardingBanner" style="position:absolute; top:12px; z-index:25; max-width:620px;">
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <div style="font-weight:700; color:#fff; font-size:12px;">👋 Chào mừng bạn đến với ClipForge! 3 bước tạo video TikTok:</div>
-          <div class="onboarding-steps">
-            <div><span class="onboarding-step-num">1</span>Thêm clip vào timeline</div>
-            <div><span class="onboarding-step-num">2</span>Áp dụng hiệu ứng & chữ</div>
-            <div><span class="onboarding-step-num">3</span>Bấm "Xuất video" tải MP4</div>
           </div>
         </div>
-        <button class="btn btn-sm btn-primary" id="btnDismissOnboarding" style="padding:4px 10px; font-size:11px;">Đã hiểu ✓</button>
-      </div>
+      </aside>
 
-      <!-- 9:16 Phone Box Frame -->
-      <div class="phone-container" id="phoneBox">
-        <canvas id="previewCanvas" width="1080" height="1920"></canvas>
-        <div class="tracking-crosshair hidden" id="trackingCrosshair" title="Kéo điểm tracking theo vật thể"></div>
+      <!-- Center Player Viewport (Hình 2: Player-Timeline 01) -->
+      <main class="viewport-center" style="flex:1; display:flex; flex-direction:column; background:#121316; position:relative; overflow:hidden;">
+        
+        <!-- Player Header Tab (Hình 2) -->
+        <div class="capcut-player-header">
+          <span style="font-weight:600; color:#c5cbe0;">Player - Timeline 01</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11px; color:#5c6373;">Aspect ratio: 9:16</span>
+            <button class="btn btn-icon btn-sm" id="btnFullscreenPlayer" title="Toàn màn hình">⛶</button>
+          </div>
+        </div>
 
-        <!-- TikTok Safe Zone Overlay -->
-        <div class="safe-zone-overlay" id="safeZoneOverlay">
-          <div class="safe-box-boundary" id="safeBoxBoundary"></div>
-          <div class="safe-tag" style="top:8px; left:8px;">VÙNG AN TOÀN TIKTOK (KHÔNG XUẤT)</div>
+        <!-- 9:16 Phone Box Frame -->
+        <div class="phone-container" id="phoneBox" style="margin:auto;">
+          <canvas id="previewCanvas" width="1080" height="1920"></canvas>
+          <div class="tracking-crosshair hidden" id="trackingCrosshair" title="Kéo điểm tracking theo vật thể"></div>
+
+          <!-- TikTok Safe Zone Overlay -->
+          <div class="safe-zone-overlay" id="safeZoneOverlay">
+            <div class="safe-box-boundary" id="safeBoxBoundary"></div>
+            <div class="safe-tag" style="top:8px; left:8px;">TIKTOK SAFE ZONE (9:16)</div>
+            
+            <div class="safe-mock-tiktok-right">
+              <div class="mock-icon-pill">❤️</div>
+              <div class="mock-icon-pill">💬</div>
+              <div class="mock-icon-pill">⭐</div>
+              <div class="mock-icon-pill">↗️</div>
+              <div class="mock-icon-pill" style="border-radius:4px;">🎵</div>
+            </div>
+            <div class="safe-mock-bottom">
+              <div class="mock-user-line">@capcut_creator</div>
+              <div class="mock-caption-line">Trending video editor 2026 #capcut #tiktok</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Playback Controls Bar (Hình 2) -->
+        <div class="playback-controls" style="margin-bottom:8px;">
+          <button class="btn btn-icon btn-sm" id="btnStepBack" title="Lùi 1 khung hình (Phím ←)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+          </button>
+          <button class="btn btn-icon btn-primary" id="btnPlayPause" title="Phát / Tạm dừng (Phím Space)" style="background:var(--capcut-cyan); color:#000;">
+            <svg id="playIconSvg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <button class="btn btn-icon btn-sm" id="btnStepForward" title="Tiến 1 khung hình (Phím →)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+          </button>
+          <div class="timecode-display" id="timecodeDisplay">00:00:00:00 / 00:00:15:00</div>
+        </div>
+      </main>
+
+      <!-- Right Details / Inspector Panel (Hình 2) -->
+      <aside class="inspector-panel" id="inspectorPanel" style="width:310px; min-width:310px; background:#16181d; border-left:1px solid var(--capcut-dark-border);">
+        <div class="inspector-header">
+          <span id="lblInspectorTitle">Details</span>
+          <span style="font-size:10px; color:var(--text-muted);" id="inspectorClipType">Timeline 01</span>
+        </div>
+
+        <div class="inspector-body" id="inspectorContent">
+          <!-- Rendered dynamically by inspector.js (Details or Clip Properties) -->
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- Bottom Timeline Section (Hình 2) -->
+    <section class="timeline-section" style="background:#131519; border-top:1px solid var(--capcut-dark-border);">
+      
+      <!-- Timeline Toolbar -->
+      <div class="timeline-toolbar" style="background:#17191f; border-bottom:1px solid var(--capcut-dark-border); padding:0 12px; height:36px;">
+        <div class="tl-tools-left">
+          <button class="btn btn-sm" id="btnSplitClip" title="Cắt clip tại playhead (Ctrl+B hoặc Phím S)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+            <span>Split (Ctrl+B)</span>
+          </button>
+          <button class="btn btn-sm" id="btnDeleteClip" title="Xóa clip đang chọn (Phím Delete)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            <span>Delete</span>
+          </button>
+          <button class="btn btn-sm" id="btnDuplicateClip" title="Nhân đôi clip (Ctrl+D)">
+            <span>Duplicate</span>
+          </button>
+          <button class="btn btn-sm" id="btnOpenBeatSync" title="Beat Sync">
+            <span>🎵 Beat Sync</span>
+          </button>
+          <button class="btn btn-sm" id="btnToggleLoopCheck" title="Loop Check">
+            <span id="lblLoopCheckState">Loop Check</span>
+          </button>
+          <button class="btn btn-sm" id="btnGroupPrecomp" title="Gộp các clip thành Nhóm (Pre-comp)">
+            <span>📦 Pre-comp</span>
+          </button>
+          <button class="btn btn-sm" id="btnTogglePointTracking" title="Point Tracking">
+            <span>🎯 Tracking</span>
+          </button>
+          <button class="btn btn-sm" id="btnAddAdjustmentLayer" title="Adjustment Layer">
+            <span>✨ Adjustment</span>
+          </button>
+
+          <div style="width:1px; height:18px; background:var(--border-subtle); margin:0 4px;"></div>
           
-          <!-- Mock TikTok UI Elements for Creator Guidance -->
-          <div class="safe-mock-tiktok-right">
-            <div class="mock-icon-pill">❤️</div>
-            <div class="mock-icon-pill">💬</div>
-            <div class="mock-icon-pill">⭐</div>
-            <div class="mock-icon-pill">↗️</div>
-            <div class="mock-icon-pill" style="border-radius:4px;">🎵</div>
-          </div>
-          <div class="safe-mock-bottom">
-            <div class="mock-user-line">@creator_vietnam</div>
-            <div class="mock-caption-line">Xu hướng video dọc 2026 #xuhuong #clipforge</div>
-          </div>
+          <button class="btn btn-sm" id="btnToggleSnap" title="Hít nam châm (Snapping)">
+            <span id="lblSnapState" style="color:var(--capcut-cyan);">Snap: ON</span>
+          </button>
+        </div>
+
+        <div class="tl-tools-right">
+          <span style="font-size:11px; color:var(--text-muted);">Zoom:</span>
+          <input type="range" id="zoomTimelineSlider" min="15" max="120" value="45" style="width:90px; accent-color:var(--capcut-cyan);" />
         </div>
       </div>
 
-      <!-- Floating Playback Controls -->
-      <div class="playback-controls">
-        <button class="btn btn-icon btn-sm" id="btnStepBack" title="Lùi 1 khung hình (Phím ←)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-        </button>
-        <button class="btn btn-icon btn-primary" id="btnPlayPause" title="Phát / Tạm dừng (Phím Space)">
-          <svg id="playIconSvg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        </button>
-        <button class="btn btn-icon btn-sm" id="btnStepForward" title="Tiến 1 khung hình (Phím →)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-        </button>
-        <div class="timecode-display" id="timecodeDisplay">00:00.00 / 00:15.00</div>
-      </div>
-    </main>
+      <!-- Scrollable Tracks Canvas -->
+      <div class="timeline-scroll-container" id="timelineScrollContainer">
+        <!-- Sticky Headers Left -->
+        <div class="track-headers-col">
+          <div class="track-header-spacer">TRACKS</div>
+          <div class="track-header-item">
+            <div><span class="track-type-indicator" style="background:var(--track-text);"></span><span>Text (T)</span></div>
+          </div>
+          <div class="track-header-item">
+            <div><span class="track-type-indicator" style="background:var(--track-fx);"></span><span>Overlay (V2)</span></div>
+          </div>
+          <div class="track-header-item">
+            <div><span class="track-type-indicator" style="background:var(--track-video);"></span><span>Main Video (V1)</span></div>
+          </div>
+          <div class="track-header-item">
+            <div><span class="track-type-indicator" style="background:var(--track-audio);"></span><span>Audio (A1)</span></div>
+          </div>
+        </div>
 
-    <!-- RIGHT INSPECTOR PANEL -->
-    <aside class="inspector-panel" id="inspectorPanel">
-      <div class="inspector-header">
-        <span id="lblInspectorTitle">THUỘC TÍNH CLIP</span>
-        <span style="font-size:10px; color:var(--text-muted);" id="inspectorClipType">Chưa chọn clip</span>
-      </div>
+        <!-- Tracks and Ruler Canvas -->
+        <div class="timeline-canvas-container" id="timelineCanvasContainer">
+          <!-- Ruler -->
+          <div class="timeline-ruler" id="timelineRuler"></div>
 
-      <div class="inspector-body" id="inspectorContent">
-        <!-- Rendered based on selected clip or empty state -->
-        <div style="text-align:center; padding:40px 10px; color:var(--text-dim);" id="inspectorEmptyMsg">
-          Nhấp chuột vào một clip trên timeline để chỉnh sửa thuộc tính, hiệu ứng và keyframe.
+          <!-- Rows -->
+          <div class="track-rows-wrapper" id="trackRowsWrapper">
+            <div class="track-row" data-track-id="track-text"></div>
+            <div class="track-row" data-track-id="track-overlay"></div>
+            <div class="track-row" data-track-id="track-main"></div>
+            <div class="track-row" data-track-id="track-audio"></div>
+          </div>
+
+          <!-- Playhead (Cyan) -->
+          <div class="timeline-playhead-line" id="timelinePlayheadLine" style="background:var(--capcut-cyan);">
+            <div class="timeline-playhead-head" id="timelinePlayheadHead" style="border-top-color:var(--capcut-cyan);"></div>
+          </div>
         </div>
       </div>
-    </aside>
+    </section>
 
   </div>
 
-  <!-- ==========================================================================
-       TIMELINE SECTION
-       ========================================================================== -->
-  <section class="timeline-section">
-    <!-- Toolbar -->
-    <div class="timeline-toolbar">
-      <div class="tl-tools-left">
-        <button class="btn btn-sm" id="btnSplitClip" title="Cắt clip tại vị trí con trỏ (Phím S hoặc Ctrl+B)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
-          <span>Cắt</span>
-        </button>
-        <button class="btn btn-sm" id="btnDeleteClip" title="Xóa clip đang chọn (Phím Delete)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-          <span>Xóa</span>
-        </button>
-        <button class="btn btn-sm" id="btnDuplicateClip" title="Nhân đôi clip (Ctrl+D)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          <span>Nhân đôi</span>
-        </button>
-        <button class="btn btn-sm" id="btnOpenBeatSync" title="Phân tích nhịp nhạc & Cắt / Nháy theo beat">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          <span>Beat Sync</span>
-        </button>
-        <button class="btn btn-sm" id="btnToggleLoopCheck" title="Kiểm tra vòng lặp vô tận TikTok (Loop Check)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <span id="lblLoopCheckState">Loop Check</span>
-        </button>
-        <button class="btn btn-sm" id="btnGroupPrecomp" title="Gộp các clip thành Nhóm (Pre-comp)">
-          <span>📦 Gộp nhóm (Pre-comp)</span>
-        </button>
-        <button class="btn btn-sm" id="btnTogglePointTracking" title="Bật/Tắt điểm theo dõi chuyển động (Point Tracking)">
-          <span>🎯 Tracking điểm</span>
-        </button>
-        <button class="btn btn-sm" id="btnAddAdjustmentLayer" title="Thêm Lớp Điều Chỉnh (Adjustment Layer)">
-          <span>✨ Lớp điều chỉnh</span>
-        </button>
-        <div style="width:1px; height:20px; background:var(--border-subtle); margin:0 4px;"></div>
-        <button class="btn btn-sm" id="btnToggleSnap" title="Bật/Tắt hít dính nam châm (Snapping)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v7a6 6 0 0012 0V3"/><line x1="4" y1="3" x2="8" y2="3"/><line x1="16" y1="3" x2="20" y2="3"/></svg>
-          <span id="lblSnapState">Hít: Bật</span>
-        </button>
-      </div>
+  <!-- Floating EditPilot Button (Hình 2) -->
+  <button class="floating-editpilot-btn" id="btnOpenEditPilotFloat" title="Mở trợ lý AI EditPilot">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L3 14h9l-1 8 10-13h-9z"/></svg>
+    <span>EditPilot</span>
+  </button>
 
-      <div class="tl-tools-right">
-        <span style="font-size:11px; color:var(--text-muted);">Thu phóng:</span>
-        <input type="range" id="zoomTimelineSlider" min="15" max="120" value="45" style="width:100px; accent-color:var(--accent-coral);" />
+  <!-- EditPilot AI Assistant Drawer -->
+  <div class="editpilot-drawer" id="editPilotDrawer">
+    <div class="editpilot-drawer-header">
+      <div style="display:flex; align-items:center; gap:8px; font-weight:700; color:var(--capcut-cyan);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L3 14h9l-1 8 10-13h-9z"/></svg>
+        <span>CapCut EditPilot AI</span>
       </div>
+      <button class="btn btn-icon btn-sm" id="btnCloseEditPilotDrawer">✕</button>
     </div>
 
-    <!-- Scrollable Tracks Canvas -->
-    <div class="timeline-scroll-container" id="timelineScrollContainer">
-      <!-- Sticky Headers Left -->
-      <div class="track-headers-col">
-        <div class="track-header-spacer">TRACKS</div>
-        <div class="track-header-item">
-          <div><span class="track-type-indicator" style="background:var(--track-text);"></span><span>Chữ (Text)</span></div>
-        </div>
-        <div class="track-header-item">
-          <div><span class="track-type-indicator" style="background:var(--track-fx);"></span><span>Lớp phủ</span></div>
-        </div>
-        <div class="track-header-item">
-          <div><span class="track-type-indicator" style="background:var(--track-video);"></span><span>Video chính</span></div>
-        </div>
-        <div class="track-header-item">
-          <div><span class="track-type-indicator" style="background:var(--track-audio);"></span><span>Âm thanh</span></div>
-        </div>
+    <div class="editpilot-drawer-body" id="editPilotChatBody">
+      <div style="font-size:12px; color:var(--text-muted); line-height:1.4;">
+        Xin chào! Tôi là trợ lý AI EditPilot của bạn. Chọn gợi ý bên dưới hoặc gõ yêu cầu của bạn:
       </div>
 
-      <!-- Tracks and Ruler Canvas -->
-      <div class="timeline-canvas-container" id="timelineCanvasContainer">
-        <!-- Ruler -->
-        <div class="timeline-ruler" id="timelineRuler"></div>
-
-        <!-- Rows -->
-        <div class="track-rows-wrapper" id="trackRowsWrapper">
-          <div class="track-row" data-track-id="track-text"></div>
-          <div class="track-row" data-track-id="track-overlay"></div>
-          <div class="track-row" data-track-id="track-main"></div>
-          <div class="track-row" data-track-id="track-audio"></div>
-        </div>
-
-        <!-- Playhead -->
-        <div class="timeline-playhead-line" id="timelinePlayheadLine">
-          <div class="timeline-playhead-head" id="timelinePlayheadHead"></div>
-        </div>
+      <div class="editpilot-suggestion-chip" data-prompt="Gợi ý 3 Hook mở đầu giữ chân người xem">
+        💡 Gợi ý 3 Hook mở đầu giữ chân người xem
       </div>
+      <div class="editpilot-suggestion-chip" data-prompt="Tạo kịch bản video TikTok 15s bán hàng">
+        📝 Tạo kịch bản TikTok 15s theo trend
+      </div>
+      <div class="editpilot-suggestion-chip" data-prompt="Thêm phụ đề phong cách Karaoke chữ sáng">
+        ⚡ Tự động thêm phụ đề Karaoke nổi bật
+      </div>
+      <div class="editpilot-suggestion-chip" data-prompt="Gợi ý hiệu ứng chuyển cảnh giật nảy Speed Ramp">
+        🚀 Gợi ý chuyển cảnh Speed Ramp giật nảy
+      </div>
+
+      <div id="editPilotResponseBox" style="display:none; background:#1b1e26; border-radius:8px; padding:12px; font-size:12px; color:#fff; line-height:1.5; border:1px solid #282d3a;"></div>
     </div>
-  </section>
 
-  <!-- ==========================================================================
-       MODALS: EXPORT & SETTINGS
-       ========================================================================== -->
+    <div class="editpilot-drawer-footer">
+      <input type="text" id="inpEditPilotDrawer" class="control-input" placeholder="Hỏi EditPilot bất kỳ điều gì..." style="flex:1; font-size:12px;" />
+      <button class="btn btn-primary" id="btnSubmitEditPilotDrawer" style="background:var(--capcut-cyan); color:#000; font-weight:700;">Gửi</button>
+    </div>
+  </div>
+
   <!-- Export Modal -->
   <div class="modal-backdrop" id="modalExport">
     <div class="modal-card">
@@ -856,5 +994,6 @@ CREATE POLICY "Users can delete their own projects" ON public.clipforge_projects
   <script src="src/js/hooks.js"></script>
   <script src="src/js/exporter.js"></script>
   <script src="src/js/app.js"></script>
+
 </body>
 </html>

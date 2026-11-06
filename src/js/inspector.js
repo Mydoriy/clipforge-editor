@@ -29,8 +29,42 @@ function toggleKeyframe(clip, prop, time, val) {
 function updateInspector() {
   const clip = project.clips.find(c => c.id === activeClipId);
   if (!clip) {
-    if (inspectorClipType) inspectorClipType.innerText = I18N[currentLang].noClipSelected;
-    if (inspectorContent) inspectorContent.innerHTML = `<div style="text-align:center; padding:40px 10px; color:var(--text-dim);">${I18N[currentLang].emptyInspector}</div>`;
+    if (inspectorClipType) inspectorClipType.innerText = "Details";
+    if (inspectorContent) {
+      inspectorContent.innerHTML = `
+        <div class="capcut-details-view">
+          <div class="details-header-title">Details</div>
+          <div class="details-row"><span class="details-label">Name:</span> <span class="details-val">${escapeHtml(project.name || "0917")}</span></div>
+          <div class="details-row"><span class="details-label">Path:</span> <span class="details-val" style="word-break:break-all; font-size:10px;">Browser Storage / IndexedDB</span></div>
+          <div class="details-row"><span class="details-label">Floating-point:</span> <span class="details-val">Turned off</span></div>
+          <div class="details-row"><span class="details-label">Imported media:</span> <span class="details-val">Stay in original location</span></div>
+          <div class="details-row"><span class="details-label">Arrange layers:</span> <span class="details-val">Turned on</span></div>
+          <div class="details-row"><span class="details-label">Proxy:</span> <span class="details-val">Turned off</span></div>
+          <div class="details-row"><span class="details-label">Timeline name:</span> <span class="details-val">Timeline 01</span></div>
+          <div class="details-row"><span class="details-label">Aspect ratio:</span> <span class="details-val" style="color:var(--capcut-cyan); font-weight:600;">9:16 (TikTok Vertical)</span></div>
+          <div class="details-row"><span class="details-label">Resolution:</span> <span class="details-val">${project.width || 1080}×${project.height || 1920}</span></div>
+          <div class="details-row"><span class="details-label">Frame rate:</span> <span class="details-val">${project.fps || 30} fps</span></div>
+          <div class="details-row"><span class="details-label">Duration:</span> <span class="details-val">${(project.duration || 15).toFixed(1)}s</span></div>
+          <div class="details-row"><span class="details-label">Cloud Backup:</span> <span class="details-val" style="color:var(--supabase-green);">${typeof isSupabaseConnected !== 'undefined' && isSupabaseConnected ? '🟢 Supabase Synced' : '⚪ Local Offline'}</span></div>
+          <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+            <button class="btn btn-sm" id="btnModifyProjectDetails" style="background:#2a2e38; color:var(--text-main); font-size:11px; padding:6px 14px; border-radius:4px; font-weight:600;">Modify</button>
+          </div>
+        </div>
+      `;
+      const btnMod = document.getElementById("btnModifyProjectDetails");
+      if (btnMod) {
+        btnMod.addEventListener("click", () => {
+          const newName = prompt("Nhập tên dự án mới:", project.name || "0917");
+          if (newName) {
+            project.name = newName;
+            const inp = document.getElementById("projectNameInput");
+            if (inp) inp.value = newName;
+            saveState("Đổi tên dự án");
+            updateInspector();
+          }
+        });
+      }
+    }
     return;
   }
 

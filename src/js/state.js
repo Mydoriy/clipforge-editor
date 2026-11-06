@@ -1,6 +1,16 @@
 /* ==========================================================================
    CLIPFORGE - STATE & DATA MODEL
    ========================================================================== */
+function escapeHtml(text) {
+  if (!text) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const I18N = {
   vi: {
     exportAction: "Xuất video",

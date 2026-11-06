@@ -31,7 +31,14 @@
       --safe-zone-color: rgba(255, 59, 92, 0.4);
       --supabase-green: #3ecf8e;
       --supabase-green-glow: rgba(62, 207, 142, 0.25);
-      --playhead-color: #ff3b5c;
+      --capcut-cyan: #00e5ff;
+      --capcut-cyan-hover: #33ebff;
+      --capcut-cyan-glow: rgba(0, 229, 255, 0.3);
+      --capcut-hero-grad: linear-gradient(135deg, #1aa3c8 0%, #086b96 50%, #034b6b 100%);
+      --capcut-dark-base: #0f1013;
+      --capcut-dark-card: #181a1f;
+      --capcut-dark-border: #262a34;
+      --playhead-color: #00e5ff;
       --grid-line: rgba(255, 255, 255, 0.05);
 
       --radius-sm: 4px;
@@ -1341,4 +1348,786 @@
       text-align: center;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     }
+
+    /* ==========================================================================
+       CAPCUT INTERFACE & WORKSPACE OVERHAUL
+       Tái hiện chuẩn xác 100% giao diện CapCut Desktop (Home + Editor)
+       ========================================================================== */
+    .capcut-view {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--capcut-dark-base);
+    }
+    .capcut-view.active {
+      display: flex;
+    }
+
+    /* --- CAPCUT HOME DASHBOARD --- */
+    #viewHome {
+      flex-direction: row;
+    }
+    .capcut-home-sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: #111215;
+      border-right: 1px solid var(--capcut-dark-border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    .capcut-logo-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      padding-left: 4px;
+      cursor: pointer;
+    }
+    .capcut-logo-icon {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .capcut-user-profile-box {
+      background: #181a1f;
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border: 1px solid #232732;
+    }
+    .capcut-profile-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .capcut-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #2a2e38;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .btn-join-pro {
+      background: linear-gradient(90deg, #9333ea, #ec4899);
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 6px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      transition: opacity 0.2s;
+    }
+    .btn-join-pro:hover {
+      opacity: 0.9;
+    }
+    .capcut-nav-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .capcut-group-title {
+      font-size: 11px;
+      color: #646a79;
+      font-weight: 600;
+      text-transform: none;
+      padding: 6px 8px 2px;
+    }
+    .capcut-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: #9ea5b5;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .capcut-nav-item:hover {
+      background: #1b1e26;
+      color: #ffffff;
+    }
+    .capcut-nav-item.active {
+      background: #222631;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Main Home Area */
+    .capcut-home-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px 28px;
+      gap: 22px;
+      background: #0e0f12;
+    }
+    .capcut-hero-banner {
+      width: 100%;
+      height: 140px;
+      border-radius: 12px;
+      background: var(--capcut-hero-grad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(8, 107, 150, 0.25);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .capcut-hero-banner:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(8, 107, 150, 0.35);
+    }
+    .btn-create-project-hero {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      padding: 14px 28px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      transition: background 0.2s;
+    }
+    .btn-create-project-hero:hover {
+      background: rgba(0, 0, 0, 0.55);
+    }
+    .create-project-plus {
+      width: 24px;
+      height: 24px;
+      background: #000;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 16px;
+    }
+
+    /* EditPilot Prompt Section */
+    .capcut-editpilot-section {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+    .editpilot-prompt-card {
+      flex: 1.5;
+      background: linear-gradient(135deg, #103445 0%, #15222c 100%);
+      border: 1px solid #1a495f;
+      border-radius: 10px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .editpilot-prompt-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--capcut-cyan);
+    }
+    .editpilot-prompt-title {
+      font-size: 15px;
+      font-weight: 700;
+      font-style: italic;
+      color: #ffffff;
+    }
+    .editpilot-input-row {
+      display: flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid #233b49;
+      border-radius: 8px;
+      padding: 4px 12px;
+      gap: 8px;
+    }
+    .editpilot-input-field {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 12.5px;
+      padding: 8px 0;
+      outline: none;
+    }
+    .editpilot-input-field::placeholder {
+      color: #6d808e;
+    }
+    .btn-editpilot-submit {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #254050;
+      border: none;
+      color: #a7bcc8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .btn-editpilot-submit:hover {
+      background: var(--capcut-cyan);
+      color: #000;
+    }
+
+    /* Quick Tool Cards */
+    .capcut-quick-tools {
+      flex: 2.5;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .quick-tool-card {
+      background: #17191e;
+      border: 1px solid var(--capcut-dark-border);
+      border-radius: 10px;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .quick-tool-card:hover {
+      background: #1f2229;
+      border-color: #3b4252;
+      transform: translateY(-1px);
+    }
+    .quick-tool-icon {
+      color: var(--capcut-cyan);
+      margin-bottom: 2px;
+    }
+    .quick-tool-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .quick-tool-desc {
+      font-size: 10.5px;
+      color: #717786;
+      line-height: 1.3;
+    }
+
+    /* Creative Suite Section */
+    .capcut-suite-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .capcut-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .capcut-suite-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .suite-card {
+      background: #17191e;
+      border: 1px solid var(--capcut-dark-border);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .suite-card:hover {
+      border-color: var(--capcut-cyan);
+      transform: translateY(-2px);
+    }
+    .suite-card-preview {
+      height: 100px;
+      background: #252932;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .suite-card-info {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .suite-card-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .suite-card-desc {
+      font-size: 10.5px;
+      color: #717786;
+    }
+
+    /* Projects Grid Section */
+    .capcut-projects-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .capcut-projects-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .capcut-projects-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .capcut-search-input {
+      background: #17191e;
+      border: 1px solid var(--capcut-dark-border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 11.5px;
+      color: #fff;
+      outline: none;
+      width: 180px;
+    }
+    .capcut-projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 14px;
+    }
+    .capcut-project-item {
+      background: #17191e;
+      border: 1px solid var(--capcut-dark-border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .capcut-project-item:hover {
+      border-color: var(--capcut-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    .project-item-thumb {
+      height: 110px;
+      background: #252830;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .project-item-thumb canvas, .project-item-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .project-duration-badge {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 4px;
+      font-size: 10px;
+      padding: 1px 5px;
+      color: #fff;
+    }
+    .project-item-info {
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .project-item-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .project-item-date {
+      font-size: 10.5px;
+      color: #6b7280;
+    }
+
+    /* --- CAPCUT EDITOR WORKSPACE (HÌNH 2) --- */
+    #viewEditor {
+      flex-direction: column;
+    }
+    .capcut-editor-topbar {
+      height: 44px;
+      min-height: 44px;
+      background: #121316;
+      border-bottom: 1px solid var(--capcut-dark-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      z-index: 20;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-capcut-menu {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: #9ea5b5;
+      background: #1c1e24;
+      border: 1px solid #282c37;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-capcut-menu:hover {
+      background: #252832;
+      color: #fff;
+    }
+    .topbar-center {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-capcut-export {
+      background: var(--capcut-cyan);
+      color: #000000;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 6px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .btn-capcut-export:hover {
+      background: var(--capcut-cyan-hover);
+      box-shadow: 0 0 12px var(--capcut-cyan-glow);
+    }
+
+    /* Sub-header Horizontal Category Tabs Bar (CapCut Tabs) */
+    .capcut-category-tabs-bar {
+      height: 40px;
+      min-height: 40px;
+      background: #16171b;
+      border-bottom: 1px solid var(--capcut-dark-border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 4px;
+      overflow-x: auto;
+    }
+    .category-tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #8f96a6;
+      background: none;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      font-weight: 500;
+    }
+    .category-tab-btn:hover {
+      color: #ffffff;
+      background: #1e2128;
+    }
+    .category-tab-btn.active {
+      color: var(--capcut-cyan);
+      background: #222631;
+      font-weight: 600;
+    }
+
+    /* Left Resource Sub-Navigation Layout */
+    .capcut-resource-layout {
+      display: flex;
+      height: 100%;
+      width: 100%;
+    }
+    .capcut-resource-subnav {
+      width: 90px;
+      min-width: 90px;
+      background: #14161a;
+      border-right: 1px solid var(--capcut-dark-border);
+      display: flex;
+      flex-direction: column;
+      padding: 10px 6px;
+      gap: 4px;
+    }
+    .subnav-import-btn {
+      background: var(--capcut-cyan);
+      color: #000;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .subnav-import-btn:hover {
+      background: var(--capcut-cyan-hover);
+    }
+    .subnav-item {
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      color: #8c93a3;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .subnav-item:hover, .subnav-item.active {
+      background: #1e2129;
+      color: #fff;
+    }
+
+    /* Dropzone area */
+    .capcut-dropzone-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .capcut-dashed-dropzone {
+      border: 1.5px dashed #2f3442;
+      border-radius: 8px;
+      padding: 34px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(255, 255, 255, 0.01);
+    }
+    .capcut-dashed-dropzone:hover {
+      border-color: var(--capcut-cyan);
+      background: rgba(0, 229, 255, 0.02);
+    }
+    .dropzone-cyan-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--capcut-cyan);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .capcut-quick-create-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+    .quick-create-btn {
+      background: #191c22;
+      border: 1px solid var(--capcut-dark-border);
+      border-radius: 6px;
+      padding: 8px 4px;
+      font-size: 11px;
+      color: #adb4c4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .quick-create-btn:hover {
+      background: #222630;
+      color: #fff;
+    }
+
+    /* Center Player Top Header (CapCut Player Tab) */
+    .capcut-player-header {
+      height: 32px;
+      background: #14161a;
+      border-bottom: 1px solid var(--capcut-dark-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 11.5px;
+      color: #7b8292;
+    }
+
+    /* Details Metadata View in Right Inspector */
+    .capcut-details-view {
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .details-header-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .details-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 11.5px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .details-label {
+      color: #737a8b;
+      min-width: 105px;
+    }
+    .details-val {
+      color: #d1d5db;
+      font-weight: 500;
+      text-align: right;
+    }
+
+    /* Floating EditPilot Button */
+    .floating-editpilot-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #192b36;
+      border: 1px solid var(--capcut-cyan);
+      border-radius: 20px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.25);
+      z-index: 99;
+      transition: all 0.2s ease;
+    }
+    .floating-editpilot-btn:hover {
+      background: var(--capcut-cyan);
+      color: #000;
+      transform: scale(1.05);
+    }
+
+    /* EditPilot AI Chat Drawer */
+    .editpilot-drawer {
+      position: fixed;
+      top: 0;
+      right: -380px;
+      width: 360px;
+      height: 100vh;
+      background: #131519;
+      border-left: 1px solid var(--capcut-dark-border);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .editpilot-drawer.open {
+      right: 0;
+    }
+    .editpilot-drawer-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--capcut-dark-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #181a20;
+    }
+    .editpilot-drawer-body {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .editpilot-suggestion-chip {
+      background: #1b1e26;
+      border: 1px solid #282d3a;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11.5px;
+      color: #a4abbd;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .editpilot-suggestion-chip:hover {
+      background: #242936;
+      color: #fff;
+      border-color: var(--capcut-cyan);
+    }
+    .editpilot-drawer-footer {
+      padding: 12px 14px;
+      border-top: 1px solid var(--capcut-dark-border);
+      display: flex;
+      gap: 8px;
+      background: #181a20;
+    }
+
 
