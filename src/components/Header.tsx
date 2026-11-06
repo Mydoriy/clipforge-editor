@@ -4,7 +4,6 @@ import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { isSupabaseConfigured } from '../utils/supabase';
 import {
-  ShieldCheck,
   Crown,
   Share2,
   Download,
@@ -40,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     if (navigator.share) {
       navigator.share({
         title: projectTitle,
-        text: 'Check out this 9:16 vertical video created in ClipForge Web!',
+        text: 'Check out this 9:16 vertical video created in CapCut Desktop Web!',
         url: window.location.href
       }).catch(() => {});
     } else {
@@ -49,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
   };
 
   return (
-    <header className="h-13 bg-[#11141c] border-b border-[#1f2633] px-4 flex items-center justify-between select-none z-30 shrink-0">
+    <header className="h-14 bg-[#0E1320] border-b border-[#1F2937] px-5 flex items-center justify-between select-none z-30 shrink-0">
       {/* Left: Logo + Menu */}
       <div className="flex items-center gap-4">
         <Logo size="md" />
@@ -58,15 +57,15 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-1 text-xs font-medium text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#E5E7EB] hover:text-[#22D3EE] px-2.5 py-1.5 rounded-xl hover:bg-[#111827] border border-transparent hover:border-[#1F2937] transition-all hover-lift"
             >
               <span>{t.menu}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#9CA3AF]" />
             </button>
 
             {menuOpen && (
               <div
-                className="absolute left-0 mt-1.5 w-48 bg-[#181d28] border border-slate-700 rounded-lg shadow-2xl py-1 text-xs text-slate-200 z-50 animate-in fade-in"
+                className="absolute left-0 mt-2 w-52 bg-[#111827] border border-[#1F2937] rounded-2xl shadow-2xl py-1.5 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
                 onMouseLeave={() => setMenuOpen(false)}
               >
                 <button
@@ -74,10 +73,10 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                     setMenuOpen(false);
                     openModal('export');
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-300 flex items-center justify-between"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] flex items-center justify-between"
                 >
                   <span>{t.export} (MP4 / WebM)</span>
-                  <span className="text-[10px] text-slate-500">Ctrl+E</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Ctrl+E</span>
                 </button>
                 <button
                   onClick={() => {
@@ -85,18 +84,18 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                     toggleSafeZone();
                     showToast(safeZoneEnabled ? 'Đã tắt vùng an toàn' : 'Đã bật vùng an toàn 9:16');
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-300 flex items-center justify-between"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] flex items-center justify-between"
                 >
                   <span>{t.safeZone}</span>
-                  <span className="text-[10px] text-slate-500">Shift+S</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Shift+S</span>
                 </button>
-                <div className="border-t border-slate-700/60 my-1" />
+                <div className="border-t border-[#1F2937] my-1" />
                 <button
                   onClick={() => {
                     setMenuOpen(false);
                     openModal('shortcuts');
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-300"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE]"
                 >
                   Phím tắt biên tập (Hotkeys)
                 </button>
@@ -105,9 +104,9 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                     setMenuOpen(false);
                     openModal('about');
                   }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-300"
+                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE]"
                 >
-                  Giới thiệu ClipForge Web v3.0
+                  Giới thiệu CapCut Web v3.0
                 </button>
               </div>
             )}
@@ -115,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         )}
       </div>
 
-      {/* Center: Project Title / Subtitle */}
+      {/* Center: Title / Subtitle matching exact Design System specification */}
       {isEditor ? (
         <div className="flex items-center gap-2">
           {isEditingTitle ? (
@@ -126,43 +125,43 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
               onBlur={() => setIsEditingTitle(false)}
               onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
               autoFocus
-              className="bg-slate-900 border border-cyan-500 text-white text-xs px-2 py-0.5 rounded outline-none font-medium text-center"
+              className="bg-[#111827] border border-[#22D3EE] text-white text-xs px-2.5 py-1 rounded-xl outline-none font-semibold text-center"
             />
           ) : (
             <span
               onClick={() => setIsEditingTitle(true)}
               title="Click để đổi tên dự án"
-              className="text-xs font-semibold text-slate-200 hover:text-cyan-400 cursor-pointer px-2 py-0.5 rounded hover:bg-slate-800/60 transition-colors"
+              className="text-xs font-bold text-[#E5E7EB] hover:text-[#22D3EE] cursor-pointer px-2.5 py-1 rounded-xl hover:bg-[#111827] transition-all hover-lift"
             >
               {projectTitle}
             </span>
           )}
-          <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+          <span className="text-[11px] px-2 py-0.5 rounded-lg bg-[#111827] text-[#9CA3AF] border border-[#1F2937] font-mono">
             9:16
           </span>
         </div>
       ) : (
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-400">
-          <span className="font-medium text-slate-300">CapCut Desktop Web</span>
+        <div className="hidden md:flex items-center gap-2 text-xs text-[#9CA3AF]">
+          <span className="font-semibold text-[#E5E7EB]">CapCut Desktop Web v3.0</span>
           <span>•</span>
-          <span>9:16 Vertical Video Studio (Guest Mode)</span>
+          <span className="text-[#22D3EE] font-medium">9:16 Vertical Video Studio</span>
         </div>
       )}
 
       {/* Right: Actions, Language, Pro, Export */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
         {/* Safe Zone Toggle in Editor */}
         {isEditor && (
           <button
             onClick={toggleSafeZone}
             title={safeZoneEnabled ? 'Tắt vùng an toàn 9:16' : 'Bật vùng an toàn 9:16 (TikTok/Reels)'}
-            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all hover-lift ${
               safeZoneEnabled
-                ? 'bg-cyan-950/40 border-cyan-500/50 text-cyan-300'
-                : 'bg-slate-900/40 border-slate-700/60 text-slate-400 hover:text-slate-200'
+                ? 'bg-[#22D3EE]/15 border-[#22D3EE]/50 text-[#22D3EE]'
+                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
             }`}
           >
-            {safeZoneEnabled ? <Eye className="w-3.5 h-3.5 text-cyan-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {safeZoneEnabled ? <Eye className="w-3.5 h-3.5 text-[#22D3EE]" /> : <EyeOff className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{t.safeZone}</span>
           </button>
         )}
@@ -170,18 +169,18 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {/* Cloud Sync / Guest Storage Indicator */}
         <div
           onClick={() => openModal(isSupabaseConfigured ? 'cloud' : 'guest')}
-          title={isSupabaseConfigured ? 'Đang đồng bộ Supabase Cloud' : 'Chế độ khách: Dữ liệu lưu an toàn trên máy (IndexedDB)'}
-          className="flex items-center gap-1.5 text-[11px] px-2 py-1 rounded bg-slate-800/70 border border-slate-700/50 text-slate-300 cursor-pointer hover:border-slate-600 transition-colors"
+          title={isSupabaseConfigured ? 'Đang đồng bộ Supabase Cloud' : 'Chế độ khách: Dữ liệu lưu an toàn trong IndexedDB'}
+          className="flex items-center gap-2 text-[11px] px-2.5 py-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#E5E7EB] cursor-pointer hover:border-[#22D3EE]/50 transition-all hover-lift"
         >
           {isSupabaseConfigured ? (
             <>
               <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-300">Cloud Sync</span>
+              <span className="text-emerald-300 font-semibold">Cloud Sync</span>
             </>
           ) : (
             <>
-              <HardDrive className="w-3.5 h-3.5 text-sky-400" />
-              <span>{t.guestMode}</span>
+              <HardDrive className="w-3.5 h-3.5 text-[#22D3EE]" />
+              <span className="text-[#9CA3AF] font-medium">{t.guestMode}</span>
             </>
           )}
         </div>
@@ -193,19 +192,19 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             setLanguage(nextLang);
             showToast(`Ngôn ngữ: ${nextLang === 'VN' ? 'Tiếng Việt' : 'English'}`);
           }}
-          className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/50 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border border-[#1F2937] transition-all hover-lift"
           title="Đổi ngôn ngữ / Change language"
         >
-          <Globe className="w-3.5 h-3.5 text-cyan-400" />
+          <Globe className="w-3.5 h-3.5 text-[#22D3EE]" />
           <span>{language}</span>
         </button>
 
-        {/* Pro Pill */}
+        {/* Pro Pill: Gradient tím → hồng (#7C3AED → #EC4899) */}
         <button
           onClick={() => openModal('pro')}
-          className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 text-purple-300 border border-purple-500/40 transition-all shadow-sm"
+          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white shadow-md shadow-pink-500/20 transition-all hover-lift"
         >
-          <Crown className="w-3 h-3 text-pink-400" />
+          <Crown className="w-3.5 h-3.5 text-amber-300" />
           <span>{t.proBadge}</span>
         </button>
 
@@ -213,7 +212,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {isEditor && (
           <button
             onClick={handleShare}
-            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border border-[#1F2937] transition-all hover-lift"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t.share}</span>
@@ -223,7 +222,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {/* Bright Cyan Export Button */}
         <button
           onClick={() => openModal('export')}
-          className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 shadow-md shadow-cyan-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+          className="flex items-center gap-1.5 text-xs font-extrabold px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-cyan-300 hover:to-sky-300 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all hover-lift active:scale-95"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>{t.export}</span>
@@ -232,4 +231,3 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     </header>
   );
 };
-

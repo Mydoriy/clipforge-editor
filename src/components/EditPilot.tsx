@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import confetti from 'canvas-confetti';
-import { Sparkles, Send, X, Bot, Check, Zap } from 'lucide-react';
+import { Sparkles, Send, X, Bot } from 'lucide-react';
 
 export const EditPilot: React.FC = () => {
   const {
@@ -100,7 +100,7 @@ export const EditPilot: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-600 hover:opacity-95 text-slate-950 font-bold text-xs shadow-xl shadow-cyan-500/30 transition-all transform hover:scale-105 active:scale-95"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow-xl shadow-cyan-500/25 hover-lift transition-all"
         >
           <Sparkles className="w-4 h-4 fill-slate-950" />
           <span>EditPilot AI</span>
@@ -109,32 +109,32 @@ export const EditPilot: React.FC = () => {
 
       {/* Floating Chat Drawer */}
       {isOpen && (
-        <div className="fixed bottom-5 right-5 z-40 w-88 max-w-[calc(100vw-2rem)] h-[460px] bg-[#141822] border border-cyan-500/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden select-none animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 right-6 z-40 w-92 max-w-[calc(100vw-2rem)] h-[480px] bg-[#111827] border border-[#1F2937] rounded-[16px] shadow-2xl flex flex-col overflow-hidden select-none animate-in fade-in slide-in-from-bottom-4">
           {/* Header */}
-          <div className="p-3 bg-gradient-to-r from-cyan-950/60 to-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-cyan-500 flex items-center justify-center text-slate-950">
+          <div className="p-3.5 bg-[#0E1320] border-b border-[#1F2937] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[#22D3EE] flex items-center justify-center text-slate-950">
                 <Bot className="w-4 h-4" />
               </div>
-              <span className="text-xs font-bold text-white">EditPilot AI Assistant</span>
+              <span className="text-xs font-bold text-[#E5E7EB]">EditPilot AI Assistant</span>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+              className="p-1.5 rounded-lg hover:bg-[#111827] text-[#9CA3AF] hover:text-[#E5E7EB] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Messages Body */}
-          <div className="flex-1 p-3 overflow-y-auto flex flex-col gap-2.5 text-xs">
+          <div className="flex-1 p-3.5 overflow-y-auto flex flex-col gap-2.5 text-xs">
             {messages.map((m, idx) => (
               <div
                 key={idx}
-                className={`p-2.5 rounded-xl max-w-[85%] leading-relaxed ${
+                className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
                   m.role === 'assistant'
-                    ? 'bg-slate-900 border border-slate-800 text-slate-200 self-start'
-                    : 'bg-cyan-500 text-slate-950 font-medium self-end'
+                    ? 'bg-[#0B0F19] border border-[#1F2937] text-[#E5E7EB] self-start'
+                    : 'bg-[#22D3EE] text-slate-950 font-semibold self-end'
                 }`}
               >
                 {m.text}
@@ -143,9 +143,9 @@ export const EditPilot: React.FC = () => {
           </div>
 
           {/* Fast Suggestions */}
-          <div className="px-3 py-1.5 border-t border-slate-800 bg-slate-900/50 flex flex-col gap-1">
-            <span className="text-[10px] text-slate-500 font-semibold uppercase">Lệnh gợi ý:</span>
-            <div className="flex flex-wrap gap-1">
+          <div className="px-3.5 py-2 border-t border-[#1F2937] bg-[#0E1320] flex flex-col gap-1.5">
+            <span className="text-[10px] text-[#9CA3AF] font-bold uppercase tracking-wider">Lệnh gợi ý:</span>
+            <div className="flex flex-wrap gap-1.5">
               {[
                 'Thêm hook viral 3s đầu',
                 'Tạo phụ đề nổi bật',
@@ -155,7 +155,7 @@ export const EditPilot: React.FC = () => {
                 <button
                   key={i}
                   onClick={() => handleExecutePrompt(sug)}
-                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] border border-cyan-800/40"
+                  className="px-2.5 py-1 rounded-lg bg-[#111827] hover:bg-[#1F2937] text-[#22D3EE] text-[10px] font-semibold border border-[#1F2937] hover-lift transition-all"
                 >
                   + {sug}
                 </button>
@@ -169,18 +169,18 @@ export const EditPilot: React.FC = () => {
               e.preventDefault();
               if (input.trim()) handleExecutePrompt(input.trim());
             }}
-            className="p-2.5 bg-[#0f121a] border-t border-slate-800 flex items-center gap-1.5"
+            className="p-3 bg-[#0B0F19] border-t border-[#1F2937] flex items-center gap-2"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Nhập yêu cầu biên tập cho AI..."
-              className="flex-1 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none"
+              className="flex-1 bg-[#111827] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-3.5 py-2 text-xs text-[#E5E7EB] placeholder-[#9CA3AF] outline-none transition-colors"
             />
             <button
               type="submit"
-              className="p-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950"
+              className="p-2.5 rounded-xl bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold shadow hover-lift transition-all"
             >
               <Send className="w-3.5 h-3.5 fill-current" />
             </button>
@@ -190,4 +190,3 @@ export const EditPilot: React.FC = () => {
     </>
   );
 };
-

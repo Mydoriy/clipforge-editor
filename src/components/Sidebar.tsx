@@ -18,24 +18,24 @@ import {
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { language, openModal, showToast } = useEditorStore();
+  const { language, openModal } = useEditorStore();
   const t = translations[language];
 
   return (
-    <aside className="w-56 bg-[#10131b] border-r border-[#1e2430] flex flex-col justify-between p-3 select-none shrink-0 h-full">
+    <aside className="w-[274px] bg-[#0E1320] border-r border-[#1F2937] flex flex-col justify-between p-4 select-none shrink-0 h-full">
       {/* Top Section */}
       <div className="flex flex-col gap-4">
         {/* User / Guest Profile Card */}
-        <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 text-slate-300">
-              <UserCheck className="w-4 h-4 text-cyan-400" />
+        <div className="p-3 rounded-2xl bg-[#111827] border border-[#1F2937] flex flex-col gap-2.5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#0E1320] flex items-center justify-center border border-[#1F2937] text-[#9CA3AF]">
+              <UserCheck className="w-4 h-4 text-[#22D3EE]" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-slate-200">
+            <div className="flex flex-col truncate">
+              <span className="text-xs font-semibold text-[#E5E7EB] truncate">
                 {isSupabaseConfigured ? 'Tài khoản Cloud' : t.guestMode}
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-[#9CA3AF]">
                 {isSupabaseConfigured ? 'Đã liên kết Supabase' : 'Offline • Dexie DB'}
               </span>
             </div>
@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
 
           <button
             onClick={() => openModal('pro')}
-            className="w-full py-1.5 px-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/20 hover-lift transition-all"
           >
             <Crown className="w-3.5 h-3.5 text-amber-300" />
             <span>{t.joinPro}</span>
@@ -56,10 +56,10 @@ export const Sidebar: React.FC = () => {
             to="/"
             end
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                 isActive
-                  ? 'bg-slate-800 text-cyan-400 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937] shadow-sm'
+                  : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
               }`
             }
           >
@@ -69,7 +69,7 @@ export const Sidebar: React.FC = () => {
 
           <button
             onClick={() => openModal('templates')}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors w-full text-left"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift w-full text-left"
           >
             <LayoutTemplate className="w-4 h-4" />
             <span>{t.navTemplates}</span>
@@ -77,18 +77,18 @@ export const Sidebar: React.FC = () => {
         </nav>
 
         {/* Create with AI Section */}
-        <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/60">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1">
+        <div className="flex flex-col gap-1 pt-3 border-t border-[#1F2937]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF]/70 px-3 py-1">
             {t.navCreateWithAi}
           </span>
 
           <NavLink
             to="/editor/demo-916-intro"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                 isActive
-                  ? 'bg-slate-800 text-cyan-400 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
+                  : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
               }`
             }
           >
@@ -99,10 +99,10 @@ export const Sidebar: React.FC = () => {
           <NavLink
             to="/design"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                 isActive
-                  ? 'bg-slate-800 text-cyan-400 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
+                  : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
               }`
             }
           >
@@ -112,14 +112,14 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* More Tools */}
-        <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/60">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1">
+        <div className="flex flex-col gap-1 pt-3 border-t border-[#1F2937]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF]/70 px-3 py-1">
             {t.navMarketingTools}
           </span>
 
           <button
             onClick={() => openModal('marketing')}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors w-full text-left"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift w-full text-left"
           >
             <TrendingUp className="w-4 h-4 text-amber-400" />
             <span>{t.navMarketingTools}</span>
@@ -127,7 +127,7 @@ export const Sidebar: React.FC = () => {
 
           <button
             onClick={() => openModal('aiImage')}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors w-full text-left"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift w-full text-left"
           >
             <Sparkles className="w-4 h-4 text-pink-400" />
             <span>{t.quickAiImage}</span>
@@ -135,14 +135,14 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Management */}
-        <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/60">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1">
+        <div className="flex flex-col gap-1 pt-3 border-t border-[#1F2937]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF]/70 px-3 py-1">
             {t.navLibrary}
           </span>
 
           <button
             onClick={() => openModal('library')}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors w-full text-left"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift w-full text-left"
           >
             <FolderKanban className="w-4 h-4 text-indigo-400" />
             <span>{t.navLibrary}</span>
@@ -150,7 +150,7 @@ export const Sidebar: React.FC = () => {
 
           <button
             onClick={() => openModal('trash')}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors w-full text-left"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift w-full text-left"
           >
             <Trash2 className="w-4 h-4 text-rose-400" />
             <span>{t.navTrash}</span>
@@ -159,16 +159,16 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Bottom Cloud Sync Status */}
-      <div className="pt-3 border-t border-slate-800/60">
+      <div className="pt-3 border-t border-[#1F2937]">
         <button
           onClick={() => openModal('cloud')}
-          className="w-full p-2 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800 text-left flex items-center justify-between text-xs text-slate-300 transition-colors"
+          className="w-full p-2.5 rounded-xl bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] text-left flex items-center justify-between text-xs text-[#E5E7EB] transition-all hover-lift"
         >
           <div className="flex items-center gap-2">
-            <Cloud className="w-4 h-4 text-cyan-400" />
+            <Cloud className="w-4 h-4 text-[#22D3EE]" />
             <span>{t.navCloudSync}</span>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-[#0E1320] text-[#9CA3AF] border border-[#1F2937]">
             {isSupabaseConfigured ? 'Sẵn sàng' : 'Tùy chọn'}
           </span>
         </button>
@@ -176,4 +176,3 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
-

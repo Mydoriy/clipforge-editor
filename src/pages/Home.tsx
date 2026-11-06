@@ -12,14 +12,13 @@ import {
   Wand2,
   Sliders,
   Search,
-  LayoutGrid,
-  List,
   Trash2,
   RefreshCw,
   Video,
   Palette,
   Megaphone,
-  Scissors
+  Scissors,
+  Film
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
@@ -27,11 +26,14 @@ export const Home: React.FC = () => {
   const { language, openModal, showToast, setCurrentProjectId, setProjectTitle } = useEditorStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [promptText, setPromptText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const t = translations[language];
 
   // Seed initial demo data in IndexedDB
   useEffect(() => {
-    seedDemoProjects();
+    seedDemoProjects().then(() => {
+      setTimeout(() => setIsLoading(false), 300);
+    });
   }, []);
 
   // Live query from Dexie IndexedDB
@@ -82,33 +84,32 @@ export const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0d1017] p-6 flex flex-col gap-8 select-none">
-      {/* 1. HERO CARD: Cyan-teal gradient banner with centered "+ Create project" */}
-      <div className="relative w-full h-44 rounded-2xl bg-gradient-to-r from-[#00f2fe] via-[#22d3ee] to-[#38bdf8] flex items-center justify-center shadow-2xl shadow-cyan-500/15 overflow-hidden">
-        {/* Subtle mesh wave decorations */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent pointer-events-none" />
+    <div className="flex-1 overflow-y-auto bg-[#0B0F19] p-7 flex flex-col gap-8 select-none">
+      {/* 1. HERO BANNER: gradient teal → xanh dương đậm (#12A8C9 → #0B4A66), bo góc 16px, nút "Create project" nằm giữa, nền tối, viền sáng nhẹ */}
+      <div className="relative w-full h-48 rounded-[16px] bg-gradient-to-r from-[#12A8C9] to-[#0B4A66] flex items-center justify-center shadow-2xl shadow-cyan-950/40 overflow-hidden border border-cyan-400/20">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/15 via-transparent to-transparent pointer-events-none" />
 
         <button
           onClick={handleCreateProject}
-          className="relative z-10 flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-slate-950/90 hover:bg-slate-950 text-white font-bold text-base shadow-2xl hover:shadow-cyan-400/30 transition-all transform hover:scale-[1.03] active:scale-[0.98] border border-cyan-300/40"
+          className="relative z-10 flex items-center gap-3 px-8 py-3.5 rounded-[14px] bg-[#0B0F19]/90 hover:bg-[#0B0F19] text-[#E5E7EB] hover:text-white font-bold text-sm shadow-2xl border border-cyan-400/30 hover:border-cyan-400 hover-lift active:scale-95 transition-all"
         >
-          <div className="w-6 h-6 rounded-lg bg-cyan-400 text-slate-950 flex items-center justify-center font-black">
+          <div className="w-6 h-6 rounded-lg bg-[#22D3EE] text-slate-950 flex items-center justify-center font-black">
             <Plus className="w-4 h-4 stroke-[3]" />
           </div>
-          <span className="tracking-wide">{t.heroCreateProject}</span>
+          <span className="tracking-wide text-base">{t.heroCreateProject}</span>
         </button>
       </div>
 
-      {/* 2. PROMPT BAR + 4 QUICK TOOLS GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-        {/* EditPilot Prompt Search Card (5 cols) */}
-        <div className="lg:col-span-4 p-4 rounded-2xl bg-[#141822] border border-[#1f2634] flex flex-col justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-2 text-cyan-400">
-            <Sparkles className="w-4 h-4 fill-cyan-400" />
-            <span className="font-bold text-xs uppercase tracking-wider text-cyan-400">EditPilot</span>
+      {/* 2. PROMPT BAR + 4 QUICK TOOLS GRID (Card #111827 viền #1F2937, accent #22D3EE) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* EditPilot Prompt Search Card (4 cols) */}
+        <div className="lg:col-span-4 p-5 rounded-[16px] bg-[#111827] border border-[#1F2937] flex flex-col justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-2 text-[#22D3EE]">
+            <Sparkles className="w-4 h-4 fill-[#22D3EE]" />
+            <span className="font-extrabold text-xs uppercase tracking-wider text-[#22D3EE]">EditPilot</span>
           </div>
 
-          <h4 className="font-semibold text-white text-sm italic">
+          <h4 className="font-semibold text-[#E5E7EB] text-sm italic">
             {t.editPilotPlaceholder}
           </h4>
 
@@ -123,8 +124,8 @@ export const Home: React.FC = () => {
                   handleCreateProject();
                 }
               }}
-              placeholder="Mô tả video bạn muốn dựng..."
-              className="w-full bg-[#0d1017] border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition-colors"
+              placeholder="Mô tả ý tưởng video bạn muốn dựng..."
+              className="w-full bg-[#0B0F19] border border-[#1F2937] focus:border-[#22D3EE] rounded-xl px-4 py-2.5 text-xs text-[#E5E7EB] placeholder-[#9CA3AF] outline-none transition-colors"
             />
             <button
               onClick={() => {
@@ -133,7 +134,7 @@ export const Home: React.FC = () => {
                   handleCreateProject();
                 }
               }}
-              className="absolute right-2 px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow"
+              className="absolute right-2 px-3 py-1.5 rounded-lg bg-[#22D3EE] hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow hover-lift transition-all"
             >
               {t.askAi}
             </button>
@@ -141,165 +142,165 @@ export const Home: React.FC = () => {
         </div>
 
         {/* 4 Quick Tools (2 cols each = 8 cols) */}
-        <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           {/* AI Image */}
           <button
             onClick={() => openModal('aiImage')}
-            className="p-4 rounded-2xl bg-[#141822] hover:bg-[#181d2a] border border-[#1f2634] hover:border-pink-500/40 transition-all text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-pink-500/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center border border-pink-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center border border-pink-500/20 group-hover:scale-110 transition-transform">
               <ImageIcon className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-white text-xs block group-hover:text-pink-400 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-pink-400 transition-colors">
                 {t.quickAiImage}
               </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">{t.quickAiImageDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickAiImageDesc}</span>
             </div>
           </button>
 
           {/* Extend Video */}
           <button
             onClick={() => openModal('extendVideo')}
-            className="p-4 rounded-2xl bg-[#141822] hover:bg-[#181d2a] border border-[#1f2634] hover:border-sky-500/40 transition-all text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-sky-500/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-110 transition-transform">
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-white text-xs block group-hover:text-sky-400 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-sky-400 transition-colors">
                 {t.quickExtendVideo}
               </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">{t.quickExtendVideoDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickExtendVideoDesc}</span>
             </div>
           </button>
 
           {/* AI Edit */}
           <button
             onClick={() => openModal('aiEdit')}
-            className="p-4 rounded-2xl bg-[#141822] hover:bg-[#181d2a] border border-[#1f2634] hover:border-cyan-500/40 transition-all text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-[#22D3EE]/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-[#22D3EE]/10 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/20 group-hover:scale-110 transition-transform">
               <Wand2 className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-white text-xs block group-hover:text-cyan-400 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-[#22D3EE] transition-colors">
                 {t.quickAiEdit}
               </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">{t.quickAiEditDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickAiEditDesc}</span>
             </div>
           </button>
 
           {/* Enhance Quality */}
           <button
             onClick={() => openModal('enhanceQuality')}
-            className="p-4 rounded-2xl bg-[#141822] hover:bg-[#181d2a] border border-[#1f2634] hover:border-amber-500/40 transition-all text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-amber-500/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
           >
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <span className="font-bold text-white text-xs block group-hover:text-amber-400 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-amber-400 transition-colors">
                 {t.quickEnhanceQuality}
               </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">{t.quickEnhanceQualityDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickEnhanceQualityDesc}</span>
             </div>
           </button>
         </div>
       </div>
 
       {/* 3. AI-POWERED CREATIVE SUITE CAROUSEL */}
-      <div className="flex flex-col gap-3">
-        <h3 className="font-bold text-sm text-slate-200 uppercase tracking-wider">{t.aiCreativeSuite}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="flex flex-col gap-3.5">
+        <h3 className="font-extrabold text-xs text-[#9CA3AF] uppercase tracking-wider">{t.aiCreativeSuite}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Video Studio */}
           <div
             onClick={() => navigate('/editor/demo-916-intro')}
-            className="relative h-44 rounded-2xl bg-gradient-to-tr from-cyan-900/60 via-slate-900 to-sky-950 border border-cyan-800/40 p-4 flex flex-col justify-between cursor-pointer hover:border-cyan-400 transition-all group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE] p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/40">
+            <div className="w-10 h-10 rounded-xl bg-[#22D3EE]/15 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/30">
               <Video className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm block group-hover:text-cyan-300 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-[#22D3EE] transition-colors">
                 {t.videoStudioCard}
               </span>
-              <span className="text-[11px] text-slate-400 block mt-0.5">{t.videoStudioCardDesc}</span>
+              <span className="text-[11px] text-[#9CA3AF] block mt-0.5">{t.videoStudioCardDesc}</span>
             </div>
           </div>
 
           {/* Card 2: Design Studio (Konva Canvas) */}
           <div
             onClick={() => navigate('/design')}
-            className="relative h-44 rounded-2xl bg-gradient-to-tr from-purple-900/60 via-slate-900 to-indigo-950 border border-purple-800/40 p-4 flex flex-col justify-between cursor-pointer hover:border-purple-400 transition-all group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-purple-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/40">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center border border-purple-500/30">
               <Palette className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm block group-hover:text-purple-300 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-purple-300 transition-colors">
                 {t.designStudioCard}
               </span>
-              <span className="text-[11px] text-slate-400 block mt-0.5">{t.designStudioCardDesc}</span>
+              <span className="text-[11px] text-[#9CA3AF] block mt-0.5">{t.designStudioCardDesc}</span>
             </div>
           </div>
 
           {/* Card 3: AI Ad Maker */}
           <div
             onClick={() => openModal('marketing')}
-            className="relative h-44 rounded-2xl bg-gradient-to-tr from-blue-900/60 via-slate-900 to-sky-950 border border-blue-800/40 p-4 flex flex-col justify-between cursor-pointer hover:border-blue-400 transition-all group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-blue-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/40">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center border border-blue-500/30">
               <Megaphone className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm block group-hover:text-blue-300 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-blue-300 transition-colors">
                 {t.aiAdMakerCard}
               </span>
-              <span className="text-[11px] text-slate-400 block mt-0.5">{t.aiAdMakerCardDesc}</span>
+              <span className="text-[11px] text-[#9CA3AF] block mt-0.5">{t.aiAdMakerCardDesc}</span>
             </div>
           </div>
 
           {/* Card 4: Long video to shorts */}
           <div
             onClick={() => openModal('aiEdit')}
-            className="relative h-44 rounded-2xl bg-gradient-to-tr from-teal-900/60 via-slate-900 to-emerald-950 border border-teal-800/40 p-4 flex flex-col justify-between cursor-pointer hover:border-teal-400 transition-all group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-teal-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
           >
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/40">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center border border-teal-500/30">
               <Scissors className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm block group-hover:text-teal-300 transition-colors">
+              <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-teal-300 transition-colors">
                 {t.longToShortsCard}
               </span>
-              <span className="text-[11px] text-slate-400 block mt-0.5">{t.longToShortsCardDesc}</span>
+              <span className="text-[11px] text-[#9CA3AF] block mt-0.5">{t.longToShortsCardDesc}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 4. RECENT PROJECTS SECTION */}
+      {/* 4. RECENT PROJECTS SECTION (With Skeleton Loading & Empty State) */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-bold text-base text-white">{t.projectsTitle}</h3>
+          <h3 className="font-bold text-base text-[#E5E7EB]">{t.projectsTitle}</h3>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             {/* Search Input */}
             <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3" />
+              <Search className="w-3.5 h-3.5 text-[#9CA3AF] absolute left-3.5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.searchProjects}
-                className="bg-[#141822] border border-slate-700/80 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 w-48"
+                className="bg-[#111827] border border-[#1F2937] rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-[#E5E7EB] placeholder-[#9CA3AF] outline-none focus:border-[#22D3EE] w-52 transition-colors"
               />
             </div>
 
             {/* Trash Button */}
             <button
               onClick={() => openModal('trash')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#111827] border border-[#1F2937] hover:border-rose-500/50 text-[#9CA3AF] hover:text-rose-300 text-xs font-semibold hover-lift transition-all"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-400" />
               <span>{t.trashTitle}</span>
@@ -307,8 +308,8 @@ export const Home: React.FC = () => {
 
             {/* Sync Button */}
             <button
-              onClick={() => showToast('Dự án đã đồng bộ tự động trong IndexedDB', 'success')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 text-xs font-semibold transition-colors"
+              onClick={() => showToast('Dự án đã được lưu trữ an toàn trong IndexedDB', 'success')}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#22D3EE]/10 border border-[#22D3EE]/30 text-[#22D3EE] hover:bg-[#22D3EE]/20 text-xs font-bold hover-lift transition-all"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>{t.projectSync}</span>
@@ -316,12 +317,30 @@ export const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* Projects Grid */}
-        {projects.length === 0 ? (
-          <div className="p-12 rounded-2xl bg-[#141822] border border-slate-800 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-            <span className="text-xs">{t.noProjects}</span>
+        {/* Skeleton Loading State */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="rounded-[16px] bg-[#111827] border border-[#1F2937] p-3 flex flex-col gap-2.5">
+                <div className="aspect-[9/16] rounded-xl skeleton-shimmer w-full" />
+                <div className="h-4 rounded-lg skeleton-shimmer w-3/4" />
+              </div>
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
+          /* Empty State */
+          <div className="p-14 rounded-[16px] bg-[#111827] border border-[#1F2937] text-center flex flex-col items-center justify-center gap-3 text-[#9CA3AF] shadow-md">
+            <Film className="w-10 h-10 opacity-30 text-[#9CA3AF]" />
+            <span className="text-xs font-medium">{t.noProjects}</span>
+            <button
+              onClick={handleCreateProject}
+              className="mt-1 px-4 py-2 rounded-xl bg-[#22D3EE] text-slate-950 font-bold text-xs hover-lift shadow-md"
+            >
+              + {t.heroCreateProject}
+            </button>
           </div>
         ) : (
+          /* Projects Grid */
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {projects.map((proj) => (
               <div
@@ -331,28 +350,28 @@ export const Home: React.FC = () => {
                   setProjectTitle(proj.title);
                   navigate(`/editor/${proj.id}`);
                 }}
-                className="group relative rounded-xl bg-[#141822] border border-slate-800/80 hover:border-cyan-400/80 p-2.5 flex flex-col gap-2 cursor-pointer transition-all shadow-md hover:shadow-cyan-500/10 transform hover:-translate-y-0.5"
+                className="group relative rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE] p-3 flex flex-col gap-2.5 cursor-pointer hover-lift shadow-md shadow-black/20"
               >
                 {/* 9:16 Aspect Thumbnail Container */}
-                <div className="relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-slate-950 flex items-center justify-center">
+                <div className="relative aspect-[9/16] w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-[#1F2937]">
                   <img
                     src={proj.thumbnail || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'}
                     alt={proj.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <span className="absolute bottom-1.5 right-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-mono text-white">
+                  <span className="absolute bottom-1.5 right-1.5 bg-black/80 px-2 py-0.5 rounded-md text-[10px] font-mono text-white">
                     {proj.duration}s
                   </span>
                 </div>
 
                 {/* Info & Options */}
                 <div className="flex items-center justify-between gap-1">
-                  <span className="font-semibold text-xs text-slate-200 truncate group-hover:text-cyan-300 transition-colors">
+                  <span className="font-semibold text-xs text-[#E5E7EB] truncate group-hover:text-[#22D3EE] transition-colors">
                     {proj.title}
                   </span>
                   <button
                     onClick={(e) => handleDeleteProject(proj, e)}
-                    className="p-1 rounded hover:bg-rose-950 text-slate-500 hover:text-rose-400 transition-colors shrink-0"
+                    className="p-1 rounded-lg hover:bg-rose-950/60 text-[#9CA3AF] hover:text-rose-400 transition-colors shrink-0"
                     title="Chuyển vào thùng rác"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -366,4 +385,3 @@ export const Home: React.FC = () => {
     </div>
   );
 };
-
