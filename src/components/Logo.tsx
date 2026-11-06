@@ -12,34 +12,49 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true, onClic
   const textSize = size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base';
 
   const content = (
-    <div className="flex items-center gap-2 group cursor-pointer select-none">
+    <div
+      className="flex items-center gap-2 group cursor-pointer select-none"
+      title="ClipForge Desktop Web - Độc lập, không liên kết với CapCut hay ByteDance"
+    >
+      {/* Custom geometric ClipForge icon: stylized interlocking dual facets forming modern cutting prism */}
       <div
-        className={`${iconSize} relative flex items-center justify-center rounded-md bg-[#141414] border border-[#333333] shadow-md group-hover:border-[#1FC8DB] transition-all overflow-hidden`}
+        className={`${iconSize} relative flex items-center justify-center rounded-lg bg-[#111622] border border-[#223049] shadow-md group-hover:border-[#1FC8DB] transition-all overflow-hidden`}
       >
-        {/* CapCut signature stylized overlapping trapezoid icon */}
         <svg
           viewBox="0 0 24 24"
           fill="none"
           className="w-4 h-4"
+          xmlns="http://www.w3.org/2000/svg"
         >
+          {/* Cyan primary cutting prism facet */}
           <path
-            d="M4 6.5L11 12L4 17.5V6.5Z"
-            fill="#1FC8DB"
+            d="M3 6L13 3L11 13L3 17V6Z"
+            fill="url(#cyanGlow)"
+            fillOpacity="0.95"
           />
+          {/* Silver/Ice secondary facet */}
           <path
-            d="M20 6.5L13 12L20 17.5V6.5Z"
-            fill="#E6E6E6"
+            d="M21 18L11 21L13 11L21 7V18Z"
+            fill="#E2E8F0"
+            fillOpacity="0.9"
           />
-          <circle cx="12" cy="12" r="2" fill="#141414" stroke="#1FC8DB" strokeWidth="1" />
+          {/* Center aperture focal core */}
+          <circle cx="12" cy="12" r="2.2" fill="#0B0F19" stroke="#1FC8DB" strokeWidth="1.5" />
+          <defs>
+            <linearGradient id="cyanGlow" x1="3" y1="3" x2="13" y2="17" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#1FC8DB" />
+              <stop offset="1" stopColor="#0891B2" />
+            </linearGradient>
+          </defs>
         </svg>
       </div>
 
       {showText && (
         <div className="flex items-center gap-1.5">
           <span className={`font-black tracking-tight text-white ${textSize}`}>
-            Cap<span className="text-[#1FC8DB]">Cut</span>
+            Clip<span className="text-[#1FC8DB]">Forge</span>
           </span>
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#262626] text-[#1FC8DB] border border-[#333333]">
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#162032] text-[#1FC8DB] border border-[#223049]">
             Web
           </span>
         </div>
@@ -57,4 +72,3 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', showText = true, onClic
 
   return <Link to="/">{content}</Link>;
 };
-

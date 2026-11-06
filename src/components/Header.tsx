@@ -569,7 +569,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
                     >
                       <span className="flex items-center gap-2">
-                        <Info className="w-3.5 h-3.5 text-sky-400" /> Giới thiệu CapCut Desktop Web
+                        <Info className="w-3.5 h-3.5 text-sky-400" /> Giới thiệu ClipForge Desktop Web
                       </span>
                     </button>
                   </div>

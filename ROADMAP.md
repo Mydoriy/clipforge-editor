@@ -16,6 +16,7 @@ Tài liệu này tổng hợp và phân loại toàn bộ lộ trình phát tri�
 | **P0-5** | **Đồng Bộ Preview = Export (W4)** | Pipeline render frame-accurate; Test Golden-frame đảm bảo SSIM $\ge 0.98$, PSNR $\ge 40$dB; Kiểm soát độ lệch âm thanh - hình ảnh A/V drift $\le 40$ms. | Hoàn thành |
 | **P0-6** | **Streaming Export & Quản Lý Bộ Nhớ (W3)** | Export ghi tuần tự vào `FileSystemWritableFileStream`, không giữ toàn bộ video trong RAM; Bộ đệm frame bounded LRU tự giải phóng; Hỗ trợ nút Cancel tức thì. | Hoàn thành |
 | **P0-7** | **Bảo Mật & Sanitize Dữ Liệu (W6)** | CSP nghiêm ngặt không inline script; DOMPurify làm sạch SVG/HTML; Sanitize file phụ đề, Lottie JSON, font magic bytes, và 3D LUT `.cube`. | Hoàn thành |
+| **P0-8** | **Pháp Lý & Tuyên Bố Độc Lập (W9)** | Nhận diện riêng (ClipForge); Tuyên bố minh bạch "Không liên kết với CapCut hay ByteDance" trong About, Footer, metadata; Cảnh báo bản quyền khi import media. | Hoàn thành |
 
 ---
 
@@ -32,6 +33,7 @@ Tài liệu này tổng hợp và phân loại toàn bộ lộ trình phát tri�
 | **P1-6** | **Đồng Bộ Dự Án & Điện Toán Đám Mây (W8)** | Hàng đợi đồng bộ Offline; Thuật toán Last-Write-Wins (LWW) giải quyết xung đột với cơ chế luôn tự tạo bản sao an toàn `[Bản sao xung đột]`; Badge trạng thái Synced/Syncing/Offline/Conflict. | Hoàn thành |
 | **P1-7** | **Trợ Lý Dựng Phim EditPilot (W1/W5)** | Parser lệnh ngôn ngữ tự nhiên thành thao tác timeline có sandbox an toàn; Giao diện trò chuyện trực tiếp bên trong Editor. | Hoàn thành |
 | **P1-8** | **Trải Nghiệm & Đa Ngôn Ngữ (W7)** | Onboarding tour có hướng dẫn trực quan; Kiểm tra xung đột phím tắt; Đồng bộ 100% i18n Tiếng Việt & Tiếng Anh được kiểm thử qua script CI tự động. | Hoàn thành |
+| **P1-9** | **Giấy Phép Tài Sản & Bên Thứ Ba (W9)** | 100% tài nguyên CC0/MIT/OFL (`ASSETS_LICENSES.md`); Tự sinh `THIRD_PARTY_NOTICES.md` phân định bản build FFmpeg.wasm LGPL v2.1+ so với GPL v3; Trang Terms/Privacy. | Hoàn thành |
 
 ---
 
@@ -52,3 +54,4 @@ Tài liệu này tổng hợp và phân loại toàn bộ lộ trình phát tri�
 1. **Kiểm tra lần cuối toàn bộ test suites**: Đảm bảo 100% Unit, Parity, Typecheck và Production Build đều xanh.
 2. **Commit và đẩy lên Git**: Đưa toàn bộ mã nguồn W8 cùng tài liệu Audit & Roadmap lên nhánh `main`.
 3. **Triển khai Production Vercel**: Deploy phiên bản hoàn thiện lên Vercel (`https://clipforge-editor.vercel.app`) và kiểm tra tính hợp lệ của headers COOP/COEP trên production.
+

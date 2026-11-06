@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
+import { Footer } from '../components/Footer';
 import { db, seedDemoProjects, autoCleanTrash, requestPersistentStorage, type ProjectEntity } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -736,6 +737,11 @@ export const Home: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Global Footer */}
+      <div className="-mx-7 -mb-7 mt-4">
+        <Footer />
       </div>
     </div>
   );

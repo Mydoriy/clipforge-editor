@@ -34,6 +34,11 @@
 | **Phím Tắt Tùy Chỉnh & Phát Hiện Xung Đột** | Hoạt động | Bản đồ phím tắt đầy đủ (Space: Play/Pause, C: Split, Q/W: Trim Start/End, Delete: Ripple Delete, Ctrl+Z/Y: Undo/Redo). Hệ thống kiểm tra và cảnh báo xung đột phím trùng lặp. File: `src/utils/shortcuts.ts`, `src/tests/w7UserExperience.test.mjs`. | P1 | Đã hoàn thiện |
 | **Hệ Thống Kiểm Tra Thiết Bị (System Check)** | Hoạt động | Bảng kiểm tra toàn diện: WebCodecs, WebGL2, WebGPU, File System Access, OPFS, SharedArrayBuffer, MediaRecorder, CPU cores, RAM. Đánh giá trạng thái Xanh/Vàng/Đỏ kèm giải pháp fallback. File: `src/components/SystemCheckModal.tsx`. | P0 | Đã hoàn thiện |
 | **Bảo Mật & Sanitize Dữ Liệu** | Hoạt động | CSP chặt chẽ, DOMPurify làm sạch SVG/HTML, parser kiểm tra magic bytes cho Font binary, sanitize cấu trúc JSON Lottie, kiểm tra LUT .cube, không bao giờ dùng `eval` hay `dangerouslySetInnerHTML`. File: `src/utils/sanitizer.ts`, `vercel.json`, `public/_headers`. | P0 | Đã hoàn thiện |
+| **Nhận diện Độc lập & Tuyên bố Không liên kết (W9)** | Hoạt động | Logo và biểu tượng cắt lăng kính ClipForge độc quyền; Tuyên bố pháp lý minh bạch: "Không liên kết với CapCut hay ByteDance" hiển thị nổi bật trong About modal, Footer và metadata. File: `src/components/Logo.tsx`, `src/components/Footer.tsx`, `src/components/Modals.tsx`. | P0 | Đã hoàn thiện |
+| **Giấy phép Tài nguyên (ASSETS_LICENSES.md) (W9)** | Hoạt động | 100% tài nguyên (font OFL/Apache 2.0, âm thanh Web Audio procedural/CC0, sticker ISC/SVG, 3D LUT toán học nội bộ, 22 video templates) tuân thủ CC0 / MIT / OFL / In-House. File: `ASSETS_LICENSES.md`. | P1 | Đã hoàn thiện |
+| **Thông báo Bên thứ ba & Phân định FFmpeg.wasm (W9)** | Hoạt động | Tự động sinh `THIRD_PARTY_NOTICES.md` qua `npm run generate:licenses`. Làm rõ phân định bản build `@ffmpeg/core` tiêu chuẩn sử dụng LGPL v2.1+ so với GPL v3, ưu tiên WebCodecs native. File: `THIRD_PARTY_NOTICES.md`, `scripts/generate-third-party-notices.mjs`. | P1 | Đã hoàn thiện |
+| **Trang Terms & Privacy Policy (W9)** | Hoạt động | Trang `/privacy` và `/terms` đầy đủ nội dung: Quy định bản quyền người dùng, cam kết kiến trúc Local-First, giới hạn trách nhiệm và bảo mật API key. File: `src/pages/Privacy.tsx`, `src/App.tsx`. | P1 | Đã hoàn thiện |
+| **Cảnh báo Bản quyền khi Import Media (W9)** | Hoạt động | Banner cảnh báo bản quyền người dùng tải lên trong Media dropzone và Audio tab; nhắc nhở xử lý 100% client-side không lưu trữ tệp lên máy chủ. File: `src/components/CategoryPanel.tsx`. | P1 | Đã hoàn thiện |
 
 ---
 
@@ -41,3 +46,4 @@
 - Tất cả các hạng mục P0, P1, P2 từ W1 đến W8 đã được hiện thực hóa bằng mã nguồn thực tế, không có stub giả lập `setTimeout` che đậy logic.
 - Toàn bộ 40 test suites tự động (gồm cả node native tests và vitest) đạt tỷ lệ vượt qua **100% (40/40)**.
 - Dự án đáp ứng tiêu chuẩn sản xuất: TypeScript strict không lỗi, ESLint sạch, i18n đầy đủ, bundle tối ưu.
+

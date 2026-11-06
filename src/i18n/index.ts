@@ -3,7 +3,7 @@ export type Language = 'VN' | 'EN';
 export const translations = {
   VN: {
     // Top / Brand
-    appName: 'CapCut Desktop Web',
+    appName: 'ClipForge Desktop Web',
     guestMode: 'Khách (Offline)',
     signIn: 'Đăng nhập',
     joinPro: 'Nâng cấp Pro',
@@ -142,7 +142,7 @@ export const translations = {
   },
   EN: {
     // Top / Brand
-    appName: 'CapCut Desktop Web',
+    appName: 'ClipForge Desktop Web',
     guestMode: 'Guest (Offline)',
     signIn: 'Sign In',
     joinPro: 'Join Pro',

@@ -76,7 +76,8 @@ import {
   Droplet,
   Filter,
   Settings,
-  Award
+  Award,
+  ShieldAlert
 } from 'lucide-react';
 import { speakText } from '../utils/tts';
 import { pickFileStayInLocation, generateProxyVideo480p, generateMediaMetadata } from '../engine/storageProxy';
@@ -2162,6 +2163,14 @@ export const CategoryPanel: React.FC = () => {
                   </div>
                 </label>
 
+                {/* Copyright Warning Notice */}
+                <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-[11px] leading-relaxed">
+                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-amber-300">Cảnh báo bản quyền:</span> Người dùng tự chịu trách nhiệm về bản quyền của hình ảnh, video và âm thanh tải lên. ClipForge xử lý 100% cục bộ (Client-Side) trên thiết bị của bạn, không lưu trữ tệp lên máy chủ.
+                  </div>
+                </div>
+
                 {/* Section: "No media? Create with these tools" (3 cards) */}
                 <div className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-[#262626]/40 border border-[#333333]">
                   <span className="text-[10px] font-bold text-[#8A8A8A] uppercase tracking-wider">
@@ -2999,6 +3008,12 @@ export const CategoryPanel: React.FC = () => {
             {/* 2.1 KHO NHẠC (MUSIC) */}
             {audioSubnav === 'music' && (
               <div className="flex flex-col gap-3">
+                {/* Copyright info */}
+                <div className="p-2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-200 text-[10px] flex items-center gap-1.5 leading-tight">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Kho nhạc tích hợp đạt chuẩn CC0 / Royalty-Free. Khi import nhạc riêng, vui lòng đảm bảo bạn sở hữu quyền sử dụng.</span>
+                </div>
+
                 {/* Search & Genre Filter */}
                 <div className="flex flex-col gap-2">
                   <div className="relative">

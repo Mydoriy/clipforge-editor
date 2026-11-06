@@ -69,6 +69,7 @@ import {
   HardDrive,
   ExternalLink,
   Shield,
+  ShieldAlert,
   MessageSquarePlus,
   Bug,
   HelpCircle,
@@ -4908,17 +4909,38 @@ export const Modals: React.FC = () => {
 
         {/* 14. ABOUT MODAL */}
         {activeModal === 'about' && (
-          <div className="flex flex-col gap-3 text-center items-center">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#1FC8DB] to-sky-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
-              CC
+          <div className="flex flex-col gap-4 text-center items-center py-1">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#1FC8DB] to-sky-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg border border-cyan-300/40">
+              CF
             </div>
-            <h3 className="text-base font-bold text-white">CapCut Desktop Web v3.0</h3>
-            <p className="text-xs text-[#8A8A8A] leading-relaxed max-w-sm">
-              Trình biên tập video dọc 9:16 chuyên nghiệp cho TikTok, Reels và YouTube Shorts. Chạy 100% ngoại tuyến
-              trên trình duyệt qua Dexie IndexedDB, WebGL2 và WebCodecs.
-            </p>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-bold text-white">ClipForge Desktop Web v3.0</h3>
+              <p className="text-xs text-[#8A8A8A] leading-relaxed max-w-sm">
+                Trình biên tập video dọc 9:16 chuyên nghiệp cho TikTok, Reels và YouTube Shorts. Chạy 100% ngoại tuyến
+                trên trình duyệt qua Dexie IndexedDB, WebGL2 và WebCodecs.
+              </p>
+            </div>
+
+            {/* Legal Non-Affiliation Disclaimer */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs text-left leading-relaxed flex flex-col gap-1.5 w-full">
+              <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Tuyên bố độc lập & Bản quyền
+              </span>
+              <p className="text-[11px] text-[#CBD5E1]">
+                <strong>Không liên kết với CapCut hay ByteDance</strong> (Not affiliated with CapCut or ByteDance Ltd). ClipForge Desktop Web là sản phẩm nghiên cứu & mã nguồn mở độc lập, không được tài trợ hay chứng thực bởi ByteDance Ltd.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-[#1FC8DB]">
+              <a href="/terms" className="hover:underline">Điều khoản dịch vụ</a>
+              <span>•</span>
+              <a href="/privacy" className="hover:underline">Quyền riêng tư</a>
+              <span>•</span>
+              <a href="https://github.com/Mydoriy/clipforge-editor" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
+            </div>
+
             <div className="text-[11px] text-[#8A8A8A] font-mono bg-[#1F1F1F] px-3 py-1 rounded border border-[#333333]">
-              Build 2026.11 • Offline-First Native Engine
+              Build 2026.11 • Offline-First Native Engine (MIT License)
             </div>
           </div>
         )}

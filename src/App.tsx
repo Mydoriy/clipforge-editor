@@ -55,7 +55,8 @@ export const App: React.FC = () => {
             <Route path="/marketing" element={<SectionPage />} />
             <Route path="/library" element={<SectionPage />} />
             <Route path="/cloud-storage" element={<SectionPage />} />
-            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/privacy" element={<Privacy initialTab="privacy" />} />
+            <Route path="/terms" element={<Privacy initialTab="terms" />} />
           </Route>
 
           {/* Fullscreen Video Editor */}

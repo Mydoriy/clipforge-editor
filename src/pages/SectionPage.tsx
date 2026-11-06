@@ -5,6 +5,7 @@ import { db, type ProjectEntity, type MediaEntity } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
+import { Footer } from '../components/Footer';
 import {
   LayoutTemplate,
   Video,
@@ -1441,6 +1442,11 @@ export const SectionPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Global Footer */}
+      <div className="-mx-7 -mb-7 mt-8">
+        <Footer />
+      </div>
     </div>
   );
 };
