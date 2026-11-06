@@ -52,7 +52,7 @@ class FFmpegService {
       ]);
 
       const output = await this.ffmpeg.readFile('trimmed.mp4');
-      return new Blob([output as Uint8Array], { type: 'video/mp4' });
+      return new Blob([output as any], { type: 'video/mp4' });
     } catch (e) {
       console.error('FFmpeg trim error:', e);
       return file;
@@ -78,9 +78,32 @@ class FFmpegService {
       ]);
 
       const output = await this.ffmpeg.readFile('speed_out.mp4');
-      return new Blob([output as Uint8Array], { type: 'video/mp4' });
+      return new Blob([output as any], { type: 'video/mp4' });
     } catch (e) {
       console.error('FFmpeg speed error:', e);
+      return file;
+    }
+  }
+
+  // Convert video to animated GIF with palette generation
+  async convertToGif(file: Blob, fps: number = 15, width: number = 540): Promise<Blob> {
+    const loaded = await this.load();
+    if (!loaded || !this.ffmpeg) return file;
+
+    try {
+      const data = await fetchFile(file);
+      await this.ffmpeg.writeFile('input_gif.mp4', data);
+
+      await this.ffmpeg.exec([
+        '-i', 'input_gif.mp4',
+        '-vf', `fps=${fps},scale=${width}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`,
+        'output.gif'
+      ]);
+
+      const output = await this.ffmpeg.readFile('output.gif');
+      return new Blob([output as any], { type: 'image/gif' });
+    } catch (e) {
+      console.error('FFmpeg convertToGif error:', e);
       return file;
     }
   }

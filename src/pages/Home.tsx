@@ -211,7 +211,7 @@ export const Home: React.FC = () => {
             onSubmit={(e) => {
               e.preventDefault();
               if (!promptText.trim()) return;
-              addChatMessage({ sender: 'user', text: promptText });
+              addChatMessage('global', 'user', promptText);
               setEditPilotOpen(true);
               setPromptText('');
             }}
@@ -240,7 +240,7 @@ export const Home: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setPromptText(chip);
-                  addChatMessage({ sender: 'user', text: chip });
+                  addChatMessage('global', 'user', chip);
                   setEditPilotOpen(true);
                 }}
                 className="py-0.5 px-2.5 rounded-lg bg-[#0B0F19] hover:bg-[#22D3EE]/20 hover:text-[#22D3EE] border border-[#1F2937] text-[11px] text-[#9CA3AF] transition-colors"

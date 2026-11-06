@@ -19,3 +19,7 @@ export async function changeVideoSpeed(file: Blob, speed: number): Promise<Blob>
   return ffmpegService.changeSpeed(file, speed);
 }
 
+export async function convertVideoToGif(file: Blob, fps?: number, width?: number): Promise<Blob> {
+  return ffmpegService.convertToGif(file, fps, width);
+}
+

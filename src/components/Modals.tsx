@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
-import { exportTimelineVideo } from '../utils/videoExporter';
+import { exportTimelineVideo, exportAudioOnly, exportCurrentFrameAsPng, exportCaptionsSrt } from '../utils/videoExporter';
+import { convertVideoToGif } from '../lib/ffmpeg';
+import { DEFAULT_SHORTCUTS, eventToKeyCombo, formatDisplayKey } from '../utils/shortcuts';
 import { isSupabaseConfigured, supabase } from '../utils/supabase';
-import { db } from '../db';
+import { db, createDefaultProject, type ProjectEntity } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   X,
@@ -37,7 +39,12 @@ import {
   Clock,
   Music,
   CheckCircle2,
-  Upload
+  Upload,
+  AlertTriangle,
+  FileText,
+  Image as ImageIcon,
+  SlidersHorizontal,
+  HardDrive
 } from 'lucide-react';
 
 export const Modals: React.FC = () => {
@@ -61,18 +68,68 @@ export const Modals: React.FC = () => {
     settings,
     updateSettings,
     setCurrentProjectId,
+    currentProjectId,
     setProjectTitle,
     projectTitle,
-    addNotification
+    addNotification,
+    currentTime,
+    rebindShortcut,
+    resetShortcuts,
+    projectSettings
   } = useEditorStore();
 
   const navigate = useNavigate();
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [exportStatus, setExportStatus] = useState<string>('');
-  const [exportRes, setExportRes] = useState<'720p' | '1080p' | '4k'>('1080p');
-  const [exportFps, setExportFps] = useState<24 | 30 | 60>(30);
+  const [exportEta, setExportEta] = useState<number>(0);
+  const [exportFileName, setExportFileName] = useState<string>('');
+  const [exportDirectoryHandle, setExportDirectoryHandle] = useState<any>(null);
+  const [exportDirectoryName, setExportDirectoryName] = useState<string>('Tải về máy qua trình duyệt (Mặc định)');
+  const [exportRes, setExportRes] = useState<'720p' | '1080p' | '2k' | '4k'>('1080p');
+  const [exportFps, setExportFps] = useState<24 | 25 | 30 | 50 | 60>(30);
+  const [exportCodec, setExportCodec] = useState<'h264' | 'hevc' | 'av1'>('h264');
+  const [exportBitrateMode, setExportBitrateMode] = useState<'recommended' | 'higher' | 'custom'>('recommended');
+  const [exportCustomBitrate, setExportCustomBitrate] = useState<number>(10); // Mbps
   const [exportFormat, setExportFormat] = useState<'mp4' | 'webm'>('mp4');
+  const [exportRangeType, setExportRangeType] = useState<'all' | 'inout'>('all');
+  const [exportRangeStart, setExportRangeStart] = useState<number>(0);
+  const [exportRangeEnd, setExportRangeEnd] = useState<number>(10);
+  const [exportAudioOnlyMode, setExportAudioOnlyMode] = useState<boolean>(false);
+  const [exportAudioFormat, setExportAudioFormat] = useState<'wav' | 'mp3' | 'aac'>('wav');
+  const [supportedCodecs, setSupportedCodecs] = useState<{ hevc: boolean; av1: boolean }>({ hevc: false, av1: false });
+  const abortSignalRef = useRef<{ aborted: boolean }>({ aborted: false });
   const [promptInput, setPromptInput] = useState('');
+
+  // Probe codec support & init export file name
+  useEffect(() => {
+    if (activeModal === 'export') {
+      setExportFileName(projectTitle || 'CapCut_Video');
+      setExportRangeStart(0);
+      setExportRangeEnd(Math.max(1, duration || 10));
+
+      if (typeof window !== 'undefined' && (window as any).VideoEncoder?.isConfigSupported) {
+        (window as any).VideoEncoder.isConfigSupported({
+          codec: 'hvc1.1.6.L93.B0',
+          width: 1920,
+          height: 1080,
+          bitrate: 8000000,
+          framerate: 30
+        }).then((res: any) => {
+          if (res?.supported) setSupportedCodecs((prev) => ({ ...prev, hevc: true }));
+        }).catch(() => {});
+
+        (window as any).VideoEncoder.isConfigSupported({
+          codec: 'av01.0.08M.10',
+          width: 1920,
+          height: 1080,
+          bitrate: 8000000,
+          framerate: 30
+        }).then((res: any) => {
+          if (res?.supported) setSupportedCodecs((prev) => ({ ...prev, av1: true }));
+        }).catch(() => {});
+      }
+    }
+  }, [activeModal, projectTitle, duration]);
 
   // New Project Modal State
   const [newProjName, setNewProjName] = useState('0917 - New Project');
@@ -88,12 +145,98 @@ export const Modals: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [shortcutsSearch, setShortcutsSearch] = useState('');
+  const [recordingShortcutId, setRecordingShortcutId] = useState<string | null>(null);
+  const [shortcutCategory, setShortcutCategory] = useState<string>('all');
   const t = translations[language];
 
-  // Dexie live queries for trash & media library
+  // Capture user key combo when recording shortcut
+  useEffect(() => {
+    if (!recordingShortcutId) return;
+
+    const handleRecordKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.code === 'Escape') {
+        setRecordingShortcutId(null);
+        showToast('Đã hủy gán phím tắt', 'info');
+        return;
+      }
+
+      const combo = eventToKeyCombo(e);
+      if (!combo) return;
+
+      rebindShortcut(recordingShortcutId, combo);
+      showToast(`Đã gán phím tắt mới: ${combo}`, 'success');
+      setRecordingShortcutId(null);
+    };
+
+    window.addEventListener('keydown', handleRecordKey, { capture: true });
+    return () => window.removeEventListener('keydown', handleRecordKey, { capture: true });
+  }, [recordingShortcutId]);
+
+  // Dexie live queries for trash, media library & recent projects
   const trashItems = useLiveQuery(() => db.trash.toArray(), []) || [];
   const mediaItems = useLiveQuery(() => db.media.toArray(), []) || [];
+  const recentProjects = useLiveQuery(() => db.projects.orderBy('updatedAt').reverse().limit(10).toArray(), []) || [];
   const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handlers for Share modal
+  const handleDownloadCurrentProjectCapproj = async () => {
+    try {
+      let projData = null;
+      if (currentProjectId) {
+        projData = await db.projects.get(currentProjectId);
+      }
+      const exportData = projData || {
+        id: currentProjectId || 'proj-' + Date.now(),
+        title: projectTitle,
+        duration,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        tracksData: { clips }
+      };
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(projectTitle || 'Project').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_')}.capproj`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Đã tải tệp dự án .capproj!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi xuất file: ${err.message}`, 'error');
+    }
+  };
+
+  const handleWebShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: projectTitle,
+          text: `Xem dự án video 9:16 "${projectTitle}" được dựng bằng CapCut Desktop Web!`,
+          url: window.location.href
+        });
+        showToast('Đã mở hộp thoại chia sẻ hệ thống', 'success');
+      } catch {
+        // cancelled
+      }
+    } else {
+      showToast('Trình duyệt không hỗ trợ Web Share API', 'warning');
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (isSupabaseConfigured) {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('Đã sao chép liên kết dự án đám mây!', 'success');
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('Đã chép link cục bộ (Cần bật Supabase để chia sẻ qua Internet)', 'info');
+    }
+  };
 
   // Auto-clean trash older than 30 days
   useEffect(() => {
@@ -792,59 +935,210 @@ export const Modals: React.FC = () => {
 
   if (!activeModal) return null;
 
-  // Handle Video Export
-  const handleStartExport = async () => {
-    try {
-      setExportProgress(0);
-      setExportStatus(`Đang render canvas 9:16 (${exportRes}, ${exportFps}fps, ${exportFormat.toUpperCase()})...`);
-      const blob = await exportTimelineVideo(
-        clips,
-        duration,
-        {
-          resolution: exportRes,
-          fps: exportFps,
-          format: exportFormat
-        },
-        ({ progress, status }) => {
-          setExportProgress(progress);
-          setExportStatus(status);
-        }
-      );
+  // Handle picking directory via File System Access API
+  const handlePickExportDirectory = async () => {
+    if ('showDirectoryPicker' in window) {
+      try {
+        const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+        setExportDirectoryHandle(handle);
+        setExportDirectoryName(handle.name || 'Thư mục đã chọn');
+        showToast(`Đã chọn thư mục: ${handle.name}`, 'success');
+      } catch (err: any) {
+        if (err.name !== 'AbortError') showToast('Không thể chọn thư mục', 'warning');
+      }
+    } else {
+      showToast('Trình duyệt chưa hỗ trợ File System Access API, video sẽ tải về qua trình duyệt', 'info');
+    }
+  };
 
-      // Create download link
+  const handleCancelExport = () => {
+    abortSignalRef.current.aborted = true;
+    setExportProgress(null);
+    showToast('Đã hủy quá trình xuất video', 'info');
+  };
+
+  const handleRunInBackground = () => {
+    closeModal();
+    showToast('Quá trình xuất tiếp tục chạy ngầm. Hệ thống sẽ gửi thông báo chuông khi xong!', 'info');
+  };
+
+  // Quick Export: Current Frame PNG
+  const handleQuickExportFrame = async () => {
+    try {
+      showToast('Đang trích xuất khung hình hiện tại...', 'info');
+      const blob = await exportCurrentFrameAsPng(clips, currentTime, exportRes === '4k' ? '4k' : '1080p');
+      if (!blob) throw new Error('Không thể render khung hình');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const cleanTitle = (projectTitle || 'CapCut_916').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
-      const ext = exportFormat === 'mp4' ? 'mp4' : 'webm';
-      a.download = `${cleanTitle}_${exportRes}_${exportFps}fps_${Date.now()}.${ext}`;
+      const cleanTitle = (exportFileName || projectTitle || 'Frame').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      a.download = `${cleanTitle}_frame_${currentTime.toFixed(2)}s.png`;
       a.click();
       URL.revokeObjectURL(url);
+      showToast('Đã xuất ảnh PNG khung hình hiện tại thành công!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi xuất ảnh: ${err.message}`, 'error');
+    }
+  };
+
+  // Quick Export: Captions .SRT
+  const handleQuickExportCaptions = () => {
+    try {
+      const blob = exportCaptionsSrt(clips);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanTitle = (exportFileName || projectTitle || 'Subtitles').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      a.download = `${cleanTitle}_captions.srt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Đã xuất tệp phụ đề .srt thành công!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi xuất phụ đề: ${err.message}`, 'error');
+    }
+  };
+
+  // Quick Export: Animated GIF
+  const handleQuickExportGif = async () => {
+    try {
+      showToast('Đang tạo ảnh động GIF từ timeline...', 'info');
+      const shortDuration = Math.min(duration || 3, 5);
+      const videoBlob = await exportTimelineVideo(
+        clips,
+        shortDuration,
+        {
+          resolution: '720p',
+          fps: 24,
+          format: 'mp4',
+          range: { start: 0, end: shortDuration }
+        }
+      );
+      const gifBlob = await convertVideoToGif(videoBlob, 15, 360);
+      const url = URL.createObjectURL(gifBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanTitle = (exportFileName || projectTitle || 'Animation').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      a.download = `${cleanTitle}.gif`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Đã xuất ảnh động GIF thành công!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi xuất GIF: ${err.message}`, 'error');
+    }
+  };
+
+  // Handle Video / Audio Export
+  const handleStartExport = async () => {
+    try {
+      abortSignalRef.current = { aborted: false };
+      setExportProgress(0);
+      setExportEta(0);
+      setExportStatus(
+        exportAudioOnlyMode
+          ? `Đang xuất tệp âm thanh ${exportAudioFormat.toUpperCase()}...`
+          : `Đang khởi tạo WebCodecs (${exportRes.toUpperCase()}, ${exportFps}fps, ${exportFormat.toUpperCase()})...`
+      );
+
+      // Bitrate calculation
+      const baseBitrate = exportRes === '4k' ? 24000000 : exportRes === '2k' ? 14000000 : exportRes === '1080p' ? 8000000 : 4500000;
+      let finalBitrate = baseBitrate;
+      if (exportBitrateMode === 'higher') finalBitrate = Math.round(baseBitrate * 1.5);
+      else if (exportBitrateMode === 'custom') finalBitrate = (exportCustomBitrate || 10) * 1000000;
+
+      const range = exportRangeType === 'inout'
+        ? { start: Math.max(0, exportRangeStart), end: Math.min(duration, Math.max(exportRangeStart + 0.5, exportRangeEnd)) }
+        : undefined;
+
+      let blob: Blob;
+      if (exportAudioOnlyMode) {
+        blob = await exportAudioOnly(
+          clips,
+          duration,
+          exportAudioFormat === 'wav' ? 'wav' : 'mp3',
+          ({ progress, status }) => {
+            setExportProgress(progress);
+            setExportStatus(status);
+          }
+        );
+      } else {
+        blob = await exportTimelineVideo(
+          clips,
+          duration,
+          {
+            resolution: exportRes,
+            fps: exportFps,
+            codec: exportCodec,
+            bitrate: finalBitrate,
+            format: exportFormat,
+            range,
+            aspect: projectSettings?.aspect,
+            abortSignal: abortSignalRef.current
+          },
+          ({ progress, status, remainingSeconds }) => {
+            setExportProgress(progress);
+            setExportStatus(status);
+            if (remainingSeconds !== undefined) setExportEta(remainingSeconds);
+          }
+        );
+      }
+
+      // Determine clean filename
+      const cleanTitle = (exportFileName || projectTitle || 'CapCut_Video').trim().replace(/[^a-zA-Z0-9_\u00C0-\u1EF9-]/g, '_');
+      const ext = exportAudioOnlyMode ? (exportAudioFormat === 'wav' ? 'wav' : 'mp3') : exportFormat;
+      const finalFileName = `${cleanTitle}_${exportRes}_${exportFps}fps_${Date.now()}.${ext}`;
+
+      // Save via File System Access API if folder selected
+      let savedViaFs = false;
+      if (exportDirectoryHandle) {
+        try {
+          const fileHandle = await exportDirectoryHandle.getFileHandle(finalFileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          savedViaFs = true;
+          showToast(`Đã lưu "${finalFileName}" vào thư mục "${exportDirectoryName}"!`, 'success');
+        } catch (fsErr) {
+          console.warn('FS write failed, falling back to browser download:', fsErr);
+        }
+      }
+
+      if (!savedViaFs) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalFileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(t.exportSuccess || 'Xuất video hoàn tất!', 'success');
+      }
 
       // Add to notifications bell drawer
       addNotification({
         id: 'notif-' + Date.now(),
         title: 'Xuất video hoàn tất',
-        desc: `Video "${projectTitle || '9:16 Vertical Video'}" (${exportRes.toUpperCase()}, ${exportFps} FPS, ${exportFormat.toUpperCase()}) đã được xuất thành công và lưu về máy!`,
+        desc: `Tệp "${finalFileName}" đã được xuất thành công!`,
         time: 'Vừa xong',
         read: false,
         type: 'export'
       });
 
-      showToast(t.exportSuccess, 'success');
       setTimeout(() => {
         setExportProgress(null);
         closeModal();
       }, 1200);
     } catch (err: any) {
-      showToast(`Lỗi xuất video: ${err.message}`, 'error');
+      if (err.message === 'EXPORT_CANCELLED') {
+        showToast('Đã hủy quá trình xuất video', 'info');
+      } else {
+        showToast(`Lỗi xuất video: ${err.message}`, 'error');
+      }
       setExportProgress(null);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none animate-in fade-in">
-      <div className={`relative w-full ${activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}>
+      <div className={`relative w-full ${activeModal === 'export' ? 'max-w-2xl' : (activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' ? 'max-w-xl' : 'max-w-lg')} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}>
         {/* Close Button */}
         <button
           onClick={closeModal}
@@ -950,15 +1244,18 @@ export const Modals: React.FC = () => {
                     height = 1440;
                   }
 
+                  const projectTemplate = createDefaultProject(id, title, {
+                    aspect: newProjAspect as any,
+                    fps: 30
+                  });
+
                   const newProj = {
-                    id,
+                    ...projectTemplate,
                     title,
                     width,
                     height,
                     fps: 30,
                     duration: 15,
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
                     isDeleted: false,
                     thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80',
                     tracksData: {
@@ -1233,123 +1530,441 @@ export const Modals: React.FC = () => {
         )}
 
         {/* 1. EXPORT MODAL */}
-        {activeModal === 'export' && (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 text-[#22D3EE]">
-              <Download className="w-6 h-6" />
-              <h3 className="text-lg font-bold text-white">{t.export} 9:16 Video</h3>
-            </div>
+        {activeModal === 'export' && (() => {
+          const exportDurationSec = exportRangeType === 'inout'
+            ? Math.max(0.5, exportRangeEnd - exportRangeStart)
+            : Math.max(0.5, duration || 5);
 
-            {/* Resolution Selector */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
-                1. Độ phân giải (Resolution)
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: '720p', label: '720p (HD)', desc: '720 × 1280' },
-                  { id: '1080p', label: '1080p (FHD)', desc: '1080 × 1920' },
-                  { id: '4k', label: '4K (UHD)', desc: '2160 × 3840' }
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setExportRes(item.id as any)}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all ${
-                      exportRes === item.id
-                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
-                        : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                    }`}
-                  >
-                    <span className="font-bold text-xs">{item.label}</span>
-                    <span className="text-[10px] text-[#22D3EE] font-mono mt-0.5">{item.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          let bitrateBitsPerSec = 8000000;
+          if (exportRes === '720p') bitrateBitsPerSec = 4500000;
+          else if (exportRes === '1080p') bitrateBitsPerSec = 8000000;
+          else if (exportRes === '2k') bitrateBitsPerSec = 14000000;
+          else if (exportRes === '4k') bitrateBitsPerSec = 24000000;
 
-            {/* FPS Selector */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
-                2. Tốc độ khung hình (Frame Rate)
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { fps: 24, label: '24 FPS', desc: 'Điện ảnh (Film)' },
-                  { fps: 30, label: '30 FPS', desc: 'Chuẩn TikTok' },
-                  { fps: 60, label: '60 FPS', desc: 'Siêu mượt (Pro)' }
-                ].map((item) => (
-                  <button
-                    key={item.fps}
-                    onClick={() => setExportFps(item.fps as any)}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all ${
-                      exportFps === item.fps
-                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
-                        : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                    }`}
-                  >
-                    <span className="font-bold text-xs">{item.label}</span>
-                    <span className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          if (exportBitrateMode === 'higher') bitrateBitsPerSec = Math.round(bitrateBitsPerSec * 1.5);
+          else if (exportBitrateMode === 'custom') bitrateBitsPerSec = (exportCustomBitrate || 10) * 1000000;
 
-            {/* Format Selector */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
-                3. Định dạng xuất (Format)
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { fmt: 'mp4', label: 'MP4 (H.264 / AVC)', desc: 'Tương thích mọi thiết bị' },
-                  { fmt: 'webm', label: 'WebM (VP9)', desc: 'Nén nhẹ & tối ưu web' }
-                ].map((item) => (
-                  <button
-                    key={item.fmt}
-                    onClick={() => setExportFormat(item.fmt as any)}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all ${
-                      exportFormat === item.fmt
-                        ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
-                        : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
-                    }`}
-                  >
-                    <span className="font-bold text-xs">{item.label}</span>
-                    <span className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          const estFileSizeMb = exportAudioOnlyMode
+            ? (exportAudioFormat === 'wav'
+                ? ((1411200 * exportDurationSec) / 8 / 1024 / 1024).toFixed(1)
+                : ((192000 * exportDurationSec) / 8 / 1024 / 1024).toFixed(1))
+            : ((bitrateBitsPerSec * exportDurationSec) / 8 / 1024 / 1024).toFixed(1);
 
-            {/* Progress or Start Button */}
-            {exportProgress !== null ? (
-              <div className="flex flex-col gap-2.5 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-[#22D3EE]">{exportStatus}</span>
-                  <span className="font-mono text-white font-bold">{exportProgress}%</span>
+          const isHighLoad = exportRes === '4k' || (exportRes === '2k' && exportFps >= 50);
+
+          return (
+            <div className="flex flex-col gap-4 text-left">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#1F2937]">
+                <div className="flex items-center gap-2.5 text-[#22D3EE]">
+                  <Download className="w-5 h-5" />
+                  <div>
+                    <h3 className="text-base font-bold text-white">Xuất Video & Âm Thanh (Export)</h3>
+                    <p className="text-[11px] text-[#9CA3AF]">Render phần cứng 100% trong trình duyệt qua WebCodecs & Canvas</p>
+                  </div>
                 </div>
-                <div className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#22D3EE] to-sky-400 transition-all duration-150"
-                    style={{ width: `${exportProgress}%` }}
+                <div className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[11px] text-[#22D3EE] font-mono">
+                  Ước tính: ~{estFileSizeMb} MB
+                </div>
+              </div>
+
+              {/* 1. Tên file & Nơi lưu */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-[#9CA3AF] uppercase">Tên tệp xuất (File Name)</label>
+                  <input
+                    type="text"
+                    value={exportFileName}
+                    onChange={(e) => setExportFileName(e.target.value)}
+                    placeholder="CapCut_Video"
+                    className="w-full px-3 py-1.5 rounded-lg bg-[#181E2C] border border-[#2A3447] text-white text-xs focus:border-[#22D3EE] focus:outline-none"
                   />
                 </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-[#9CA3AF] uppercase">Nơi lưu (Destination)</label>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 px-3 py-1.5 rounded-lg bg-[#181E2C] border border-[#2A3447] text-[#9CA3AF] text-xs truncate flex items-center gap-1.5" title={exportDirectoryName}>
+                      <HardDrive className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" />
+                      <span className="truncate">{exportDirectoryName}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePickExportDirectory}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#22D3EE]/10 border border-[#22D3EE]/30 hover:bg-[#22D3EE]/20 text-[#22D3EE] text-xs font-semibold whitespace-nowrap transition-all"
+                    >
+                      Đổi...
+                    </button>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="flex flex-col gap-2 pt-2">
+
+              {/* Toggle Audio Only vs Video */}
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#111827] border border-[#1F2937]">
+                <div className="flex items-center gap-2">
+                  <Music className="w-4 h-4 text-[#22D3EE]" />
+                  <span className="text-xs font-semibold text-white">Chỉ xuất âm thanh (Export audio only)</span>
+                </div>
                 <button
-                  onClick={handleStartExport}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2"
+                  type="button"
+                  onClick={() => setExportAudioOnlyMode(!exportAudioOnlyMode)}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${
+                    exportAudioOnlyMode ? 'bg-[#22D3EE]' : 'bg-[#374151]'
+                  }`}
                 >
-                  <Download className="w-4 h-4 stroke-[2.5]" />
-                  <span>Bắt đầu xuất video ngay (Client Render)</span>
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                      exportAudioOnlyMode ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
                 </button>
-                <span className="text-[11px] text-[#9CA3AF] text-center">
-                  Render trực tiếp 100% bằng Canvas & MediaRecorder trong trình duyệt. Không tải video lên máy chủ.
-                </span>
               </div>
-            )}
-          </div>
-        )}
+
+              {exportAudioOnlyMode ? (
+                /* Audio Only Options */
+                <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                  <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Định dạng âm thanh</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'wav', label: 'WAV', desc: 'Lossless PCM 16-bit 44.1kHz' },
+                      { id: 'mp3', label: 'MP3', desc: 'Stereo 192 kbps' },
+                      { id: 'aac', label: 'AAC', desc: 'Định dạng chuẩn Apple' }
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setExportAudioFormat(item.id as any)}
+                        className={`p-2 rounded-lg border text-left transition-all ${
+                          exportAudioFormat === item.id
+                            ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
+                            : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
+                        }`}
+                      >
+                        <div className="font-bold text-xs">{item.label}</div>
+                        <div className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Video Options */
+                <div className="flex flex-col gap-3">
+                  {/* Resolution Selector */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                      1. Độ phân giải (Resolution)
+                    </span>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { id: '720p', label: '720p HD', desc: '720 × 1280' },
+                        { id: '1080p', label: '1080p FHD', desc: '1080 × 1920' },
+                        { id: '2k', label: '2K QHD', desc: '1440 × 2560' },
+                        { id: '4k', label: '4K UHD', desc: '2160 × 3840' }
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setExportRes(item.id as any)}
+                          className={`p-2 rounded-xl border text-left flex flex-col transition-all ${
+                            exportRes === item.id
+                              ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-md shadow-cyan-500/20'
+                              : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                          }`}
+                        >
+                          <span className="font-bold text-xs">{item.label}</span>
+                          <span className="text-[10px] text-[#22D3EE] font-mono mt-0.5">{item.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* FPS & Codec Selector */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* FPS */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                        2. Tốc độ khung hình (FPS)
+                      </span>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[24, 25, 30, 50, 60].map((fpsVal) => (
+                          <button
+                            key={fpsVal}
+                            type="button"
+                            onClick={() => setExportFps(fpsVal as any)}
+                            className={`py-1.5 rounded-lg border text-center font-bold text-xs transition-all ${
+                              exportFps === fpsVal
+                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                            }`}
+                          >
+                            {fpsVal}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Codec */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                        3. Codec nén video
+                      </span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { id: 'h264', label: 'H.264', avail: true },
+                          { id: 'hevc', label: 'HEVC', avail: supportedCodecs.hevc },
+                          { id: 'av1', label: 'AV1', avail: supportedCodecs.av1 }
+                        ].map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            disabled={!c.avail && c.id !== 'h264'}
+                            onClick={() => setExportCodec(c.id as any)}
+                            className={`py-1.5 px-2 rounded-lg border text-center text-xs font-bold transition-all ${
+                              exportCodec === c.id
+                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                : !c.avail && c.id !== 'h264'
+                                ? 'bg-[#111827]/40 border-transparent text-slate-600 cursor-not-allowed'
+                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                            }`}
+                          >
+                            {c.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bitrate & Format */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Bitrate */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">4. Tốc độ bit (Bitrate)</span>
+                        {exportBitrateMode === 'custom' && (
+                          <span className="text-xs text-[#22D3EE] font-mono">{exportCustomBitrate} Mbps</span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { id: 'recommended', label: 'Chuẩn' },
+                          { id: 'higher', label: 'Cao (HQ)' },
+                          { id: 'custom', label: 'Tùy chỉnh' }
+                        ].map((b) => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => setExportBitrateMode(b.id as any)}
+                            className={`py-1.5 rounded-lg border text-center text-xs font-semibold transition-all ${
+                              exportBitrateMode === b.id
+                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                            }`}
+                          >
+                            {b.label}
+                          </button>
+                        ))}
+                      </div>
+                      {exportBitrateMode === 'custom' && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <input
+                            type="range"
+                            min="2"
+                            max="50"
+                            step="1"
+                            value={exportCustomBitrate}
+                            onChange={(e) => setExportCustomBitrate(Number(e.target.value))}
+                            className="w-full accent-[#22D3EE] h-1.5 bg-[#1F2937] rounded-lg cursor-pointer"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Format */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">5. Định dạng (Container)</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { fmt: 'mp4', label: 'MP4' },
+                          { fmt: 'webm', label: 'WebM' }
+                        ].map((f) => (
+                          <button
+                            key={f.fmt}
+                            type="button"
+                            onClick={() => setExportFormat(f.fmt as any)}
+                            className={`py-1.5 rounded-lg border text-center text-xs font-bold transition-all ${
+                              exportFormat === f.fmt
+                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white'
+                                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-white'
+                            }`}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Export Range (Toàn bộ / In-Out) */}
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Phạm vi thời gian xuất</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExportRangeType('all')}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                        exportRangeType === 'all'
+                          ? 'bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40'
+                          : 'text-[#9CA3AF] hover:text-white'
+                      }`}
+                    >
+                      Toàn bộ ({duration.toFixed(1)}s)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportRangeType('inout')}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                        exportRangeType === 'inout'
+                          ? 'bg-[#22D3EE]/20 text-[#22D3EE] border border-[#22D3EE]/40'
+                          : 'text-[#9CA3AF] hover:text-white'
+                      }`}
+                    >
+                      Theo In-Out
+                    </button>
+                  </div>
+                </div>
+                {exportRangeType === 'inout' && (
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#9CA3AF]">In (Bắt đầu):</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={duration}
+                        step="0.1"
+                        value={exportRangeStart}
+                        onChange={(e) => setExportRangeStart(Number(e.target.value))}
+                        className="w-20 px-2 py-1 rounded bg-[#181E2C] border border-[#2A3447] text-white text-xs font-mono"
+                      />
+                      <span className="text-xs text-[#9CA3AF]">giây</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#9CA3AF]">Out (Kết thúc):</span>
+                      <input
+                        type="number"
+                        min="0.1"
+                        max={duration}
+                        step="0.1"
+                        value={exportRangeEnd}
+                        onChange={(e) => setExportRangeEnd(Number(e.target.value))}
+                        className="w-20 px-2 py-1 rounded bg-[#181E2C] border border-[#2A3447] text-white text-xs font-mono"
+                      />
+                      <span className="text-xs text-[#9CA3AF]">giây</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Hardware Warning if High Load */}
+              {isHighLoad && !exportAudioOnlyMode && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                  <div>
+                    <span className="font-semibold">Cảnh báo tải phần cứng: </span>
+                    <span>Độ phân giải {exportRes.toUpperCase()} ({exportFps} FPS) yêu cầu dung lượng RAM và GPU cao. Nếu máy tính xuất hiện hiện tượng giật lag hoặc tràn bộ nhớ, hãy cân nhắc hạ xuống 1080p 30 FPS.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions Bar */}
+              <div className="flex items-center justify-between p-2 rounded-xl bg-[#111827] border border-[#1F2937]">
+                <span className="text-[11px] font-bold text-[#9CA3AF] uppercase pl-1">Xuất nhanh:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleQuickExportFrame}
+                    className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-[#22D3EE]" />
+                    <span>Frame PNG</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickExportCaptions}
+                    className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[#22D3EE]" />
+                    <span>Phụ đề (.srt)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickExportGif}
+                    className="px-2.5 py-1 rounded-lg bg-[#181E2C] hover:bg-[#22D3EE]/20 border border-[#2A3447] hover:border-[#22D3EE]/40 text-xs text-slate-200 hover:text-white flex items-center gap-1.5 transition-all"
+                  >
+                    <Film className="w-3.5 h-3.5 text-[#22D3EE]" />
+                    <span>Ảnh động (GIF)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Export Progress or CTA */}
+              {exportProgress !== null ? (
+                <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#111827] border border-[#22D3EE]/50 mt-1">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-[#22D3EE] flex items-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      {exportStatus}
+                    </span>
+                    <span className="font-mono text-white font-bold">{exportProgress}%</span>
+                  </div>
+                  <div className="w-full h-3 rounded-full bg-[#1F2937] overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#22D3EE] to-sky-400 transition-all duration-150"
+                      style={{ width: `${exportProgress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-[#9CA3AF] flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-[#22D3EE]" />
+                      {exportEta > 0 ? `Còn khoảng ~${exportEta} giây` : 'Đang tính thời gian còn lại...'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRunInBackground}
+                        className="px-3 py-1 rounded-lg bg-[#181E2C] hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
+                      >
+                        Chạy ngầm (Ẩn)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelExport}
+                        className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 text-xs font-medium transition-colors"
+                      >
+                        Hủy xuất
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleStartExport}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 stroke-[2.5]" />
+                    <span>Bắt đầu xuất video ngay (Client Hardware Render)</span>
+                  </button>
+                  <span className="text-[11px] text-[#9CA3AF] text-center">
+                    Render trực tiếp 100% bằng WebCodecs & Canvas. File lưu an toàn tại máy của bạn.
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 2. PRO PRICING MODAL (3 GÓI FREE / PRO THÁNG / PRO NĂM) */}
         {activeModal === 'pro' && (
@@ -1552,6 +2167,23 @@ export const Modals: React.FC = () => {
                   onChange={(e) => {
                     updateSettings({ autosave: e.target.checked });
                     showToast(e.target.checked ? 'Đã bật Autosave' : 'Đã tắt Autosave');
+                  }}
+                  className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
+                />
+              </div>
+
+              {/* Bật/Tắt Linh vật Pixel Mascot */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block">Linh vật Pixel mầm cây (🌱 Mascot)</span>
+                  <span className="text-[10px] text-[#9CA3AF]">Hiển thị chú mầm cây pixel chia sẻ mẹo dựng góc trái dưới</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.showMascot !== false}
+                  onChange={(e) => {
+                    updateSettings({ showMascot: e.target.checked });
+                    showToast(e.target.checked ? 'Đã bật linh vật Pixel' : 'Đã ẩn linh vật Pixel', 'info');
                   }}
                   className="w-4 h-4 accent-[#22D3EE] cursor-pointer"
                 />
@@ -2184,7 +2816,7 @@ export const Modals: React.FC = () => {
                 {videoClips.length > 0 ? (
                   videoClips.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.duration}s, filter: {c.filter || 'none'})
+                      {c.name} ({c.duration}s, filter: {typeof c.filter === 'object' ? c.filter?.id : (c.filter || 'none')})
                     </option>
                   ))
                 ) : (
@@ -2285,7 +2917,7 @@ export const Modals: React.FC = () => {
                 {videoClips.length > 0 ? (
                   videoClips.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.duration}s, filter: {c.filter || 'standard'})
+                      {c.name} ({c.duration}s, filter: {typeof c.filter === 'object' ? c.filter?.id : (c.filter || 'standard')})
                     </option>
                   ))
                 ) : (
@@ -2967,46 +3599,337 @@ export const Modals: React.FC = () => {
           </div>
         )}
 
-        {/* 11. KEYBOARD SHORTCUTS */}
-        {activeModal === 'shortcuts' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Keyboard className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">Phím tắt biên tập (Hotkeys)</h3>
+        {/* 11. SHARE PROJECT MODAL */}
+        {activeModal === 'share' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center gap-2.5 text-[#1FC8DB] pb-3 border-b border-[#333333]">
+              <Share2 className="w-5 h-5" />
+              <h3 className="text-base font-bold text-white">Chia sẻ dự án (Share Project)</h3>
             </div>
-            <div className="flex flex-col gap-2 text-xs">
-              <div className="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
-                <span>Phát / Tạm dừng</span>
-                <span className="font-mono text-cyan-400 font-bold">Spacebar</span>
-              </div>
-              <div className="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
-                <span>Tách clip tại playhead</span>
-                <span className="font-mono text-cyan-400 font-bold">Ctrl + B / B</span>
-              </div>
-              <div className="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
-                <span>Xóa clip đã chọn</span>
-                <span className="font-mono text-cyan-400 font-bold">Delete / Backspace</span>
-              </div>
-              <div className="flex justify-between p-2 rounded bg-slate-900 border border-slate-800">
-                <span>Bật / Tắt Safe Zone 9:16</span>
-                <span className="font-mono text-cyan-400 font-bold">Shift + S</span>
+
+            <p className="text-xs text-[#8A8A8A] leading-relaxed">
+              Bạn có thể tải gói tệp dự án <code className="text-[#1FC8DB]">.capproj</code> để chia sẻ ngoại tuyến, sử dụng hộp thoại chia sẻ hệ thống hoặc sao chép liên kết trực tuyến.
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              {/* Option 1: Download .capproj */}
+              <button
+                onClick={handleDownloadCurrentProjectCapproj}
+                className="p-3.5 rounded-md bg-[#1F1F1F] hover:bg-[#262626] border border-[#333333] hover:border-[#1FC8DB] text-left flex items-center justify-between transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-md bg-[#1FC8DB]/15 text-[#1FC8DB] flex items-center justify-center border border-[#1FC8DB]/30 shrink-0">
+                    <Download className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs text-white group-hover:text-[#1FC8DB] transition-colors">
+                      Tải tệp dự án (.capproj)
+                    </span>
+                    <span className="text-[11px] text-[#8A8A8A]">
+                      Bao gồm toàn bộ tracks, clips, settings để mở lại trên bất kỳ máy nào
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-[#1FC8DB] px-2.5 py-1 rounded bg-[#1FC8DB]/10">
+                  Tải ngay
+                </span>
+              </button>
+
+              {/* Option 2: Web Share API */}
+              <button
+                onClick={handleWebShare}
+                className="p-3.5 rounded-md bg-[#1F1F1F] hover:bg-[#262626] border border-[#333333] hover:border-[#1FC8DB] text-left flex items-center justify-between transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-md bg-purple-500/15 text-purple-400 flex items-center justify-center border border-purple-500/30 shrink-0">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs text-white group-hover:text-purple-300 transition-colors">
+                      Chia sẻ qua ứng dụng (Web Share)
+                    </span>
+                    <span className="text-[11px] text-[#8A8A8A]">
+                      Gửi nhanh qua Zalo, Messenger, Telegram, AirDrop hoặc Bluetooth
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-purple-400 px-2.5 py-1 rounded bg-purple-500/10">
+                  Mở App
+                </span>
+              </button>
+
+              {/* Option 3: Copy Link */}
+              <div className="p-3.5 rounded-md bg-[#1F1F1F] border border-[#333333] flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs text-white">Liên kết chia sẻ (Cloud Link)</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${
+                    isSupabaseConfigured
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  }`}>
+                    {isSupabaseConfigured ? '🟢 Supabase Online' : '⚡ Chế độ Khách (Offline)'}
+                  </span>
+                </div>
+
+                {!isSupabaseConfigured && (
+                  <p className="text-[11px] text-amber-300/80 leading-relaxed bg-amber-500/10 p-2 rounded border border-amber-500/20">
+                    Chưa kết nối Supabase Cloud: Tính năng tạo link công khai qua mạng yêu cầu biến môi trường <code className="text-white">VITE_SUPABASE_URL</code>. Bạn có thể sử dụng nút sao chép đường dẫn cục bộ hoặc gửi file .capproj ở trên.
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    readOnly
+                    value={typeof window !== 'undefined' ? window.location.href : ''}
+                    className="flex-1 bg-[#262626] border border-[#333333] rounded px-3 py-1.5 text-xs text-[#8A8A8A] font-mono outline-none"
+                  />
+                  <button
+                    onClick={handleCopyShareLink}
+                    className="px-3.5 py-1.5 rounded bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 font-bold text-xs transition-colors shrink-0"
+                  >
+                    Sao chép link
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 12. ABOUT MODAL */}
+        {/* 12. SEARCHABLE & CUSTOMIZABLE KEYBOARD SHORTCUTS */}
+        {activeModal === 'shortcuts' && (() => {
+          const categories = [
+            { id: 'all', label: language === 'VN' ? 'Tất cả' : 'All' },
+            { id: 'playback', label: language === 'VN' ? 'Phát video' : 'Playback' },
+            { id: 'editing', label: language === 'VN' ? 'Biên tập' : 'Editing' },
+            { id: 'tools', label: language === 'VN' ? 'Công cụ' : 'Tools' },
+            { id: 'navigation', label: language === 'VN' ? 'Điều hướng' : 'Navigation' },
+            { id: 'view', label: language === 'VN' ? 'Giao diện' : 'View' },
+            { id: 'project', label: language === 'VN' ? 'Dự án' : 'Project' }
+          ];
+
+          const filtered = DEFAULT_SHORTCUTS.filter((s) => {
+            const matchesCat = shortcutCategory === 'all' || s.category === shortcutCategory;
+            if (!matchesCat) return false;
+            if (!shortcutsSearch) return true;
+            const q = shortcutsSearch.toLowerCase();
+            const currentKey = settings.customShortcuts?.[s.id] || s.defaultKey;
+            return (
+              s.name.toLowerCase().includes(q) ||
+              s.nameEn.toLowerCase().includes(q) ||
+              s.description.toLowerCase().includes(q) ||
+              s.descriptionEn.toLowerCase().includes(q) ||
+              currentKey.toLowerCase().includes(q)
+            );
+          });
+
+          return (
+            <div className="flex flex-col gap-3.5 text-left">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#333333]">
+                <div className="flex items-center gap-2 text-[#22D3EE]">
+                  <Keyboard className="w-5 h-5" />
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {language === 'VN' ? 'Phím tắt biên tập' : 'Keyboard Shortcuts'}
+                    </h3>
+                    <p className="text-[11px] text-[#9CA3AF]">
+                      {language === 'VN'
+                        ? 'Bấm vào bất kỳ phím tắt nào bên dưới để tùy chỉnh gán phím mới'
+                        : 'Click on any shortcut badge below to record and rebind custom keys'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetShortcuts();
+                    showToast('Đã khôi phục toàn bộ phím tắt mặc định!', 'info');
+                  }}
+                  className="px-2.5 py-1 rounded bg-[#181E2C] hover:bg-[#2A3447] text-[#9CA3AF] hover:text-white border border-[#2A3447] text-xs font-medium transition-colors"
+                  title="Khôi phục cài đặt phím tắt gốc"
+                >
+                  {language === 'VN' ? 'Khôi phục mặc định' : 'Reset Defaults'}
+                </button>
+              </div>
+
+              {/* Search & Category Filter Pills */}
+              <div className="flex flex-col gap-2">
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={shortcutsSearch}
+                    onChange={(e) => setShortcutsSearch(e.target.value)}
+                    placeholder={
+                      language === 'VN'
+                        ? 'Tìm phím tắt (VD: split, cắt, space, undo, zoom, ctrl+b)...'
+                        : 'Search shortcuts (e.g. split, space, undo, zoom, ctrl+b)...'
+                    }
+                    className="w-full bg-[#1F1F1F] border border-[#333333] focus:border-[#22D3EE] rounded-lg px-3.5 py-2 text-xs text-[#E6E6E6] placeholder-[#8A8A8A] outline-none"
+                  />
+                  {shortcutsSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setShortcutsSearch('')}
+                      className="absolute right-2.5 text-xs text-[#8A8A8A] hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {categories.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setShortcutCategory(c.id)}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                        shortcutCategory === c.id
+                          ? 'bg-[#22D3EE]/20 border border-[#22D3EE]/50 text-[#22D3EE]'
+                          : 'bg-[#181E2C] border border-transparent text-[#9CA3AF] hover:text-white'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shortcuts Table */}
+              <div className="flex flex-col gap-1.5 max-h-[380px] overflow-y-auto pr-1">
+                {filtered.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-[#8A8A8A]">
+                    {language === 'VN' ? 'Không tìm thấy phím tắt phù hợp' : 'No matching shortcuts found'}
+                  </div>
+                ) : (
+                  filtered.map((s) => {
+                    const isRecording = recordingShortcutId === s.id;
+                    const customKey = settings.customShortcuts?.[s.id];
+                    const activeKey = customKey || s.defaultKey;
+
+                    return (
+                      <div
+                        key={s.id}
+                        className={`flex items-center justify-between p-2.5 rounded-lg border transition-all ${
+                          isRecording
+                            ? 'bg-[#22D3EE]/10 border-[#22D3EE] ring-1 ring-[#22D3EE]'
+                            : 'bg-[#181E2C] border-[#2A3447] hover:border-[#22D3EE]/40'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-white">
+                              {language === 'VN' ? s.name : s.nameEn}
+                            </span>
+                            {customKey && (
+                              <span className="px-1 py-0.2 rounded bg-cyan-500/10 text-[9px] text-[#22D3EE] font-mono border border-cyan-500/20">
+                                Tùy chỉnh
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-[#9CA3AF]">
+                            {language === 'VN' ? s.description : s.descriptionEn}
+                          </span>
+                        </div>
+
+                        {isRecording ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-3 py-1 rounded bg-amber-500 text-slate-950 font-bold text-xs animate-pulse">
+                              {language === 'VN' ? 'Nhấn phím mới... (Esc hủy)' : 'Press new key... (Esc cancel)'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setRecordingShortcutId(null)}
+                              className="px-2 py-1 rounded bg-[#2A3447] hover:bg-slate-700 text-xs text-slate-300"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setRecordingShortcutId(s.id)}
+                            className="font-mono text-xs text-[#22D3EE] font-bold bg-[#111827] hover:bg-[#22D3EE]/20 hover:border-[#22D3EE] px-3 py-1.5 rounded-lg border border-[#2A3447] transition-all cursor-pointer shadow-sm group"
+                            title="Nhấp để đổi phím tắt này"
+                          >
+                            <span>{formatDisplayKey(activeKey)}</span>
+                            <span className="ml-1.5 opacity-0 group-hover:opacity-100 text-[10px] text-slate-400">
+                              ✎
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 13. OPEN RECENT PROJECTS MODAL */}
+        {activeModal === 'recentProjects' && (
+          <div className="flex flex-col gap-4 text-left">
+            <div className="flex items-center gap-2.5 text-[#1FC8DB] pb-3 border-b border-[#333333]">
+              <FolderOpen className="w-5 h-5" />
+              <h3 className="text-base font-bold text-white">Dự án gần đây (Recent Projects)</h3>
+            </div>
+
+            <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto">
+              {recentProjects.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#8A8A8A]">
+                  Chưa có dự án nào trong IndexedDB.
+                </div>
+              ) : (
+                recentProjects.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setCurrentProjectId(p.id);
+                      setProjectTitle(p.title);
+                      closeModal();
+                      navigate(`/editor/${p.id}`);
+                    }}
+                    className="p-3 rounded-md bg-[#1F1F1F] hover:bg-[#262626] border border-[#333333] hover:border-[#1FC8DB] flex items-center justify-between cursor-pointer transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={p.thumbnail || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'}
+                        alt=""
+                        className="w-10 h-14 rounded object-cover border border-[#333333]"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-bold text-xs text-white group-hover:text-[#1FC8DB] transition-colors">
+                          {p.title}
+                        </span>
+                        <span className="text-[10px] text-[#8A8A8A]">
+                          Sửa đổi: {new Date(p.updatedAt).toLocaleDateString('vi-VN')} • {p.duration}s
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-[#1FC8DB] px-3 py-1 rounded bg-[#1FC8DB]/10 group-hover:bg-[#1FC8DB] group-hover:text-black transition-colors">
+                      Mở
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 14. ABOUT MODAL */}
         {activeModal === 'about' && (
           <div className="flex flex-col gap-3 text-center items-center">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-400 to-sky-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
-              CF
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#1FC8DB] to-sky-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
+              CC
             </div>
-            <h3 className="text-base font-bold text-white">CapCut Desktop Web (ClipForge v3.0)</h3>
-            <p className="text-xs text-slate-400">
-              Web app chỉnh sửa video dọc 9:16 chuyên dụng cho TikTok, Reels và YouTube Shorts. Chạy 100% trên trình duyệt với Dexie IndexedDB và Canvas MediaRecorder.
+            <h3 className="text-base font-bold text-white">CapCut Desktop Web v3.0</h3>
+            <p className="text-xs text-[#8A8A8A] leading-relaxed max-w-sm">
+              Trình biên tập video dọc 9:16 chuyên nghiệp cho TikTok, Reels và YouTube Shorts. Chạy 100% ngoại tuyến trên trình duyệt qua Dexie IndexedDB, WebGL2 và WebCodecs.
             </p>
-            <div className="text-[11px] text-slate-500 font-mono">
-              Build 2026.11 • Offline Guest Mode Ready
+            <div className="text-[11px] text-[#8A8A8A] font-mono bg-[#1F1F1F] px-3 py-1 rounded border border-[#333333]">
+              Build 2026.11 • Offline-First Native Engine
             </div>
           </div>
         )}

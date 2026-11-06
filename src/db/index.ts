@@ -1,16 +1,24 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { ProjectSettings, Timeline, MediaItem } from '../types/project';
+
+export * from '../types/project';
 
 export interface ProjectEntity {
   id: string;
+  name?: string;
   title: string;
-  width: number;
-  height: number;
-  fps: number;
+  width?: number;
+  height?: number;
+  fps?: number;
   duration: number; // in seconds
   thumbnail?: string; // base64 or blob URL
   createdAt: number;
   updatedAt: number;
   isDeleted: boolean;
+  settings?: ProjectSettings;
+  timelines?: Timeline[];
+  activeTimelineId?: string;
+  media?: MediaItem[];
   tracksData?: any; // JSON serialized tracks state
 }
 
@@ -23,6 +31,10 @@ export interface MediaEntity {
   duration?: number;
   size: number;
   createdAt: number;
+  favorite?: boolean;
+  folderId?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface TrashEntity {
@@ -58,6 +70,7 @@ export async function seedDemoProjects() {
     await db.projects.bulkAdd([
       {
         id: 'demo-916-intro',
+        name: '0917 - Viral TikTok Reel',
         title: '0917 - Viral TikTok Reel',
         width: 1080,
         height: 1920,
@@ -77,6 +90,7 @@ export async function seedDemoProjects() {
       },
       {
         id: 'demo-hook-lab',
+        name: 'Hook Lab - E-Commerce Ad',
         title: 'Hook Lab - E-Commerce Ad',
         width: 1080,
         height: 1920,

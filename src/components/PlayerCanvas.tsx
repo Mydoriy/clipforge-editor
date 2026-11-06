@@ -1,7 +1,33 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useEditorStore } from '../store/useEditorStore';
-import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize2 } from 'lucide-react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useEditorStore, type Clip } from '../store/useEditorStore';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  RotateCw,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Zap,
+  Menu,
+  Maximize,
+  Minimize,
+  Grid,
+  Ruler,
+  Check,
+  Volume2,
+  Activity,
+  Sliders,
+  Eye,
+  Repeat,
+  Square,
+  Type,
+  X
+} from 'lucide-react';
 import { db } from '../db';
+import { sharedCompositor } from '../engine/compositor';
+import { masterAudio } from '../engine/audioEngine';
+import { generateMediaMetadata } from '../engine/storageProxy';
 
 export const PlayerCanvas: React.FC = () => {
   const {
@@ -11,16 +37,108 @@ export const PlayerCanvas: React.FC = () => {
     isPlaying,
     setIsPlaying,
     safeZoneEnabled,
+    toggleSafeZone,
+    isProxyEnabled,
+    toggleProxy,
     clips,
     addClip,
+    updateClip,
+    selectedClipId,
+    selectClip,
+    projectSettings,
+    updateProjectSettings,
+    settings,
+    updateSettings,
+    timelines,
+    activeTimelineId,
     showToast
   } = useEditorStore();
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
+  const canvasWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  // Playback timer loop
+  // Drag over canvas state
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Top Bar ☰ Menu states
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showRulers, setShowRulers] = useState(false);
+  const [bgColor, setBgColor] = useState<'black' | 'dark' | 'checker' | 'white' | 'green'>('black');
+  const [loopPlayback, setLoopPlayback] = useState(false);
+  const [showWaveform, setShowWaveform] = useState(false);
+  const [showColorScale, setShowColorScale] = useState(false);
+
+  // Bottom Controls states
+  const [previewQuality, setPreviewQuality] = useState<'full' | 'half' | 'quarter'>('full');
+  const [zoomMode, setZoomMode] = useState<'fit' | number>('fit');
+  const [timecodeDisplayMode, setTimecodeDisplayMode] = useState<'smpte' | 'frames'>('smpte');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Dropdowns in bottom bar
+  const [qualityDropdownOpen, setQualityDropdownOpen] = useState(false);
+  const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
+  const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
+
+  // Direct Manipulation States
+  const [isDraggingClip, setIsDraggingClip] = useState(false);
+  const [dragAction, setDragAction] = useState<'move' | 'scale' | 'rotate' | null>(null);
+  const [scaleCorner, setScaleCorner] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [initialClipPos, setInitialClipPos] = useState<{ x: number; y: number; scale: number; rotation: number }>({
+    x: 0,
+    y: 0,
+    scale: 1,
+    rotation: 0
+  });
+  const [snapX, setSnapX] = useState(false);
+  const [snapY, setSnapY] = useState(false);
+
+  // Inline text editing state
+  const [isEditingInlineText, setIsEditingInlineText] = useState(false);
+  const [inlineTextValue, setInlineTextValue] = useState('');
+  const inlineInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Current active timeline
+  const activeTimeline = timelines.find((t) => t.id === activeTimelineId) || timelines[0];
+  const timelineTitle = activeTimeline?.name || 'Timeline 01';
+
+  // Current aspect ratio
+  const currentAspect = projectSettings?.aspect || settings?.defaultAspect || '9:16';
+  const fps = projectSettings?.fps || 30;
+
+  // Compute Base Dimensions & CSS Aspect Ratio
+  const getAspectConfig = (aspect: string) => {
+    switch (aspect) {
+      case '16:9':
+        return { w: 960, h: 540, cssRatio: '16/9', label: '16:9 (Ngang)' };
+      case '1:1':
+        return { w: 720, h: 720, cssRatio: '1/1', label: '1:1 (Vuông)' };
+      case '4:3':
+        return { w: 960, h: 720, cssRatio: '4/3', label: '4:3 (Truyền thống)' };
+      case '3:4':
+        return { w: 720, h: 960, cssRatio: '3/4', label: '3:4 (Chân dung)' };
+      case '21:9':
+        return { w: 1120, h: 480, cssRatio: '21/9', label: '21:9 (Ultrawide)' };
+      case 'original':
+        return { w: 540, h: 960, cssRatio: '9/16', label: 'Gốc (Theo media)' };
+      case 'custom':
+        return { w: 540, h: 960, cssRatio: '9/16', label: 'Tùy chỉnh' };
+      case '9:16':
+      default:
+        return { w: 540, h: 960, cssRatio: '9/16', label: '9:16 (Dọc TikTok/Reels)' };
+    }
+  };
+
+  const aspectConfig = getAspectConfig(currentAspect);
+
+  // Quality scaling factor for preview rendering
+  const qualityFactor = previewQuality === 'quarter' ? 0.25 : previewQuality === 'half' ? 0.5 : 1.0;
+  const canvasWidth = Math.round(aspectConfig.w * qualityFactor);
+  const canvasHeight = Math.round(aspectConfig.h * qualityFactor);
+
+  // Master Playback Timer Loop with Loop Playback support
   useEffect(() => {
     let animId: number;
     let lastTimestamp = performance.now();
@@ -28,10 +146,16 @@ export const PlayerCanvas: React.FC = () => {
     const loop = (timestamp: number) => {
       if (isPlaying) {
         const delta = (timestamp - lastTimestamp) / 1000;
-        setCurrentTime(Math.min(duration, currentTime + delta));
-        if (currentTime + delta >= duration) {
-          setIsPlaying(false);
-          setCurrentTime(0);
+        const nextTime = currentTime + delta;
+        if (nextTime >= duration) {
+          if (loopPlayback && duration > 0) {
+            setCurrentTime(0);
+          } else {
+            setIsPlaying(false);
+            setCurrentTime(0);
+          }
+        } else {
+          setCurrentTime(nextTime);
         }
       }
       lastTimestamp = timestamp;
@@ -40,218 +164,49 @@ export const PlayerCanvas: React.FC = () => {
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, duration, currentTime, setCurrentTime, setIsPlaying]);
+  }, [isPlaying, duration, currentTime, setCurrentTime, setIsPlaying, loopPlayback]);
 
-  // Render canvas frame
+  // Synchronize audio playback with currentTime and isPlaying
+  useEffect(() => {
+    masterAudio.syncClips(clips, currentTime, isPlaying);
+    return () => {
+      if (!isPlaying) {
+        masterAudio.pauseAll();
+      }
+    };
+  }, [clips, currentTime, isPlaying]);
+
+  // Master Compositor Rendering
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
-
-    // Background gradient
-    const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, '#0a0d14');
-    grad.addColorStop(0.5, '#0e1422');
-    grad.addColorStop(1, '#05070a');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, height);
-
-    // Active clips at currentTime
+    // Check active clips at currentTime
     const activeClips = clips.filter((c) => currentTime >= c.start && currentTime <= c.start + c.duration);
 
-    // Render Video & Image tracks
-    const videoClips = activeClips.filter((c) => c.track === 'video' || c.type === 'image');
-    for (const vClip of videoClips) {
-      ctx.save();
-
-      // Opacity
-      ctx.globalAlpha = vClip.opacity ?? 1;
-
-      // Position, Scale & Rotation
-      ctx.translate(width / 2 + (vClip.x || 0), height / 2 + (vClip.y || 0));
-      if (vClip.rotation) {
-        ctx.rotate((vClip.rotation * Math.PI) / 180);
+    if (activeClips.length === 0) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        if (bgColor === 'dark') ctx.fillStyle = '#1F1F1F';
+        else if (bgColor === 'white') ctx.fillStyle = '#FFFFFF';
+        else if (bgColor === 'green') ctx.fillStyle = '#00FF00';
+        else ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
-      ctx.scale(vClip.scale || 1, vClip.scale || 1);
-
-      // Filters (CSS filter string)
-      const b = 100 + (vClip.brightness || 0);
-      const c = 100 + (vClip.contrast || 0);
-      const s = 100 + (vClip.saturation || 0);
-
-      let filterCss = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
-      if (vClip.filter === 'noir') {
-        filterCss += ' grayscale(100%)';
-      } else if (vClip.filter === 'vintage') {
-        filterCss += ' sepia(60%)';
-      } else if (vClip.filter === 'warm') {
-        filterCss += ' sepia(25%) saturate(140%)';
-      } else if (vClip.filter === 'cinematic') {
-        filterCss += ' contrast(115%) saturate(125%)';
-      } else if (vClip.filter === 'vhs') {
-        filterCss += ' hue-rotate(20deg) contrast(110%)';
-      } else if (vClip.filter === 'cyberpunk') {
-        filterCss += ' hue-rotate(180deg) saturate(180%)';
-      } else if (vClip.filter === 'vivid') {
-        filterCss += ' saturate(160%) contrast(110%)';
-      }
-
-      ctx.filter = filterCss;
-
-      // Draw image if src exists
-      if (vClip.src) {
-        let img = imageCache.current.get(vClip.src);
-        if (!img) {
-          img = new Image();
-          img.src = vClip.src;
-          imageCache.current.set(vClip.src, img);
-        }
-        if (img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, -width / 2, -height / 2, width, height);
-        } else {
-          // Placeholder card
-          ctx.fillStyle = '#111827';
-          ctx.fillRect(-width / 2 + 30, -height / 2 + 100, width - 60, height - 200);
-        }
-      } else {
-        // Procedural 9:16 Video Canvas Card
-        const cardGrad = ctx.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
-        if (vClip.filter === 'cyberpunk') {
-          cardGrad.addColorStop(0, '#3b0764');
-          cardGrad.addColorStop(1, '#083344');
-        } else if (vClip.filter === 'cinematic') {
-          cardGrad.addColorStop(0, '#042f2e');
-          cardGrad.addColorStop(1, '#0f172a');
-        } else if (vClip.filter === 'warm') {
-          cardGrad.addColorStop(0, '#451a03');
-          cardGrad.addColorStop(1, '#1c1917');
-        } else {
-          cardGrad.addColorStop(0, '#0f172a');
-          cardGrad.addColorStop(1, '#1e1b4b');
-        }
-
-        ctx.fillStyle = cardGrad;
-        ctx.fillRect(-width / 2 + 30, -height / 2 + 80, width - 60, height - 160);
-
-        // Animated neon circle
-        const pulse = Math.sin(currentTime * 4) * 14;
-        ctx.beginPath();
-        ctx.arc(0, 0, 80 + pulse, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.15)';
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#22D3EE';
-        ctx.stroke();
-
-        ctx.filter = 'none';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(vClip.name, 0, 8);
-      }
-
-      ctx.restore();
+    } else {
+      sharedCompositor.renderFrame(canvas, clips, currentTime, {
+        showSafeZone: safeZoneEnabled,
+        isProxy: isProxyEnabled
+      });
     }
+  }, [currentTime, clips, safeZoneEnabled, isProxyEnabled, bgColor, canvasWidth, canvasHeight]);
 
-    // Render Stickers
-    const stickerClips = activeClips.filter((c) => c.track === 'sticker');
-    for (const sticker of stickerClips) {
-      ctx.save();
-      ctx.globalAlpha = sticker.opacity ?? 1;
-      ctx.translate(width / 2 + (sticker.x || 0), height / 2 + (sticker.y || 0));
-      if (sticker.rotation) ctx.rotate((sticker.rotation * Math.PI) / 180);
-      ctx.scale(sticker.scale || 1, sticker.scale || 1);
-      ctx.font = '64px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(sticker.text || '🔥', 0, 0);
-      ctx.restore();
-    }
+  // Currently selected clip if active at playhead
+  const selectedClip = clips.find((c) => c.id === selectedClipId);
+  const isSelectedClipActive =
+    selectedClip && currentTime >= selectedClip.start && currentTime <= selectedClip.start + selectedClip.duration;
 
-    // Render Text & Captions with In/Out Animations
-    const textClips = activeClips.filter((c) => c.track === 'text');
-    for (const tClip of textClips) {
-      if (!tClip.text) continue;
-      ctx.save();
-
-      const timeInClip = currentTime - tClip.start;
-      const timeLeftInClip = tClip.start + tClip.duration - currentTime;
-
-      // In Animation
-      let inScale = 1;
-      let inYOffset = 0;
-      let inAlpha = 1;
-      let displayText = tClip.text;
-
-      if (tClip.textAnimIn === 'pop') {
-        inScale = Math.min(1, timeInClip * 6);
-      } else if (tClip.textAnimIn === 'slideUp') {
-        inYOffset = Math.max(0, (0.35 - timeInClip) * 120);
-      } else if (tClip.textAnimIn === 'fadeIn') {
-        inAlpha = Math.min(1, timeInClip / 0.4);
-      } else if (tClip.textAnimIn === 'typewriter') {
-        const charCount = Math.floor(timeInClip * 18);
-        displayText = tClip.text.slice(0, charCount);
-      } else if (tClip.textAnimIn === 'zoomIn') {
-        inScale = Math.min(1, 0.4 + timeInClip * 2);
-      }
-
-      // Out Animation
-      let outAlpha = 1;
-      let outYOffset = 0;
-      if (tClip.textAnimOut === 'fade' && timeLeftInClip < 0.35) {
-        outAlpha = Math.max(0, timeLeftInClip / 0.35);
-      } else if (tClip.textAnimOut === 'slideDown' && timeLeftInClip < 0.35) {
-        outYOffset = (0.35 - timeLeftInClip) * 80;
-      }
-
-      ctx.globalAlpha = (tClip.opacity ?? 1) * inAlpha * outAlpha;
-      ctx.translate(
-        width / 2 + (tClip.x || 0),
-        height / 2 + (tClip.y || -110) + inYOffset + outYOffset
-      );
-      if (tClip.rotation) ctx.rotate((tClip.rotation * Math.PI) / 180);
-      ctx.scale((tClip.scale || 1) * inScale, (tClip.scale || 1) * inScale);
-
-      // Alex Hormozi typography style
-      ctx.font = '900 28px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Text stroke (Black outline)
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 6;
-      ctx.lineJoin = 'round';
-      ctx.strokeText(displayText, 0, 0);
-
-      // Text Fill (Yellow / Neon)
-      ctx.fillStyle = tClip.name.includes('Red') ? '#fda4af' : '#facc15';
-      ctx.fillText(displayText, 0, 0);
-
-      ctx.restore();
-    }
-
-    // Render Particles
-    const particleClip = activeClips.find((c) => c.particleType);
-    if (particleClip) {
-      ctx.save();
-      for (let i = 0; i < 28; i++) {
-        const px = (currentTime * 110 + i * 42) % width;
-        const py = height - ((currentTime * 190 + i * 58) % height);
-        ctx.fillStyle = i % 2 === 0 ? '#22D3EE' : '#EC4899';
-        ctx.beginPath();
-        ctx.arc(px, py, 2.5 + (i % 3), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }, [currentTime, clips]);
-
-  // Drag and drop onto canvas
+  // Handle Drag & Drop media file onto canvas
   const handleCanvasDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -261,6 +216,9 @@ export const PlayerCanvas: React.FC = () => {
       const url = URL.createObjectURL(file);
       const isAudio = file.type.startsWith('audio');
       const isVideo = file.type.startsWith('video');
+      const isImage = file.type.startsWith('image');
+
+      const meta = await generateMediaMetadata(file, url);
 
       await db.media.add({
         id: 'media-' + Date.now(),
@@ -275,101 +233,857 @@ export const PlayerCanvas: React.FC = () => {
         track: isAudio ? 'audio' : 'video',
         name: file.name,
         start: currentTime,
-        duration: isAudio ? 12 : 8,
+        duration: isAudio ? 12 : isImage ? 5 : 8,
         type: isVideo ? 'video' : isAudio ? 'audio' : 'image',
-        src: url
+        src: url,
+        thumbnailUrl: meta.thumbnailUrl,
+        waveformPeaks: meta.waveformPeaks
       });
 
-      showToast(`Đã thả file "${file.name}" vào vị trí phát!`, 'success');
+      masterAudio.playSynthesizer('click');
+      showToast(`Đã thêm "${file.name}" vào vị trí playhead!`, 'success');
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(1);
-    return `${mins.toString().padStart(2, '0')}:${parseFloat(secs) < 10 ? '0' : ''}${secs}`;
+  // SMPTE Timecode Formatter: HH:MM:SS:FF
+  const formatTimecode = (seconds: number) => {
+    const totalFrames = Math.floor(seconds * fps);
+    const ff = (totalFrames % fps).toString().padStart(2, '0');
+    const ss = (Math.floor(seconds) % 60).toString().padStart(2, '0');
+    const mm = (Math.floor(seconds / 60) % 60).toString().padStart(2, '0');
+    const hh = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    return `${hh}:${mm}:${ss}:${ff}`;
+  };
+
+  // Keyboard Shortcuts listener (Space, Left, Right, Shift+Left, Shift+Right, Home, End, Arrows nudge)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPlaying(!isPlaying);
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        if (selectedClip && !e.altKey && !e.ctrlKey) {
+          // Nudge selected clip left
+          const step = e.shiftKey ? 10 : 1;
+          const curX = selectedClip.x || selectedClip.transform?.x || 0;
+          updateClip(selectedClip.id, {
+            x: curX - step,
+            transform: { ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), x: curX - step }
+          });
+        } else {
+          // Step back 1 frame or 1 second
+          const stepTime = e.shiftKey ? 1.0 : 1 / fps;
+          setCurrentTime(Math.max(0, currentTime - stepTime));
+        }
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        if (selectedClip && !e.altKey && !e.ctrlKey) {
+          // Nudge selected clip right
+          const step = e.shiftKey ? 10 : 1;
+          const curX = selectedClip.x || selectedClip.transform?.x || 0;
+          updateClip(selectedClip.id, {
+            x: curX + step,
+            transform: { ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), x: curX + step }
+          });
+        } else {
+          // Step forward 1 frame or 1 second
+          const stepTime = e.shiftKey ? 1.0 : 1 / fps;
+          setCurrentTime(Math.min(duration, currentTime + stepTime));
+        }
+      } else if (e.code === 'ArrowUp') {
+        if (selectedClip) {
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 1;
+          const curY = selectedClip.y || selectedClip.transform?.y || 0;
+          updateClip(selectedClip.id, {
+            y: curY - step,
+            transform: { ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), y: curY - step }
+          });
+        }
+      } else if (e.code === 'ArrowDown') {
+        if (selectedClip) {
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 1;
+          const curY = selectedClip.y || selectedClip.transform?.y || 0;
+          updateClip(selectedClip.id, {
+            y: curY + step,
+            transform: { ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), y: curY + step }
+          });
+        }
+      } else if (e.code === 'Home') {
+        e.preventDefault();
+        setCurrentTime(0);
+      } else if (e.code === 'End') {
+        e.preventDefault();
+        setCurrentTime(duration);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, currentTime, duration, fps, selectedClip, updateClip, setCurrentTime, setIsPlaying]);
+
+  // Fullscreen Change Listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const handleToggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  // Close menus on outside click
+  useEffect(() => {
+    const handleOutside = () => {
+      setMenuOpen(false);
+      setQualityDropdownOpen(false);
+      setZoomDropdownOpen(false);
+      setRatioDropdownOpen(false);
+    };
+    window.addEventListener('click', handleOutside);
+    return () => window.removeEventListener('click', handleOutside);
+  }, []);
+
+  // Mouse Handlers for Direct Manipulation on Canvas
+  const handleMouseDownOnClip = (e: React.MouseEvent, action: 'move' | 'scale' | 'rotate', corner?: 'tl' | 'tr' | 'bl' | 'br') => {
+    e.stopPropagation();
+    if (!selectedClip) return;
+
+    setIsDraggingClip(true);
+    setDragAction(action);
+    setScaleCorner(corner || null);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setInitialClipPos({
+      x: selectedClip.x || selectedClip.transform?.x || 0,
+      y: selectedClip.y || selectedClip.transform?.y || (selectedClip.type === 'text' ? -110 : 0),
+      scale: selectedClip.scale || selectedClip.transform?.scale || 1.0,
+      rotation: selectedClip.rotation || selectedClip.transform?.rotation || 0
+    });
+  };
+
+  // Window MouseMove / MouseUp for Direct Manipulation
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingClip || !selectedClip || !dragAction) return;
+
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+
+      if (dragAction === 'move') {
+        let newX = initialClipPos.x + deltaX;
+        let newY = initialClipPos.y + deltaY;
+
+        // Snapping: Center Snap lines
+        if (Math.abs(newX) < 8) {
+          newX = 0;
+          setSnapX(true);
+        } else {
+          setSnapX(false);
+        }
+
+        if (Math.abs(newY) < 8) {
+          newY = 0;
+          setSnapY(true);
+        } else {
+          setSnapY(false);
+        }
+
+        updateClip(selectedClip.id, {
+          x: Math.round(newX),
+          y: Math.round(newY),
+          transform: {
+            ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }),
+            x: Math.round(newX),
+            y: Math.round(newY)
+          }
+        });
+      } else if (dragAction === 'scale') {
+        // Distance based scaling
+        const distChange = (deltaX + deltaY) / 150;
+        let newScale = Math.max(0.2, Math.min(5.0, initialClipPos.scale + distChange));
+        updateClip(selectedClip.id, {
+          scale: parseFloat(newScale.toFixed(2)),
+          transform: {
+            ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }),
+            scale: parseFloat(newScale.toFixed(2))
+          }
+        });
+      } else if (dragAction === 'rotate') {
+        // Rotation handle
+        const rotationDelta = Math.round(deltaX * 0.8);
+        let newRot = (initialClipPos.rotation + rotationDelta) % 360;
+        if (Math.abs(newRot) < 4) newRot = 0;
+        if (Math.abs(newRot - 90) < 4) newRot = 90;
+        if (Math.abs(newRot - 180) < 4) newRot = 180;
+        if (Math.abs(newRot - 270) < 4) newRot = 270;
+
+        updateClip(selectedClip.id, {
+          rotation: newRot,
+          transform: {
+            ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }),
+            rotation: newRot
+          }
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingClip) {
+        setIsDraggingClip(false);
+        setDragAction(null);
+        setScaleCorner(null);
+        setSnapX(false);
+        setSnapY(false);
+      }
+    };
+
+    if (isDraggingClip) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDraggingClip, dragAction, dragStart, initialClipPos, selectedClip, updateClip]);
+
+  // Double click text to edit inline
+  const handleDoubleClickText = (clip: Clip) => {
+    if (clip.type === 'text') {
+      setIsEditingInlineText(true);
+      setInlineTextValue(clip.text || '');
+      setTimeout(() => {
+        inlineInputRef.current?.focus();
+        inlineInputRef.current?.select();
+      }, 50);
+    }
+  };
+
+  // Submit inline text edit
+  const handleSaveInlineText = () => {
+    if (selectedClip && isEditingInlineText) {
+      updateClip(selectedClip.id, { text: inlineTextValue });
+      setIsEditingInlineText(false);
+      showToast('Đã lưu nội dung chữ!', 'success');
+    }
+  };
+
+  // Change project aspect ratio
+  const handleChangeAspect = (aspectKey: string) => {
+    updateProjectSettings({ aspect: aspectKey as any });
+    updateSettings({ defaultAspect: aspectKey as any });
+    showToast(`Đã đổi tỉ lệ khung hình sang: ${aspectKey}`, 'info');
+  };
+
+  // Background style helper
+  const getBackgroundStyle = () => {
+    switch (bgColor) {
+      case 'dark':
+        return 'bg-[#1F1F1F]';
+      case 'white':
+        return 'bg-white';
+      case 'green':
+        return 'bg-[#00FF00]';
+      case 'checker':
+        return 'bg-[linear-gradient(45deg,#222_25%,transparent_25%),linear-gradient(-45deg,#222_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#222_75%),linear-gradient(-45deg,transparent_75%,#222_75%)] bg-[size:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0] bg-[#111]';
+      case 'black':
+      default:
+        return 'bg-black';
+    }
   };
 
   return (
     <div
+      id="player-canvas-container"
+      ref={containerRef}
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragOver(true);
       }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleCanvasDrop}
-      className={`flex-1 flex flex-col items-center justify-center bg-[#0B0F19] p-4 relative overflow-hidden select-none transition-colors ${
-        isDragOver ? 'bg-[#22D3EE]/5' : ''
+      className={`flex-1 flex flex-col h-full bg-[#141414] relative overflow-hidden select-none transition-colors ${
+        isDragOver ? 'ring-2 ring-[#1FC8DB] ring-inset' : ''
       }`}
     >
-      {/* 9:16 Canvas Wrapper */}
-      <div className="relative aspect-[9/16] h-[78%] max-h-[580px] rounded-2xl overflow-hidden shadow-2xl border border-[#1F2937] bg-black flex items-center justify-center">
-        <canvas ref={canvasRef} width={540} height={960} className="w-full h-full object-contain" />
+      {/* ======================================================== */}
+      {/* 1. TOP BAR: Title & Menu ☰                               */}
+      {/* ======================================================== */}
+      <div className="h-9 px-3 flex items-center justify-between border-b border-[#262626] bg-[#181818] z-30 shrink-0">
+        <div className="flex items-center gap-2">
+          {/* Menu ☰ Icon */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className={`p-1.5 rounded-md hover:bg-[#262626] text-[#E6E6E6] hover:text-white transition-colors ${
+                menuOpen ? 'bg-[#262626] text-[#1FC8DB]' : ''
+              }`}
+              title="Menu Player (☰)"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
 
-        {/* 9:16 Safe Zone Overlay (TikTok/Reels overlay guidelines) */}
-        {safeZoneEnabled && (
-          <div className="absolute inset-0 pointer-events-none border border-dashed border-[#22D3EE]/50 m-4 rounded-xl flex flex-col justify-between p-3">
-            {/* Top Bar Safe Zone */}
-            <div className="text-[10px] text-[#22D3EE] font-mono bg-[#0E1320]/80 px-2 py-0.5 rounded-lg w-max border border-[#22D3EE]/30">
-              Safe Zone: Header & Search
-            </div>
+            {/* Menu Dropdown */}
+            {menuOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-full left-0 mt-1 w-60 rounded-md bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1.5 text-xs text-[#E6E6E6] z-50 flex flex-col gap-0.5"
+              >
+                {/* 1. Safe Zones */}
+                <button
+                  onClick={toggleSafeZone}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Shield className="w-3.5 h-3.5 text-[#1FC8DB]" />
+                    <span>Safe zones (Khung an toàn)</span>
+                  </span>
+                  {safeZoneEnabled && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
 
-            {/* Right Action Icons simulated zone (TikTok/Reels: Like, Comment, Save, Share) */}
-            <div className="self-end flex flex-col gap-2 items-center bg-[#0E1320]/80 p-2 rounded-xl border border-[#1F2937]/80">
-              <div className="w-6 h-6 rounded-full bg-rose-500/30 flex items-center justify-center text-[10px] text-rose-300 font-bold">
-                ♥
-              </div>
-              <div className="w-6 h-6 rounded-full bg-slate-700/40 flex items-center justify-center text-[10px] text-slate-300">
-                💬
-              </div>
-              <div className="w-6 h-6 rounded-full bg-slate-700/40 flex items-center justify-center text-[10px] text-slate-300">
-                🔖
-              </div>
-              <div className="w-6 h-6 rounded-full bg-slate-700/40 flex items-center justify-center text-[10px] text-slate-300">
-                ↗
-              </div>
-            </div>
+                {/* 2. Grid 3x3 */}
+                <button
+                  onClick={() => setShowGrid(!showGrid)}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Grid className="w-3.5 h-3.5 text-[#1FC8DB]" />
+                    <span>Grid (Lưới 3x3)</span>
+                  </span>
+                  {showGrid && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
 
-            {/* Bottom Caption & Audio Safe Zone */}
-            <div className="text-[10px] text-[#22D3EE] font-mono bg-[#0E1320]/80 px-2 py-0.5 rounded-lg w-max border border-[#22D3EE]/30">
-              Safe Zone: Caption, Hashtags & Sound
-            </div>
+                {/* 3. Rulers */}
+                <button
+                  onClick={() => setShowRulers(!showRulers)}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Ruler className="w-3.5 h-3.5 text-[#1FC8DB]" />
+                    <span>Rulers (Thước đo pixel)</span>
+                  </span>
+                  {showRulers && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
+
+                <div className="h-[1px] bg-[#333333] my-1" />
+
+                {/* 4. Background Color Submenu */}
+                <div className="px-3 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold">Màu nền Player</div>
+                <div className="px-3 py-1 flex items-center gap-1.5">
+                  {[
+                    { id: 'black', label: 'Đen', color: '#000000' },
+                    { id: 'dark', label: 'Xám', color: '#1F1F1F' },
+                    { id: 'white', label: 'Trắng', color: '#FFFFFF' },
+                    { id: 'green', label: 'Chroma', color: '#00FF00' },
+                    { id: 'checker', label: 'Trong suốt', color: '#444444' }
+                  ].map((bg) => (
+                    <button
+                      key={bg.id}
+                      onClick={() => setBgColor(bg.id as any)}
+                      className={`w-5 h-5 rounded border transition-transform ${
+                        bgColor === bg.id ? 'ring-2 ring-[#1FC8DB] scale-110' : 'border-[#333333] hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: bg.color }}
+                      title={`Nền: ${bg.label}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="h-[1px] bg-[#333333] my-1" />
+
+                {/* 5. Loop Playback */}
+                <button
+                  onClick={() => setLoopPlayback(!loopPlayback)}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Repeat className="w-3.5 h-3.5 text-[#1FC8DB]" />
+                    <span>Phát lặp lại (Loop)</span>
+                  </span>
+                  {loopPlayback && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
+
+                {/* 6. Show Waveform */}
+                <button
+                  onClick={() => setShowWaveform(!showWaveform)}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Volume2 className="w-3.5 h-3.5 text-[#1FC8DB]" />
+                    <span>Hiển thị Waveform</span>
+                  </span>
+                  {showWaveform && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
+
+                {/* 7. Color Scale */}
+                <button
+                  onClick={() => setShowColorScale(!showColorScale)}
+                  className="px-3 py-1.5 flex items-center justify-between hover:bg-[#262626] text-left transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Activity className="w-3.5 h-3.5 text-[#1FC8DB]" />
+                    <span>Thang đo màu (Color scale)</span>
+                  </span>
+                  {showColorScale && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                </button>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Title: Player-Timeline 01 */}
+          <span className="text-xs font-semibold text-white tracking-wide">
+            Player-{timelineTitle}
+          </span>
+        </div>
+
+        {/* Right Status Badge */}
+        <div className="flex items-center gap-2 text-[11px] text-[#8A8A8A]">
+          <span className="px-1.5 py-0.5 rounded bg-[#262626] border border-[#333333] text-[#1FC8DB] font-mono text-[10px]">
+            {aspectConfig.label.split(' ')[0]}
+          </span>
+        </div>
       </div>
 
-      {/* Playback Controls Bar */}
-      <div className="mt-3 flex items-center gap-4 bg-[#111827] px-5 py-2.5 rounded-2xl border border-[#1F2937] shadow-xl text-white">
-        <button
-          onClick={() => setCurrentTime(Math.max(0, currentTime - 1))}
-          className="p-1.5 hover:text-[#22D3EE] hover:bg-[#1F2937] rounded-xl transition-colors"
-          title="Lùi 1s (-1s)"
+      {/* ======================================================== */}
+      {/* 2. MAIN VIEWPORT: Canvas with Rulers & Guides            */}
+      {/* ======================================================== */}
+      <div
+        onClick={() => selectClip(null)}
+        className="flex-1 relative flex items-center justify-center p-3 overflow-hidden bg-[#0D0D0D]"
+      >
+        {/* Rulers: Top & Left */}
+        {showRulers && (
+          <>
+            <div className="absolute top-0 left-0 right-0 h-4 bg-[#181818] border-b border-[#262626] flex items-center text-[8px] font-mono text-[#8A8A8A] px-2 overflow-hidden pointer-events-none z-20">
+              {Array.from({ length: 25 }).map((_, i) => (
+                <div key={i} className="flex-1 border-r border-[#333333] h-full flex items-end pb-0.5">
+                  {i % 2 === 0 ? i * 50 : ''}
+                </div>
+              ))}
+            </div>
+            <div className="absolute top-4 left-0 bottom-0 w-4 bg-[#181818] border-r border-[#262626] flex flex-col text-[8px] font-mono text-[#8A8A8A] py-2 overflow-hidden pointer-events-none z-20">
+              {Array.from({ length: 25 }).map((_, i) => (
+                <div key={i} className="flex-1 border-b border-[#333333] w-full flex items-center justify-center">
+                  {i % 2 === 0 ? i * 50 : ''}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Canvas Display Wrapper */}
+        <div
+          ref={canvasWrapperRef}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            aspectRatio: aspectConfig.cssRatio,
+            transform: typeof zoomMode === 'number' ? `scale(${zoomMode})` : undefined
+          }}
+          className={`relative max-h-[92%] max-w-[94%] rounded border border-[#2E2E2E] shadow-2xl flex items-center justify-center overflow-hidden transition-all ${getBackgroundStyle()}`}
         >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+          {/* Main Rendering Canvas */}
+          <canvas
+            ref={canvasRef}
+            width={canvasWidth}
+            height={canvasHeight}
+            className="w-full h-full object-contain pointer-events-auto"
+          />
 
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className="p-3 bg-gradient-to-tr from-[#22D3EE] to-sky-400 hover:from-[#22D3EE] hover:to-sky-300 text-slate-950 rounded-full shadow-lg shadow-cyan-500/20 transition-all transform hover:scale-105 active:scale-95"
-          title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}
-        >
-          {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-        </button>
+          {/* Grid 3x3 Overlay (Rule of Thirds) */}
+          {showGrid && (
+            <div className="absolute inset-0 pointer-events-none z-10 grid grid-cols-3 grid-rows-3 border border-white/10">
+              <div className="border-r border-b border-white/20 border-dashed" />
+              <div className="border-r border-b border-white/20 border-dashed" />
+              <div className="border-b border-white/20 border-dashed" />
+              <div className="border-r border-b border-white/20 border-dashed" />
+              <div className="border-r border-b border-white/20 border-dashed" />
+              <div className="border-b border-white/20 border-dashed" />
+              <div className="border-r border-white/20 border-dashed" />
+              <div className="border-r border-white/20 border-dashed" />
+              <div />
+            </div>
+          )}
 
-        <button
-          onClick={() => setCurrentTime(Math.min(duration, currentTime + 1))}
-          className="p-1.5 hover:text-[#22D3EE] hover:bg-[#1F2937] rounded-xl transition-colors"
-          title="Tiến 1s (+1s)"
-        >
-          <RotateCw className="w-4 h-4" />
-        </button>
+          {/* Center Snap Lines */}
+          {snapX && (
+            <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-[#1FC8DB] shadow-[0_0_8px_#1FC8DB] pointer-events-none z-20" />
+          )}
+          {snapY && (
+            <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[#1FC8DB] shadow-[0_0_8px_#1FC8DB] pointer-events-none z-20" />
+          )}
 
-        <div className="h-4 w-[1px] bg-[#1F2937] mx-1" />
+          {/* 9:16 Safe Zone Overlay */}
+          {safeZoneEnabled && currentAspect === '9:16' && (
+            <div className="absolute inset-0 pointer-events-none border border-dashed border-[#1FC8DB]/50 m-4 rounded flex flex-col justify-between p-3 z-10">
+              <div className="text-[9px] text-[#1FC8DB] font-mono bg-black/80 px-1.5 py-0.5 rounded w-max border border-[#1FC8DB]/30">
+                Safe Zone: Header & Search
+              </div>
 
-        <div className="text-xs font-mono font-medium text-[#E5E7EB]">
-          <span className="text-[#22D3EE] font-bold">{formatTime(currentTime)}</span>
-          <span className="text-[#9CA3AF]"> / </span>
-          <span>{formatTime(duration)}</span>
+              {/* Right Action Icons simulated zone */}
+              <div className="self-end flex flex-col gap-1.5 items-center bg-black/80 p-1.5 rounded border border-[#333333]">
+                <div className="w-5 h-5 rounded-full bg-rose-500/30 flex items-center justify-center text-[9px] text-rose-300">♥</div>
+                <div className="w-5 h-5 rounded-full bg-slate-700/40 flex items-center justify-center text-[9px] text-slate-300">💬</div>
+                <div className="w-5 h-5 rounded-full bg-slate-700/40 flex items-center justify-center text-[9px] text-slate-300">🔖</div>
+                <div className="w-5 h-5 rounded-full bg-slate-700/40 flex items-center justify-center text-[9px] text-slate-300">↗</div>
+              </div>
+
+              <div className="text-[9px] text-[#1FC8DB] font-mono bg-black/80 px-1.5 py-0.5 rounded w-max border border-[#1FC8DB]/30">
+                Safe Zone: Caption & Audio
+              </div>
+            </div>
+          )}
+
+          {/* Audio Waveform Bar at Bottom */}
+          {showWaveform && (
+            <div className="absolute bottom-2 left-4 right-4 h-6 bg-black/70 backdrop-blur rounded border border-white/10 flex items-end gap-1 px-2 py-1 z-10 pointer-events-none">
+              {Array.from({ length: 32 }).map((_, i) => {
+                const h = Math.abs(Math.sin(currentTime * 8 + i * 0.4)) * 100;
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-[#1FC8DB] to-[#4BD9E8] rounded-t-sm transition-all duration-75"
+                    style={{ height: `${Math.max(15, h)}%` }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Color Scale (RGB Parade / Histogram Indicator) */}
+          {showColorScale && (
+            <div className="absolute top-2 right-2 p-1.5 bg-black/80 backdrop-blur rounded border border-[#333333] flex flex-col gap-1 z-10 pointer-events-none">
+              <span className="text-[8px] font-mono text-[#8A8A8A]">RGB SCOPE</span>
+              <div className="flex items-center gap-1 h-8 w-14">
+                <div className="flex-1 bg-red-500/80 h-[80%] rounded-sm" />
+                <div className="flex-1 bg-emerald-500/80 h-[92%] rounded-sm" />
+                <div className="flex-1 bg-sky-500/80 h-[75%] rounded-sm" />
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* DIRECT MANIPULATION BOUNDING BOX & HANDLES               */}
+          {/* ======================================================== */}
+          {isSelectedClipActive && (
+            <div
+              onMouseDown={(e) => handleMouseDownOnClip(e, 'move')}
+              onDoubleClick={() => handleDoubleClickText(selectedClip)}
+              style={{
+                position: 'absolute',
+                left: `calc(50% + ${(selectedClip.x || selectedClip.transform?.x || 0) * 0.5}px)`,
+                top: `calc(50% + ${(selectedClip.y || selectedClip.transform?.y || (selectedClip.type === 'text' ? -110 : 0)) * 0.5}px)`,
+                transform: `translate(-50%, -50%) rotate(${selectedClip.rotation || selectedClip.transform?.rotation || 0}deg) scale(${selectedClip.scale || selectedClip.transform?.scale || 1.0})`,
+                width: selectedClip.type === 'text' ? `${Math.max(160, (selectedClip.text?.length || 10) * 14)}px` : '75%',
+                height: selectedClip.type === 'text' ? '54px' : '65%'
+              }}
+              className="border-2 border-[#1FC8DB] cursor-move z-20 group pointer-events-auto shadow-[0_0_12px_rgba(31,200,219,0.3)]"
+            >
+              {/* Rotation Handle (Stem & Circle) */}
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'rotate')}
+                className="absolute -top-7 left-1/2 -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing"
+                title="Kéo để xoay góc"
+              >
+                <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-[#1FC8DB] shadow-md hover:scale-125 transition-transform" />
+                <div className="w-[1.5px] h-3.5 bg-[#1FC8DB]" />
+              </div>
+
+              {/* 4 Corner Scale Handles */}
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'tl')}
+                className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform"
+                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+              />
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'tr')}
+                className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform"
+                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+              />
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'bl')}
+                className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform"
+                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+              />
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'br')}
+                className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform"
+                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+              />
+
+              {/* Inline Text Editing Input */}
+              {isEditingInlineText && selectedClip.type === 'text' && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="absolute inset-0 bg-black/90 p-1 flex items-center justify-center z-30"
+                >
+                  <input
+                    ref={inlineInputRef}
+                    type="text"
+                    value={inlineTextValue}
+                    onChange={(e) => setInlineTextValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveInlineText();
+                      if (e.key === 'Escape') setIsEditingInlineText(false);
+                    }}
+                    onBlur={handleSaveInlineText}
+                    className="w-full bg-[#1A1A1A] border border-[#1FC8DB] rounded px-2 py-1 text-center font-bold text-white text-xs outline-none"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 3. BOTTOM CONTROLS BAR                                   */}
+      {/* ======================================================== */}
+      <div className="h-11 px-3 bg-[#181818] border-t border-[#262626] flex items-center justify-between z-30 shrink-0 text-[#E6E6E6]">
+        {/* Left Side: Timecode / Frame Display & Step Controls */}
+        <div className="flex items-center gap-1.5">
+          {/* Timecode Toggle Button (HH:MM:SS:FF <-> Frame count) */}
+          <button
+            onClick={() => setTimecodeDisplayMode(timecodeDisplayMode === 'smpte' ? 'frames' : 'smpte')}
+            className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] font-mono text-[11px] font-medium transition-all ${
+              duration === 0 || clips.length === 0 ? 'opacity-40' : 'text-[#E6E6E6]'
+            }`}
+            title="Bấm để chuyển đổi giữa Timecode (HH:MM:SS:FF) và Số Frame"
+          >
+            {timecodeDisplayMode === 'smpte' ? (
+              <>
+                <span className="text-[#1FC8DB] font-bold">{formatTimecode(currentTime)}</span>
+                <span className="text-[#8A8A8A]"> / </span>
+                <span>{formatTimecode(duration)}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[#1FC8DB] font-bold">F {Math.floor(currentTime * fps)}</span>
+                <span className="text-[#8A8A8A]"> / </span>
+                <span>F {Math.floor(duration * fps)}</span>
+              </>
+            )}
+          </button>
+
+          {/* Step -1 Frame (Left) */}
+          <button
+            onClick={() => setCurrentTime(Math.max(0, currentTime - 1 / fps))}
+            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            title="Lùi 1 frame (←)"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Rewind 1s */}
+          <button
+            onClick={() => setCurrentTime(Math.max(0, currentTime - 1))}
+            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            title="Lùi 1 giây (Shift+←)"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Center: Prominent Master Play / Pause Button */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              masterAudio.playSynthesizer('click');
+              setIsPlaying(!isPlaying);
+            }}
+            className="px-4 py-1.5 bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 rounded-md font-bold text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shadow-md shadow-cyan-500/20"
+            title={isPlaying ? 'Tạm dừng (Space)' : 'Phát video (Space)'}
+          >
+            {isPlaying ? (
+              <>
+                <Pause className="w-3.5 h-3.5 fill-current" />
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                <span>Play</span>
+              </>
+            )}
+          </button>
+
+          {/* Forward 1s */}
+          <button
+            onClick={() => setCurrentTime(Math.min(duration, currentTime + 1))}
+            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            title="Tiến 1 giây (Shift+→)"
+          >
+            <RotateCw className="w-3 h-3" />
+          </button>
+
+          {/* Step +1 Frame (Right) */}
+          <button
+            onClick={() => setCurrentTime(Math.min(duration, currentTime + 1 / fps))}
+            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            title="Tiến 1 frame (→)"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Right Side: Quality, Zoom, Ratio & Fullscreen */}
+        <div className="flex items-center gap-1.5 text-xs">
+          {/* Quality Dropdown: Full / Half / Quarter */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setQualityDropdownOpen(!qualityDropdownOpen);
+              }}
+              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
+              title="Chất lượng Preview"
+            >
+              <span>{previewQuality === 'full' ? 'Full' : previewQuality === 'half' ? 'Half (1/2)' : 'Quarter (1/4)'}</span>
+            </button>
+            {qualityDropdownOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+              >
+                {[
+                  { id: 'full', label: 'Full (100%)' },
+                  { id: 'half', label: 'Half (50%)' },
+                  { id: 'quarter', label: 'Quarter (25%)' }
+                ].map((q) => (
+                  <button
+                    key={q.id}
+                    onClick={() => {
+                      setPreviewQuality(q.id as any);
+                      setQualityDropdownOpen(false);
+                      showToast(`Chất lượng preview: ${q.label}`, 'info');
+                    }}
+                    className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
+                      previewQuality === q.id ? 'text-[#1FC8DB] font-bold' : ''
+                    }`}
+                  >
+                    <span>{q.label}</span>
+                    {previewQuality === q.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Zoom / Fit Dropdown */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomDropdownOpen(!zoomDropdownOpen);
+              }}
+              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
+              title="Mức phóng to Player (Fit / 25-400%)"
+            >
+              <span>{zoomMode === 'fit' ? 'Fit' : `${Math.round(zoomMode * 100)}%`}</span>
+            </button>
+            {zoomDropdownOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50 max-h-48 overflow-y-auto"
+              >
+                {[
+                  { id: 'fit', label: 'Fit' },
+                  { id: 0.25, label: '25%' },
+                  { id: 0.5, label: '50%' },
+                  { id: 0.75, label: '75%' },
+                  { id: 1.0, label: '100%' },
+                  { id: 1.5, label: '150%' },
+                  { id: 2.0, label: '200%' },
+                  { id: 4.0, label: '400%' }
+                ].map((z) => (
+                  <button
+                    key={String(z.id)}
+                    onClick={() => {
+                      setZoomMode(z.id as any);
+                      setZoomDropdownOpen(false);
+                    }}
+                    className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
+                      zoomMode === z.id ? 'text-[#1FC8DB] font-bold' : ''
+                    }`}
+                  >
+                    <span>{z.label}</span>
+                    {zoomMode === z.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Ratio Dropdown: Original, 9:16, 16:9, 1:1, 4:3, 3:4, 21:9, Custom */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setRatioDropdownOpen(!ratioDropdownOpen);
+              }}
+              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-[#1FC8DB] flex items-center gap-1 transition-colors"
+              title="Đổi tỉ lệ khung hình (Ratio)"
+            >
+              <span>{currentAspect}</span>
+            </button>
+            {ratioDropdownOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full right-0 mb-1 w-44 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+              >
+                <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold">Tỉ lệ khung hình</div>
+                {[
+                  { id: '9:16', label: '9:16 (TikTok, Reels)' },
+                  { id: '16:9', label: '16:9 (YouTube ngang)' },
+                  { id: '1:1', label: '1:1 (Vuông Instagram)' },
+                  { id: '4:3', label: '4:3 (Truyền thống)' },
+                  { id: '3:4', label: '3:4 (Chân dung)' },
+                  { id: '21:9', label: '21:9 (Ultrawide)' },
+                  { id: 'original', label: 'Original (Gốc)' },
+                  { id: 'custom', label: 'Custom (Tùy chỉnh)' }
+                ].map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => {
+                      handleChangeAspect(r.id);
+                      setRatioDropdownOpen(false);
+                    }}
+                    className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
+                      currentAspect === r.id ? 'text-[#1FC8DB] font-bold' : ''
+                    }`}
+                  >
+                    <span>{r.label}</span>
+                    {currentAspect === r.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fullscreen Button */}
+          <button
+            onClick={handleToggleFullscreen}
+            className="p-1.5 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-white transition-colors"
+            title={isFullscreen ? 'Thu nhỏ (Thoát toàn màn hình)' : 'Toàn màn hình (Fullscreen)'}
+          >
+            {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
     </div>

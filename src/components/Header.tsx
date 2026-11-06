@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
-import { isSupabaseConfigured } from '../utils/supabase';
+import { db } from '../db';
 import {
   Menu as MenuIcon,
   Crown,
@@ -10,15 +11,32 @@ import {
   Download,
   ChevronDown,
   Globe,
-  Cloud,
-  HardDrive,
   Eye,
   EyeOff,
   Bell,
   Settings,
   CheckCheck,
   Sparkles,
-  Info
+  Columns3,
+  Keyboard,
+  Minus,
+  Square,
+  X,
+  Undo2,
+  Redo2,
+  Scissors,
+  Copy,
+  ClipboardPaste,
+  FolderOpen,
+  FilePlus,
+  Save,
+  Check,
+  BookmarkPlus,
+  Upload,
+  Gem,
+  HelpCircle,
+  Info,
+  Maximize2
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -26,6 +44,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
+  const navigate = useNavigate();
   const {
     language,
     setLanguage,
@@ -34,38 +53,195 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     openModal,
     projectTitle,
     setProjectTitle,
+    currentProjectId,
+    setCurrentProjectId,
+    clips,
+    duration,
     showToast,
     toggleSidebar,
     isPro,
     notifications,
     markAllNotificationsAsRead,
-    autosaveStatus
+    autosaveStatus,
+    panelTopHeight,
+    panelLeftWidth,
+    panelRightWidth,
+    showDetails,
+    showTimeline,
+    layoutPreset,
+    setLayoutPreset,
+    toggleShowDetails,
+    toggleShowTimeline,
+    resetLayout,
+    undo,
+    redo,
+    undoStack,
+    redoStack,
+    cutClip,
+    copyClip,
+    pasteClip,
+    selectAllClips,
+    deselectAllClips,
+    selectedClipId,
+    duplicateClip
   } = useEditorStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeMenuTab, setActiveMenuTab] = useState<'file' | 'edit' | 'view' | 'help'>('file');
+  const [layoutDropdownOpen, setLayoutDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
 
+  // Inline Rename State
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(projectTitle);
+
+  const importFileRef = useRef<HTMLInputElement>(null);
   const t = translations[language];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: projectTitle,
-        text: 'Check out this 9:16 vertical video created in CapCut Desktop Web!',
-        url: window.location.href
-      }).catch(() => {});
+  // Navigate to Home safely
+  const handleHomeNavigation = () => {
+    if (isEditor) {
+      if (window.confirm('Quay về trang chủ? Mọi thay đổi của dự án đã được tự động lưu vào IndexedDB.')) {
+        navigate('/');
+      }
     } else {
-      openModal('share');
+      navigate('/');
+    }
+  };
+
+  // Manual Save project to IndexedDB
+  const handleManualSave = async () => {
+    setMenuOpen(false);
+    if (currentProjectId) {
+      try {
+        await db.projects.update(currentProjectId, {
+          title: projectTitle,
+          name: projectTitle,
+          updatedAt: Date.now(),
+          tracksData: { clips }
+        });
+        showToast('Đã lưu dự án vào Dexie IndexedDB', 'success');
+      } catch (err: any) {
+        showToast(`Lỗi lưu dự án: ${err.message}`, 'error');
+      }
+    } else {
+      showToast('Dự án được lưu tự động liên tục', 'info');
+    }
+  };
+
+  // Save current project as a template
+  const handleSaveAsTemplate = async () => {
+    setMenuOpen(false);
+    try {
+      const tplId = 'proj-tpl-' + Date.now();
+      const tplTitle = `[Template] ${projectTitle}`;
+      await db.projects.add({
+        id: tplId,
+        title: tplTitle,
+        name: tplTitle,
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        duration,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDeleted: false,
+        thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
+        tracksData: { clips }
+      });
+      showToast(`Đã lưu "${projectTitle}" làm Template mới!`, 'success');
+    } catch (err: any) {
+      showToast(`Lỗi lưu template: ${err.message}`, 'error');
+    }
+  };
+
+  // Export current project as .capproj JSON file
+  const handleExportCapproj = async () => {
+    setMenuOpen(false);
+    try {
+      let projData = null;
+      if (currentProjectId) {
+        projData = await db.projects.get(currentProjectId);
+      }
+      const exportData = projData || {
+        id: currentProjectId || 'proj-' + Date.now(),
+        title: projectTitle,
+        duration,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        tracksData: { clips }
+      };
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(projectTitle || 'Project').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_')}.capproj`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Đã xuất tệp dự án .capproj!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi xuất file: ${err.message}`, 'error');
+    }
+  };
+
+  // Import .capproj JSON file
+  const handleImportCapproj = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMenuOpen(false);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const newId = 'proj-' + Date.now();
+      const title = data.title || data.name || 'Imported Project';
+      await db.projects.add({
+        ...data,
+        id: newId,
+        title,
+        name: title,
+        updatedAt: Date.now(),
+        createdAt: data.createdAt || Date.now()
+      });
+      showToast(`Đã nhập dự án: "${title}"`, 'success');
+      setCurrentProjectId(newId);
+      setProjectTitle(title);
+      navigate(`/editor/${newId}`);
+    } catch (err: any) {
+      showToast(`Tệp .capproj không hợp lệ: ${err.message}`, 'error');
+    }
+  };
+
+  // Fullscreen toggle for window control
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
     }
   };
 
   return (
-    <header className="h-14 bg-[#0E1320] border-b border-[#1F2937] px-5 flex items-center justify-between select-none z-30 shrink-0">
-      {/* Left: Logo + Mobile Hamburger + Menu */}
-      <div className="flex items-center gap-3">
+    <header
+      className={`${
+        isEditor
+          ? 'h-[44px] bg-[#1F1F1F] border-[#333333] px-3 font-sans'
+          : 'h-14 bg-[#0E1320] border-[#1F2937] px-5'
+      } border-b flex items-center justify-between select-none z-30 shrink-0 text-xs`}
+    >
+      {/* Hidden file input for import .capproj */}
+      <input
+        type="file"
+        ref={importFileRef}
+        accept=".capproj,.json"
+        onChange={handleImportCapproj}
+        className="hidden"
+      />
+
+      {/* LEFT: Logo "CapCut" + Menu ▾ Dropdown */}
+      <div className="flex items-center gap-2.5">
         {!isEditor && (
           <button
             onClick={toggleSidebar}
@@ -76,151 +252,483 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           </button>
         )}
 
-        <Logo size="md" />
+        {/* Logo CapCut placeholder: click confirms & navigates to Home */}
+        <Logo
+          size={isEditor ? 'sm' : 'md'}
+          onClick={isEditor ? handleHomeNavigation : undefined}
+        />
 
+        {/* Menu ▾ Dropdown for Editor */}
         {isEditor && (
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#E5E7EB] hover:text-[#22D3EE] px-2.5 py-1.5 rounded-xl hover:bg-[#111827] border border-transparent hover:border-[#1F2937] transition-all hover-lift"
+              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all ${
+                menuOpen
+                  ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
+                  : 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#E6E6E6] hover:text-[#1FC8DB]'
+              }`}
             >
               <span>{t.menu}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#9CA3AF]" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#8A8A8A]" />
             </button>
 
             {menuOpen && (
               <div
-                className="absolute left-0 mt-2 w-52 bg-[#111827] border border-[#1F2937] rounded-2xl shadow-2xl py-1.5 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
+                className="absolute left-0 mt-2 w-72 bg-[#1F1F1F] border border-[#333333] rounded-md shadow-2xl z-50 animate-in fade-in flex flex-col overflow-hidden text-xs text-[#E6E6E6]"
                 onMouseLeave={() => setMenuOpen(false)}
               >
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    openModal('export');
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] flex items-center justify-between"
-                >
-                  <span>{t.export} (MP4 / WebM)</span>
-                  <span className="text-[10px] text-[#9CA3AF]">Ctrl+E</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    toggleSafeZone();
-                    showToast(safeZoneEnabled ? 'Đã tắt vùng an toàn' : 'Đã bật vùng an toàn 9:16');
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] flex items-center justify-between"
-                >
-                  <span>{t.safeZone}</span>
-                  <span className="text-[10px] text-[#9CA3AF]">Shift+S</span>
-                </button>
-                <div className="border-t border-[#1F2937] my-1" />
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    openModal('shortcuts');
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE]"
-                >
-                  Phím tắt biên tập (Hotkeys)
-                </button>
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    openModal('about');
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE]"
-                >
-                  Giới thiệu CapCut Web v3.0
-                </button>
+                {/* Menu Category Tabs */}
+                <div className="grid grid-cols-4 bg-[#262626] border-b border-[#333333] p-1 gap-1 text-[11px] font-bold">
+                  {(['file', 'edit', 'view', 'help'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveMenuTab(tab)}
+                      className={`py-1 rounded text-center uppercase tracking-wider transition-colors ${
+                        activeMenuTab === tab
+                          ? 'bg-[#1FC8DB] text-slate-950 shadow-sm'
+                          : 'text-[#8A8A8A] hover:text-white hover:bg-[#2E2E2E]'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Submenu: FILE */}
+                {activeMenuTab === 'file' && (
+                  <div className="flex flex-col py-1">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('newProject');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><FilePlus className="w-3.5 h-3.5 text-[#1FC8DB]" /> Dự án mới (New project)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('recentProjects');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><FolderOpen className="w-3.5 h-3.5 text-purple-400" /> Dự án gần đây (Recent)</span>
+                    </button>
+                    <button
+                      onClick={handleManualSave}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Save className="w-3.5 h-3.5 text-emerald-400" /> Lưu dự án (Save)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+S</span>
+                    </button>
+                    <button
+                      onClick={handleSaveAsTemplate}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><BookmarkPlus className="w-3.5 h-3.5 text-amber-400" /> Lưu làm mẫu (Save as template)</span>
+                    </button>
+                    <div className="border-t border-[#333333] my-1" />
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        importFileRef.current?.click();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Upload className="w-3.5 h-3.5 text-sky-400" /> Nhập dự án (.capproj)</span>
+                    </button>
+                    <button
+                      onClick={handleExportCapproj}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Download className="w-3.5 h-3.5 text-teal-400" /> Xuất dự án (.capproj)</span>
+                    </button>
+                    <div className="border-t border-[#333333] my-1" />
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        handleHomeNavigation();
+                      }}
+                      className="px-3.5 py-2 hover:bg-rose-950/40 text-rose-300 flex items-center justify-between text-left"
+                    >
+                      <span>Quay về trang chủ (Back to home)</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Submenu: EDIT */}
+                {activeMenuTab === 'edit' && (
+                  <div className="flex flex-col py-1">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        undo();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Undo2 className="w-3.5 h-3.5" /> Hoàn tác (Undo)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+Z</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        redo();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Redo2 className="w-3.5 h-3.5" /> Làm lại (Redo)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+Shift+Z</span>
+                    </button>
+                    <div className="border-t border-[#333333] my-1" />
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        cutClip();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Scissors className="w-3.5 h-3.5 text-amber-400" /> Cắt (Cut)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+X</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        copyClip();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Copy className="w-3.5 h-3.5 text-blue-400" /> Sao chép (Copy)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+C</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        pasteClip();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><ClipboardPaste className="w-3.5 h-3.5 text-emerald-400" /> Dán (Paste)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+V</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        if (selectedClipId) duplicateClip(selectedClipId);
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> Nhân bản (Duplicate)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+D</span>
+                    </button>
+                    <div className="border-t border-[#333333] my-1" />
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        selectAllClips();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span>Chọn tất cả (Select all)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Ctrl+A</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        deselectAllClips();
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span>Bỏ chọn (Deselect)</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Esc</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Submenu: VIEW */}
+                {activeMenuTab === 'view' && (
+                  <div className="flex flex-col py-1">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        resetLayout();
+                        showToast('Đã khôi phục bố cục mặc định', 'info');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span>Đặt lại bố cục (Reset layout)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleShowDetails();
+                        showToast(showDetails ? 'Đã ẩn panel Details' : 'Đã hiện panel Details');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span>{showDetails ? 'Ẩn bảng Details' : 'Hiện bảng Details'}</span>
+                      {showDetails && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleShowTimeline();
+                        showToast(showTimeline ? 'Đã ẩn Timeline' : 'Đã hiện Timeline');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span>{showTimeline ? 'Ẩn Timeline' : 'Hiện Timeline'}</span>
+                      {showTimeline && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                    </button>
+                    <div className="border-t border-[#333333] my-1" />
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('settings');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Settings className="w-3.5 h-3.5 text-[#8A8A8A]" /> Cài đặt hệ thống (Settings)</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Submenu: HELP */}
+                {activeMenuTab === 'help' && (
+                  <div className="flex flex-col py-1">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('shortcuts');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Keyboard className="w-3.5 h-3.5 text-[#1FC8DB]" /> Phím tắt (Keyboard shortcuts)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openModal('about');
+                      }}
+                      className="px-3.5 py-2 hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] flex items-center justify-between text-left"
+                    >
+                      <span className="flex items-center gap-2"><Info className="w-3.5 h-3.5 text-sky-400" /> Giới thiệu CapCut Desktop Web</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
+
+        {/* Direct Undo / Redo buttons with disabled tooltips */}
+        {isEditor && (
+          <div className="flex items-center gap-0.5 border-l border-[#333333] pl-2 ml-1">
+            <button
+              onClick={undo}
+              disabled={undoStack.length === 0}
+              title={undoStack.length === 0 ? 'Không có thao tác nào để hoàn tác (Ctrl+Z)' : 'Hoàn tác (Undo - Ctrl+Z)'}
+              className={`p-1.5 rounded-md transition-colors ${
+                undoStack.length === 0
+                  ? 'text-[#555555] cursor-not-allowed opacity-40'
+                  : 'text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626]'
+              }`}
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={redoStack.length === 0}
+              title={redoStack.length === 0 ? 'Không có thao tác nào để làm lại (Ctrl+Shift+Z / Ctrl+Y)' : 'Làm lại (Redo - Ctrl+Shift+Z)'}
+              className={`p-1.5 rounded-md transition-colors ${
+                redoStack.length === 0
+                  ? 'text-[#555555] cursor-not-allowed opacity-40'
+                  : 'text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626]'
+              }`}
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Center: Title / Subtitle matching exact Design System specification */}
+      {/* CENTER: Project Name Inline Rename + Saved/Saving Status */}
       {isEditor ? (
         <div className="flex items-center gap-2">
           {isEditingTitle ? (
             <input
               type="text"
-              value={projectTitle}
-              onChange={(e) => setProjectTitle(e.target.value)}
-              onBlur={() => setIsEditingTitle(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
+              value={tempTitle}
+              onChange={(e) => setTempTitle(e.target.value)}
+              onBlur={() => {
+                if (tempTitle.trim()) {
+                  setProjectTitle(tempTitle.trim());
+                  if (currentProjectId) {
+                    db.projects.update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() }).catch(() => {});
+                  }
+                }
+                setIsEditingTitle(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (tempTitle.trim()) {
+                    setProjectTitle(tempTitle.trim());
+                    if (currentProjectId) {
+                      db.projects.update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() }).catch(() => {});
+                    }
+                    showToast('Đã đổi tên dự án!', 'success');
+                  }
+                  setIsEditingTitle(false);
+                } else if (e.key === 'Escape') {
+                  setTempTitle(projectTitle);
+                  setIsEditingTitle(false);
+                }
+              }}
               autoFocus
-              className="bg-[#111827] border border-[#22D3EE] text-white text-xs px-2.5 py-1 rounded-xl outline-none font-semibold text-center"
+              className="bg-[#2E2E2E] border border-[#1FC8DB] text-[#E6E6E6] text-xs px-2.5 py-0.5 rounded-md outline-none font-medium text-center w-40"
             />
           ) : (
             <span
-              onClick={() => setIsEditingTitle(true)}
-              title="Click để đổi tên dự án"
-              className="text-xs font-bold text-[#E5E7EB] hover:text-[#22D3EE] cursor-pointer px-2.5 py-1 rounded-xl hover:bg-[#111827] transition-all hover-lift"
+              onClick={() => {
+                setTempTitle(projectTitle);
+                setIsEditingTitle(true);
+              }}
+              title="Bấm để đổi tên dự án (Enter lưu, Esc hủy)"
+              className="text-xs font-semibold text-[#E6E6E6] hover:text-[#1FC8DB] cursor-pointer px-2 py-0.5 rounded-md hover:bg-[#262626] transition-all truncate max-w-[200px]"
             >
               {projectTitle}
             </span>
           )}
-          <span className="text-[11px] px-2 py-0.5 rounded-lg bg-[#111827] text-[#9CA3AF] border border-[#1F2937] font-mono">
+
+          {/* Aspect ratio 9:16 tag */}
+          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#262626] text-[#8A8A8A] border border-[#333333] font-mono">
             9:16
           </span>
+
+          {/* Saved / Saving Status Indicator */}
           <span
-            className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium hidden sm:flex items-center gap-1 transition-all ${
+            className={`text-[10px] px-2 py-0.5 rounded-md border font-medium flex items-center gap-1.5 transition-all ${
               autosaveStatus === 'saving'
                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : 'bg-[#262626] text-[#8A8A8A] border-[#333333]'
             }`}
-            title="Dự án được tự động lưu mỗi 3 giây vào Dexie IndexedDB"
+            title="Dự án được lưu tự động mỗi 3 giây vào IndexedDB"
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                autosaveStatus === 'saving' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'
+                autosaveStatus === 'saving' ? 'bg-amber-400 animate-ping' : 'bg-[#1FC8DB]'
               }`}
             />
-            <span>{autosaveStatus === 'saving' ? 'Đang lưu...' : 'Đã lưu'}</span>
+            <span>{autosaveStatus === 'saving' ? 'Saving…' : 'Saved'}</span>
           </span>
         </div>
       ) : (
         <div className="hidden md:flex items-center gap-2 text-xs text-[#9CA3AF]">
           <span className="font-semibold text-[#E5E7EB]">CapCut Desktop Web v3.0</span>
           <span>•</span>
-          <span className="text-[#22D3EE] font-medium">9:16 Vertical Video Studio</span>
+          <span className="text-[#1FC8DB] font-medium">9:16 Vertical Video Studio</span>
         </div>
       )}
 
-      {/* Right: Actions, Language, Bell, Settings, Pro, Export, Window decor */}
-      <div className="flex items-center gap-2.5">
+      {/* RIGHT: Layout, Shortcuts, Pro, Share, Export, Window controls */}
+      <div className="flex items-center gap-2">
+        {/* Layout Presets Dropdown */}
+        {isEditor && (
+          <div className="relative">
+            <button
+              onClick={() => setLayoutDropdownOpen(!layoutDropdownOpen)}
+              title="Tùy chọn bố cục làm việc (Layout)"
+              className={`p-1.5 rounded-md border transition-all ${
+                layoutDropdownOpen
+                  ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
+                  : 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
+              }`}
+            >
+              <Columns3 className="w-3.5 h-3.5" />
+            </button>
+
+            {layoutDropdownOpen && (
+              <div
+                className="absolute right-0 mt-2 w-48 bg-[#1F1F1F] border border-[#333333] rounded-md shadow-2xl py-1 text-xs text-[#E6E6E6] z-50 animate-in fade-in flex flex-col"
+                onMouseLeave={() => setLayoutDropdownOpen(false)}
+              >
+                <span className="px-3 py-1 text-[10px] font-bold text-[#8A8A8A] uppercase tracking-wider">
+                  Bố cục giao diện (Layout)
+                </span>
+                {[
+                  { id: 'default', label: 'Default (Mặc định)' },
+                  { id: 'media-focus', label: 'Media focus (Thư viện)' },
+                  { id: 'timeline-focus', label: 'Timeline focus (Dựng phim)' },
+                  { id: 'large-player', label: 'Large player (Canvas lớn)' },
+                  { id: 'hide-details', label: 'Hide Details (Ẩn thuộc tính)' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setLayoutPreset(item.id as any);
+                      setLayoutDropdownOpen(false);
+                      showToast(`Đã chuyển bố cục: ${item.label}`, 'info');
+                    }}
+                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] ${
+                      layoutPreset === item.id ? 'text-[#1FC8DB] font-bold bg-[#1FC8DB]/5' : ''
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    {layoutPreset === item.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Keyboard Shortcuts Icon Button */}
+        {isEditor && (
+          <button
+            onClick={() => openModal('shortcuts')}
+            title="Xem phím tắt (Keyboard shortcuts)"
+            className="p-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#262626] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] transition-all"
+          >
+            <Keyboard className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         {/* Safe Zone Toggle in Editor */}
         {isEditor && (
           <button
             onClick={toggleSafeZone}
             title={safeZoneEnabled ? 'Tắt vùng an toàn 9:16' : 'Bật vùng an toàn 9:16 (TikTok/Reels)'}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border transition-all hover-lift ${
+            className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border transition-all ${
               safeZoneEnabled
-                ? 'bg-[#22D3EE]/15 border-[#22D3EE]/50 text-[#22D3EE]'
-                : 'bg-[#111827] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
+                ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
+                : 'bg-[#2E2E2E] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
             }`}
           >
-            {safeZoneEnabled ? <Eye className="w-3.5 h-3.5 text-[#22D3EE]" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {safeZoneEnabled ? <Eye className="w-3.5 h-3.5 text-[#1FC8DB]" /> : <EyeOff className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{t.safeZone}</span>
           </button>
         )}
 
-        {/* 1. NÚT "VN" DROPDOWN: Chuyển đổi ngôn ngữ VN/EN tức thì */}
+        {/* Language VN/EN */}
         <div className="relative">
           <button
             onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-            className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border border-[#1F2937] transition-all hover-lift"
+            className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border transition-all ${
+              isEditor
+                ? 'bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border-[#333333]'
+                : 'bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border-[#1F2937]'
+            }`}
             title="Đổi ngôn ngữ toàn app"
           >
-            <Globe className="w-3.5 h-3.5 text-[#22D3EE]" />
+            <Globe className="w-3.5 h-3.5 text-[#1FC8DB]" />
             <span>{language}</span>
-            <ChevronDown className="w-3 h-3 text-[#9CA3AF]" />
+            <ChevronDown className="w-3 h-3 text-[#8A8A8A]" />
           </button>
 
           {langDropdownOpen && (
             <div
-              className="absolute right-0 mt-2 w-36 bg-[#111827] border border-[#1F2937] rounded-xl shadow-2xl py-1 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
+              className={`absolute right-0 mt-2 w-32 ${
+                isEditor ? 'bg-[#1F1F1F] border-[#333333]' : 'bg-[#111827] border-[#1F2937]'
+              } border rounded-md shadow-2xl py-1 text-xs text-[#E6E6E6] z-50 animate-in fade-in`}
               onMouseLeave={() => setLangDropdownOpen(false)}
             >
               <button
@@ -229,12 +737,12 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                   setLangDropdownOpen(false);
                   showToast('Đã đổi ngôn ngữ sang Tiếng Việt (VN)', 'success');
                 }}
-                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] ${
-                  language === 'VN' ? 'text-[#22D3EE] font-bold' : ''
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] ${
+                  language === 'VN' ? 'text-[#1FC8DB] font-bold' : ''
                 }`}
               >
                 <span>Tiếng Việt</span>
-                <span className="text-[10px] text-[#9CA3AF]">VN</span>
+                <span className="text-[10px] text-[#8A8A8A]">VN</span>
               </button>
               <button
                 onClick={() => {
@@ -242,39 +750,44 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                   setLangDropdownOpen(false);
                   showToast('Language changed to English (EN)', 'success');
                 }}
-                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] ${
-                  language === 'EN' ? 'text-[#22D3EE] font-bold' : ''
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] ${
+                  language === 'EN' ? 'text-[#1FC8DB] font-bold' : ''
                 }`}
               >
                 <span>English</span>
-                <span className="text-[10px] text-[#9CA3AF]">EN</span>
+                <span className="text-[10px] text-[#8A8A8A]">EN</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* 2. CHUÔNG THÔNG BÁO (NOTIFICATION BELL WITH DRAWER) */}
+        {/* Notifications Bell */}
         <div className="relative">
           <button
             onClick={() => setNotifDrawerOpen(!notifDrawerOpen)}
-            className="relative p-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] transition-all hover-lift"
+            className={`relative p-1.5 rounded-md border transition-all ${
+              isEditor
+                ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
+                : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
+            }`}
             title="Thông báo hệ thống"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-3.5 h-3.5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center shadow">
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-white text-[8px] font-black flex items-center justify-center shadow">
                 {unreadCount}
               </span>
             )}
           </button>
 
-          {/* Drawer Popover */}
           {notifDrawerOpen && (
             <div
-              className="absolute right-0 mt-2 w-80 bg-[#111827] border border-[#1F2937] rounded-2xl shadow-2xl p-3 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
+              className={`absolute right-0 mt-2 w-80 ${
+                isEditor ? 'bg-[#1F1F1F] border-[#333333]' : 'bg-[#111827] border-[#1F2937]'
+              } border rounded-md shadow-2xl p-3 text-xs text-[#E6E6E6] z-50 animate-in fade-in`}
               onMouseLeave={() => setNotifDrawerOpen(false)}
             >
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1F2937]">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#333333]">
                 <span className="font-bold text-white text-xs">Thông báo</span>
                 {unreadCount > 0 && (
                   <button
@@ -282,7 +795,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                       markAllNotificationsAsRead();
                       showToast('Đã đánh dấu đã đọc tất cả', 'info');
                     }}
-                    className="flex items-center gap-1 text-[10px] text-[#22D3EE] hover:underline font-semibold"
+                    className="flex items-center gap-1 text-[10px] text-[#1FC8DB] hover:underline font-semibold"
                   >
                     <CheckCheck className="w-3 h-3" />
                     <span>Đánh dấu đã đọc</span>
@@ -294,17 +807,17 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                 {notifications.map((n) => (
                   <div
                     key={n.id}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-colors ${
+                    className={`p-2 rounded-md border text-left flex flex-col gap-1 transition-colors ${
                       n.read
-                        ? 'bg-[#0B0F19]/60 border-[#1F2937] text-[#9CA3AF]'
-                        : 'bg-[#111827] border-[#22D3EE]/40 text-[#E5E7EB]'
+                        ? 'bg-[#141414] border-[#333333] text-[#8A8A8A]'
+                        : 'bg-[#262626] border-[#1FC8DB]/40 text-[#E6E6E6]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-white text-xs">{n.title}</span>
-                      <span className="text-[9px] text-[#9CA3AF]">{n.time}</span>
+                      <span className="text-[9px] text-[#8A8A8A]">{n.time}</span>
                     </div>
-                    <p className="text-[11px] text-[#9CA3AF] leading-relaxed">{n.desc}</p>
+                    <p className="text-[11px] text-[#8A8A8A] leading-relaxed">{n.desc}</p>
                   </div>
                 ))}
               </div>
@@ -312,50 +825,90 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           )}
         </div>
 
-        {/* 3. BÁNH RĂNG SETTINGS */}
+        {/* Settings button */}
         <button
           onClick={() => openModal('settings')}
-          className="p-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] transition-all hover-lift"
+          className={`p-1.5 rounded-md border transition-all ${
+            isEditor
+              ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
+              : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
+          }`}
           title="Cài đặt hệ thống (Settings)"
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-3.5 h-3.5" />
         </button>
 
-        {/* Pro Pill: Gradient tím → hồng (#7C3AED → #EC4899) */}
+        {/* Nút Unlock Pro: Icon kim cương, gradient tím-hồng / huy hiệu PRO VIP */}
         <button
           onClick={() => openModal('pro')}
-          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white shadow-md shadow-pink-500/20 transition-all hover-lift"
+          className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md transition-all shadow-sm ${
+            isPro
+              ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+              : 'bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white active:scale-95'
+          }`}
+          title="Nâng cấp tài khoản CapCut Web Pro"
         >
-          <Crown className="w-3.5 h-3.5 text-amber-300" />
-          <span>{isPro ? 'PRO VIP' : t.proBadge}</span>
+          {isPro ? (
+            <>
+              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <span>PRO VIP</span>
+            </>
+          ) : (
+            <>
+              <Gem className="w-3.5 h-3.5 text-pink-200" />
+              <span>Unlock Pro</span>
+            </>
+          )}
         </button>
 
-        {/* Share Button (Editor only) */}
+        {/* Nút Share: Mở Share modal */}
         {isEditor && (
           <button
-            onClick={handleShare}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border border-[#1F2937] transition-all hover-lift"
+            onClick={() => openModal('share')}
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border border-[#333333] hover:border-[#1FC8DB] transition-all"
+            title="Chia sẻ dự án (.capproj, link, Web Share)"
           >
-            <Share2 className="w-3.5 h-3.5" />
+            <Share2 className="w-3.5 h-3.5 text-[#1FC8DB]" />
             <span className="hidden sm:inline">{t.share}</span>
           </button>
         )}
 
-        {/* Bright Cyan Export Button */}
+        {/* Nút Export (Cyan) */}
         <button
           onClick={() => openModal('export')}
-          className="flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#22D3EE] to-sky-400 hover:from-cyan-300 hover:to-sky-300 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all hover-lift active:scale-95"
+          className="flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-md bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 transition-all shadow-sm active:scale-95"
+          title="Xuất video hoàn tất (MP4 / WebM)"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>{t.export}</span>
         </button>
 
-        {/* 4. BA CHẤM TRÒN BÊN PHẢI (Trang trí cửa sổ Desktop) */}
-        <div className="hidden lg:flex items-center gap-1.5 ml-1 pl-2 border-l border-[#1F2937] text-[#9CA3AF]">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#1F2937] hover:bg-slate-600 transition-colors" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#1F2937] hover:bg-slate-600 transition-colors" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#1F2937] hover:bg-slate-600 transition-colors" />
-        </div>
+        {/* Cụm cửa sổ (– ☐ ✕) */}
+        {isEditor && (
+          <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-[#333333]">
+            <button
+              onClick={() => showToast('Cửa sổ đã ở kích thước tối ưu', 'info')}
+              className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors"
+              title="Thu nhỏ (–)"
+            >
+              <Minus className="w-3 h-3" />
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors"
+              title="Phóng to toàn màn hình (☐)"
+            >
+              <Square className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleHomeNavigation}
+              className="p-1 rounded text-[#8A8A8A] hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+              title="Đóng về trang chủ (✕)"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

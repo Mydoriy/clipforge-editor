@@ -1,34 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Language } from '../i18n';
+import { db } from '../db';
 
-export interface TimelineClip {
-  id: string;
-  track: 'video' | 'audio' | 'text' | 'sticker' | 'effect' | 'transition';
-  name: string;
-  start: number; // in seconds
-  duration: number; // in seconds
-  type: string;
-  src?: string;
-  text?: string;
-  scale?: number;
-  x?: number;
-  y?: number;
-  rotation?: number;
-  opacity?: number;
-  speed?: number;
-  volume?: number;
-  fadeIn?: number; // seconds
-  fadeOut?: number; // seconds
-  brightness?: number; // -50 to 50
-  contrast?: number; // -50 to 50
-  saturation?: number; // -50 to 50
-  filter?: string;
-  transitionType?: string;
-  textAnimIn?: string; // 'none' | 'pop' | 'slideUp' | 'fadeIn' | 'typewriter' | 'zoomIn'
-  textAnimOut?: string; // 'none' | 'fade' | 'slideDown' | 'zoomOut'
-  particleType?: string;
-}
+import {
+  type Project,
+  type ProjectSettings,
+  type Timeline,
+  type Track,
+  type Clip,
+  type MediaItem,
+  createDefaultProjectSettings,
+  createDefaultTimeline,
+  createClip
+} from '../types/project';
+
+export * from '../types/project';
+export type TimelineClip = Clip;
 
 export interface UserProfile {
   id: string;
@@ -53,6 +41,8 @@ export interface AppSettings {
   defaultAspect: '9:16' | '16:9' | '1:1';
   autosave: boolean;
   aiApiKey: string;
+  showMascot?: boolean;
+  customShortcuts?: Record<string, string>;
 }
 
 export interface ToastState {
@@ -101,11 +91,23 @@ interface EditorState {
   showToast: (message: string, type?: ToastState['type']) => void;
   removeToast: (id: string) => void;
 
-  // Editor View State
+  // Editor View State & Formal Project Model
   currentProjectId: string | null;
   setCurrentProjectId: (id: string | null) => void;
   projectTitle: string;
   setProjectTitle: (title: string) => void;
+
+  project: Project | null;
+  setProject: (project: Project | null) => void;
+  projectSettings: ProjectSettings;
+  updateProjectSettings: (updates: Partial<ProjectSettings>) => void;
+  timelines: Timeline[];
+  setTimelines: (timelines: Timeline[]) => void;
+  activeTimelineId: string;
+  setActiveTimelineId: (id: string) => void;
+  mediaItems: MediaItem[];
+  setMediaItems: (items: MediaItem[]) => void;
+  addMediaItem: (item: MediaItem) => void;
 
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -123,24 +125,53 @@ interface EditorState {
 
   // Selected Item
   selectedClipId: string | null;
-  selectClip: (id: string | null) => void;
+  selectedClipIds: string[];
+  selectClip: (id: string | null, multi?: boolean) => void;
+  setSelectedClipIds: (ids: string[]) => void;
 
   // Timeline Clips
   clips: TimelineClip[];
   setClips: (clips: TimelineClip[]) => void;
-  addClip: (clip: Omit<TimelineClip, 'id'>) => void;
+  addClip: (clip: Partial<TimelineClip>) => void;
   updateClip: (id: string, updates: Partial<TimelineClip>) => void;
+  updateClipDraft: (id: string, updates: Partial<TimelineClip>) => void;
+  commitHistorySnapshot: () => void;
   deleteClip: (id: string) => void;
   splitClip: (id: string, atTime: number) => void;
   duplicateClip: (id: string) => void;
   trimClipStart: (id: string, newStart: number) => void;
   trimClipEnd: (id: string, newEnd: number) => void;
 
-  // Timeline Zoom & Snap
+  // Proxy 480p Mode
+  isProxyEnabled: boolean;
+  toggleProxy: () => void;
+
+  // Timeline Zoom
   timelineZoom: number;
   setTimelineZoom: (zoom: number) => void;
-  snapEnabled: boolean;
-  toggleSnap: () => void;
+
+  // Layout Management (Top bar layout presets & panels)
+  panelTopHeight: number;
+  panelLeftWidth: number;
+  panelRightWidth: number;
+  showDetails: boolean;
+  showTimeline: boolean;
+  layoutPreset: 'default' | 'media-focus' | 'timeline-focus' | 'large-player' | 'hide-details';
+  setLayoutPreset: (preset: 'default' | 'media-focus' | 'timeline-focus' | 'large-player' | 'hide-details') => void;
+  setPanelDimensions: (dims: { top?: number; left?: number; right?: number }) => void;
+  setShowDetails: (show: boolean) => void;
+  toggleShowDetails: () => void;
+  setShowTimeline: (show: boolean) => void;
+  toggleShowTimeline: () => void;
+  resetLayout: () => void;
+
+  // Clipboard & Selection (Edit Menu)
+  clipboardClip: TimelineClip | null;
+  cutClip: () => void;
+  copyClip: () => void;
+  pasteClip: () => void;
+  selectAllClips: () => void;
+  deselectAllClips: () => void;
 
   // EditPilot Drawer & Chat
   editPilotOpen: boolean;
@@ -154,6 +185,19 @@ interface EditorState {
   redoStack: TimelineClip[][];
   undo: () => void;
   redo: () => void;
+
+  // Shortcuts & Snapping
+  rebindShortcut: (id: string, newKey: string) => void;
+  resetShortcuts: () => void;
+  snapEnabled: boolean;
+  toggleSnap: () => void;
+  setSnapEnabled: (val: boolean) => void;
+
+  // Media Relinking & Storage Quota
+  relinkClipMedia: (clipId: string, file: File | Blob) => Promise<void>;
+  storageWarning: string | null;
+  setStorageWarning: (warn: string | null) => void;
+  checkStorageQuota: () => Promise<void>;
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -235,7 +279,8 @@ export const useEditorStore = create<EditorState>()(
         defaultFps: 30,
         defaultAspect: '9:16',
         autosave: true,
-        aiApiKey: localStorage.getItem('clipforge_ai_key') || ''
+        aiApiKey: localStorage.getItem('clipforge_ai_key') || '',
+        showMascot: true
       },
       updateSettings: (updates) => {
         set((state) => {
@@ -283,6 +328,19 @@ export const useEditorStore = create<EditorState>()(
       projectTitle: '0917 - Vertical Studio',
       setProjectTitle: (title) => set({ projectTitle: title }),
 
+      project: null,
+      setProject: (project) => set({ project }),
+      projectSettings: createDefaultProjectSettings(),
+      updateProjectSettings: (updates) =>
+        set((state) => ({ projectSettings: { ...state.projectSettings, ...updates } })),
+      timelines: [createDefaultTimeline()],
+      setTimelines: (timelines) => set({ timelines }),
+      activeTimelineId: 'timeline-main',
+      setActiveTimelineId: (id) => set({ activeTimelineId: id }),
+      mediaItems: [],
+      setMediaItems: (mediaItems) => set({ mediaItems }),
+      addMediaItem: (item) => set((state) => ({ mediaItems: [...state.mediaItems, item] })),
+
       activeTab: 'Media',
       setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -297,10 +355,34 @@ export const useEditorStore = create<EditorState>()(
       setIsPlaying: (playing) => set({ isPlaying: playing }),
 
       selectedClipId: 'clip-1',
-      selectClip: (id) => set({ selectedClipId: id }),
+      selectedClipIds: ['clip-1'],
+      selectClip: (id, multi) => {
+        if (!id) {
+          set({ selectedClipId: null, selectedClipIds: [] });
+          return;
+        }
+        if (multi) {
+          const current = get().selectedClipIds || [];
+          const next = current.includes(id)
+            ? current.filter((x) => x !== id)
+            : [...current, id];
+          set({
+            selectedClipId: next.length > 0 ? next[next.length - 1] : null,
+            selectedClipIds: next
+          });
+        } else {
+          set({ selectedClipId: id, selectedClipIds: [id] });
+        }
+      },
+      setSelectedClipIds: (ids) => {
+        set({
+          selectedClipIds: ids,
+          selectedClipId: ids.length > 0 ? ids[ids.length - 1] : null
+        });
+      },
 
       clips: [
-        {
+        createClip({
           id: 'clip-1',
           track: 'video',
           name: 'Video Clip 1 (9:16 Vertical)',
@@ -308,15 +390,9 @@ export const useEditorStore = create<EditorState>()(
           duration: 15,
           type: 'video',
           scale: 1,
-          x: 0,
-          y: 0,
-          rotation: 0,
-          opacity: 1,
-          speed: 1,
-          volume: 1,
-          filter: 'none'
-        },
-        {
+          opacity: 1
+        }),
+        createClip({
           id: 'clip-2',
           track: 'text',
           name: 'HOOK: Đừng bỏ lỡ!',
@@ -325,12 +401,10 @@ export const useEditorStore = create<EditorState>()(
           type: 'text',
           text: '🔥 3 BÍ QUYẾT TĂNG TƯƠNG TÁC',
           scale: 1,
-          x: 0,
           y: -120,
-          rotation: 0,
           opacity: 1
-        },
-        {
+        }),
+        createClip({
           id: 'clip-3',
           track: 'audio',
           name: 'Viral Lo-Fi Chill Beat',
@@ -338,42 +412,88 @@ export const useEditorStore = create<EditorState>()(
           duration: 15,
           type: 'audio',
           volume: 0.8
-        }
+        })
       ],
       setClips: (clips) => set({ clips }),
       addClip: (clipData) => {
-        const id = 'clip-' + Date.now();
-        const newClip: TimelineClip = {
-          id,
-          scale: 1,
-          x: 0,
-          y: 0,
-          rotation: 0,
-          opacity: 1,
-          speed: 1,
-          volume: 1,
-          ...clipData
-        };
+        const newClip = createClip(clipData);
         const currentClips = get().clips;
         set({
-          undoStack: [...get().undoStack, currentClips],
+          undoStack: [...get().undoStack, currentClips].slice(-100),
           redoStack: [],
           clips: [...currentClips, newClip],
-          selectedClipId: id
+          selectedClipId: newClip.id
         });
       },
       updateClip: (id, updates) => {
+        const currentClips = get().clips;
+        set({
+          undoStack: [...get().undoStack, currentClips].slice(-100),
+          redoStack: [],
+          clips: currentClips.map((c) => {
+            if (c.id !== id) return c;
+            const updated = { ...c, ...updates };
+            if (updates.x !== undefined || updates.y !== undefined || updates.scale !== undefined || updates.rotation !== undefined) {
+              updated.transform = {
+                ...c.transform,
+                x: updates.x ?? c.transform?.x ?? 0,
+                y: updates.y ?? c.transform?.y ?? 0,
+                scale: updates.scale ?? c.transform?.scale ?? 1,
+                rotation: updates.rotation ?? c.transform?.rotation ?? 0
+              };
+            }
+            if (updates.transform) {
+              updated.x = updates.transform.x;
+              updated.y = updates.transform.y;
+              updated.scale = updates.transform.scale;
+              updated.rotation = updates.transform.rotation;
+            }
+            return updated;
+          })
+        });
+      },
+      updateClipDraft: (id, updates) => {
         set((state) => ({
-          clips: state.clips.map((c) => (c.id === id ? { ...c, ...updates } : c))
+          clips: state.clips.map((c) => {
+            if (c.id !== id) return c;
+            const updated = { ...c, ...updates };
+            if (updates.x !== undefined || updates.y !== undefined || updates.scale !== undefined || updates.rotation !== undefined) {
+              updated.transform = {
+                ...c.transform,
+                x: updates.x ?? c.transform?.x ?? 0,
+                y: updates.y ?? c.transform?.y ?? 0,
+                scale: updates.scale ?? c.transform?.scale ?? 1,
+                rotation: updates.rotation ?? c.transform?.rotation ?? 0
+              };
+            }
+            if (updates.transform) {
+              updated.x = updates.transform.x;
+              updated.y = updates.transform.y;
+              updated.scale = updates.transform.scale;
+              updated.rotation = updates.transform.rotation;
+            }
+            return updated;
+          })
+        }));
+      },
+      commitHistorySnapshot: () => {
+        const currentClips = get().clips;
+        set((state) => ({
+          undoStack: [...state.undoStack, currentClips].slice(-100),
+          redoStack: []
         }));
       },
       deleteClip: (id) => {
         const currentClips = get().clips;
+        const targetIds = get().selectedClipIds.includes(id) && get().selectedClipIds.length > 1
+          ? get().selectedClipIds
+          : [id];
         set({
-          undoStack: [...get().undoStack, currentClips],
+          undoStack: [...get().undoStack, currentClips].slice(-100),
           redoStack: [],
-          clips: currentClips.filter((c) => c.id !== id),
-          selectedClipId: null
+          clips: currentClips.filter((c) => !targetIds.includes(c.id)),
+          selectedClipId: null,
+          selectedClipIds: []
         });
       },
       splitClip: (id, atTime) => {
@@ -393,7 +513,7 @@ export const useEditorStore = create<EditorState>()(
 
         const currentClips = get().clips;
         set({
-          undoStack: [...get().undoStack, currentClips],
+          undoStack: [...get().undoStack, currentClips].slice(-100),
           redoStack: [],
           clips: currentClips.map((c) => (c.id === id ? part1 : c)).concat(part2),
           selectedClipId: part2.id
@@ -410,7 +530,7 @@ export const useEditorStore = create<EditorState>()(
         };
         const currentClips = get().clips;
         set({
-          undoStack: [...get().undoStack, currentClips],
+          undoStack: [...get().undoStack, currentClips].slice(-100),
           redoStack: [],
           clips: [...currentClips, newClip],
           selectedClipId: newClip.id
@@ -427,7 +547,7 @@ export const useEditorStore = create<EditorState>()(
         const newDuration = currentEnd - clampedStart;
         const currentClips = get().clips;
         set({
-          undoStack: [...get().undoStack, currentClips],
+          undoStack: [...get().undoStack, currentClips].slice(-100),
           redoStack: [],
           clips: currentClips.map((c) => (c.id === id ? { ...c, start: clampedStart, duration: newDuration } : c))
         });
@@ -439,7 +559,7 @@ export const useEditorStore = create<EditorState>()(
         const newDuration = clampedEnd - clip.start;
         const currentClips = get().clips;
         set({
-          undoStack: [...get().undoStack, currentClips],
+          undoStack: [...get().undoStack, currentClips].slice(-100),
           redoStack: [],
           clips: currentClips.map((c) => (c.id === id ? { ...c, duration: newDuration } : c))
         });
@@ -448,10 +568,159 @@ export const useEditorStore = create<EditorState>()(
         }
       },
 
+      isProxyEnabled: false,
+      toggleProxy: () => set((state) => ({ isProxyEnabled: !state.isProxyEnabled })),
+
       timelineZoom: 1,
       setTimelineZoom: (zoom) => set({ timelineZoom: Math.max(0.5, Math.min(3, zoom)) }),
-      snapEnabled: true,
-      toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
+
+      // Layout states & actions
+      panelTopHeight: parseFloat(localStorage.getItem('clipforge_panel_top_height') || '50'),
+      panelLeftWidth: parseFloat(localStorage.getItem('clipforge_panel_left_width') || '34'),
+      panelRightWidth: parseFloat(localStorage.getItem('clipforge_panel_right_width') || '32'),
+      showDetails: true,
+      showTimeline: true,
+      layoutPreset: 'default',
+      setLayoutPreset: (preset) => {
+        let top = 50;
+        let left = 34;
+        let right = 32;
+        let showDet = true;
+        let showTl = true;
+
+        switch (preset) {
+          case 'media-focus':
+            top = 55;
+            left = 48;
+            right = 24;
+            break;
+          case 'timeline-focus':
+            top = 35;
+            left = 34;
+            right = 32;
+            break;
+          case 'large-player':
+            top = 60;
+            left = 24;
+            right = 24;
+            break;
+          case 'hide-details':
+            top = 50;
+            left = 34;
+            right = 32;
+            showDet = false;
+            break;
+          case 'default':
+          default:
+            top = 50;
+            left = 34;
+            right = 32;
+            break;
+        }
+
+        localStorage.setItem('clipforge_panel_top_height', top.toString());
+        localStorage.setItem('clipforge_panel_left_width', left.toString());
+        localStorage.setItem('clipforge_panel_right_width', right.toString());
+
+        set({
+          layoutPreset: preset,
+          panelTopHeight: top,
+          panelLeftWidth: left,
+          panelRightWidth: right,
+          showDetails: showDet,
+          showTimeline: showTl
+        });
+      },
+      setPanelDimensions: (dims) => {
+        set((state) => {
+          const top = dims.top !== undefined ? dims.top : state.panelTopHeight;
+          const left = dims.left !== undefined ? dims.left : state.panelLeftWidth;
+          const right = dims.right !== undefined ? dims.right : state.panelRightWidth;
+          if (dims.top !== undefined) localStorage.setItem('clipforge_panel_top_height', top.toString());
+          if (dims.left !== undefined) localStorage.setItem('clipforge_panel_left_width', left.toString());
+          if (dims.right !== undefined) localStorage.setItem('clipforge_panel_right_width', right.toString());
+          return { panelTopHeight: top, panelLeftWidth: left, panelRightWidth: right };
+        });
+      },
+      setShowDetails: (show) => set({ showDetails: show }),
+      toggleShowDetails: () => set((state) => ({ showDetails: !state.showDetails })),
+      setShowTimeline: (show) => set({ showTimeline: show }),
+      toggleShowTimeline: () => set((state) => ({ showTimeline: !state.showTimeline })),
+      resetLayout: () => {
+        localStorage.setItem('clipforge_panel_top_height', '50');
+        localStorage.setItem('clipforge_panel_left_width', '34');
+        localStorage.setItem('clipforge_panel_right_width', '32');
+        set({
+          panelTopHeight: 50,
+          panelLeftWidth: 34,
+          panelRightWidth: 32,
+          showDetails: true,
+          showTimeline: true,
+          layoutPreset: 'default'
+        });
+      },
+
+      // Clipboard & Selection
+      clipboardClip: null,
+      cutClip: () => {
+        const { selectedClipId, clips, undoStack } = get();
+        if (!selectedClipId) return;
+        const target = clips.find((c) => c.id === selectedClipId);
+        if (!target) return;
+        set({
+          clipboardClip: target,
+          undoStack: [...undoStack, clips].slice(-100),
+          redoStack: [],
+          clips: clips.filter((c) => c.id !== selectedClipId),
+          selectedClipId: null
+        });
+        get().showToast('Đã cắt clip (Ctrl+X)', 'info');
+      },
+      copyClip: () => {
+        const { selectedClipId, clips } = get();
+        if (!selectedClipId) return;
+        const target = clips.find((c) => c.id === selectedClipId);
+        if (!target) return;
+        set({ clipboardClip: target });
+        get().showToast('Đã sao chép clip (Ctrl+C)', 'info');
+      },
+      pasteClip: () => {
+        const { clipboardClip, currentTime, clips, undoStack, duration } = get();
+        if (!clipboardClip) {
+          get().showToast('Clipboard trống', 'warning');
+          return;
+        }
+        const pasted: TimelineClip = {
+          ...clipboardClip,
+          id: 'clip-' + Date.now(),
+          start: currentTime,
+          name: `${clipboardClip.name} (Paste)`
+        };
+        const updated = [...clips, pasted];
+        set({
+          undoStack: [...undoStack, clips].slice(-100),
+          redoStack: [],
+          clips: updated,
+          selectedClipId: pasted.id
+        });
+        if (pasted.start + pasted.duration > duration) {
+          set({ duration: Math.ceil(pasted.start + pasted.duration) });
+        }
+        get().showToast('Đã dán clip tại con trỏ (Ctrl+V)', 'success');
+      },
+      selectAllClips: () => {
+        const { clips } = get();
+        if (clips.length > 0) {
+          set({
+            selectedClipId: clips[0].id,
+            selectedClipIds: clips.map((c) => c.id)
+          });
+          get().showToast(`Đã chọn tất cả ${clips.length} clip (Ctrl+A)`, 'info');
+        }
+      },
+      deselectAllClips: () => {
+        set({ selectedClipId: null, selectedClipIds: [] });
+      },
 
       undoStack: [],
       redoStack: [],
@@ -474,6 +743,86 @@ export const useEditorStore = create<EditorState>()(
           undoStack: [...undoStack, clips],
           clips: next
         });
+      },
+
+      rebindShortcut: (id, newKey) => {
+        set((state) => {
+          const customShortcuts = { ...(state.settings.customShortcuts || {}), [id]: newKey };
+          return { settings: { ...state.settings, customShortcuts } };
+        });
+      },
+      resetShortcuts: () => {
+        set((state) => ({ settings: { ...state.settings, customShortcuts: {} } }));
+      },
+
+      snapEnabled: true,
+      toggleSnap: () => {
+        set((state) => {
+          const next = !state.snapEnabled;
+          get().showToast(next ? 'Hút tự động (Snapping): BẬT' : 'Hút tự động (Snapping): TẮT', 'info');
+          return { snapEnabled: next };
+        });
+      },
+      setSnapEnabled: (val) => set({ snapEnabled: val }),
+
+      storageWarning: null,
+      setStorageWarning: (warn) => set({ storageWarning: warn }),
+      checkStorageQuota: async () => {
+        if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
+          try {
+            const estimate = await navigator.storage.estimate();
+            if (estimate.quota && estimate.usage) {
+              const ratio = estimate.usage / estimate.quota;
+              if (ratio >= 0.9) {
+                const usedMb = (estimate.usage / (1024 * 1024)).toFixed(0);
+                const totalMb = (estimate.quota / (1024 * 1024)).toFixed(0);
+                const msg = `Bộ nhớ trình duyệt gần đầy (${usedMb}MB / ${totalMb}MB, ${(ratio * 100).toFixed(0)}%). Hãy xóa bớt dự án cũ hoặc sao lưu .capproj để tránh mất dữ liệu!`;
+                set({ storageWarning: msg });
+              } else {
+                set({ storageWarning: null });
+              }
+            }
+          } catch (e) {
+            console.warn('Storage estimate failed:', e);
+          }
+        }
+      },
+
+      relinkClipMedia: async (clipId: string, file: File | Blob) => {
+        const { clips, updateClip, showToast } = get();
+        const target = clips.find((c) => c.id === clipId);
+        if (!target) return;
+
+        try {
+          const blobUrl = URL.createObjectURL(file);
+          const mediaId = target.mediaId || 'media-' + Date.now();
+          const fileName = (file as File).name || target.name || 'relinked_media';
+
+          try {
+            await db.media.put({
+              id: mediaId,
+              name: fileName,
+              type: file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : 'image',
+              blob: file,
+              size: file.size,
+              createdAt: Date.now()
+            });
+          } catch (dbErr) {
+            console.warn('IndexedDB put relink media error:', dbErr);
+          }
+
+          updateClip(clipId, {
+            src: blobUrl,
+            mediaId,
+            name: fileName,
+            hasError: false,
+            missingMedia: false
+          });
+
+          showToast(`Đã kết nối lại tệp cho "${target.name || 'clip'}"!`, 'success');
+        } catch (err: any) {
+          showToast(`Lỗi kết nối lại tệp: ${err.message}`, 'error');
+        }
       }
     }),
     {
