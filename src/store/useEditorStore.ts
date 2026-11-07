@@ -263,10 +263,10 @@ export const useEditorStore = create<EditorState>()(
       },
 
       user: null,
-      isPro: (localStorage.getItem('clipforge_pro') === 'true'),
-      setIsPro: (val) => {
-        localStorage.setItem('clipforge_pro', val ? 'true' : 'false');
-        set({ isPro: val });
+      isPro: true, // Mặc định tài khoản PRO VIP vĩnh viễn ở mức hạn cao nhất
+      setIsPro: (_val) => {
+        localStorage.setItem('clipforge_pro', 'true');
+        set({ isPro: true });
       },
 
       notifications: [

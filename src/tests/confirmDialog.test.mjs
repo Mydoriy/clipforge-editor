@@ -53,3 +53,4 @@ test('ConfirmDialog: Replaces crude browser confirm alerts with modern dark-them
   const headerContent = fs.readFileSync(headerPath, 'utf8');
   assert.ok(!headerContent.includes('window.confirm'), 'Header.tsx must not contain window.confirm');
 });
+

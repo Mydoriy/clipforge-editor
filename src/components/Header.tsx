@@ -985,27 +985,16 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           <Settings className="w-3.5 h-3.5" />
         </button>
 
-        {/* Nút Unlock Pro: Icon kim cương, gradient tím-hồng / huy hiệu PRO VIP */}
+        {/* Huy hiệu PRO VIP: Khẳng định đặc quyền tài khoản mức hạn cao nhất */}
         <button
-          onClick={() => openModal('pro')}
-          className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md transition-all shadow-sm ${
-            isPro
-              ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-              : 'bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white active:scale-95'
-          }`}
-          title="Nâng cấp tài khoản CapCut Web Pro"
+          onClick={() => {
+            showToast('👑 Tài khoản PRO VIP: Đang hoạt động ở mức hạn cao nhất (4K 60fps & AI Unlimited)!', 'success');
+          }}
+          className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md transition-all shadow-sm bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/25 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 active:scale-95 cursor-pointer"
+          title="Tài khoản PRO VIP vĩnh viễn (Mức hạn cao nhất)"
         >
-          {isPro ? (
-            <>
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span>PRO VIP</span>
-            </>
-          ) : (
-            <>
-              <Gem className="w-3.5 h-3.5 text-pink-200" />
-              <span>Unlock Pro</span>
-            </>
-          )}
+          <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
+          <span>PRO VIP</span>
         </button>
 
         {/* Nút Share: Mở Share modal */}

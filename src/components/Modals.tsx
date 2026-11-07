@@ -2481,147 +2481,75 @@ export const Modals: React.FC = () => {
             );
           })()}
 
-        {/* 2. PRO PRICING MODAL (3 GÓI FREE / PRO THÁNG / PRO NĂM) */}
+        {/* 2. PRO VIP PRIVILEGES MODAL (MỨC HẠN CAO NHẤT - KHÔNG BÁN GÓI) */}
         {activeModal === 'pro' && (
-          <div className="flex flex-col gap-5 text-center items-center max-w-2xl">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#7C3AED] to-[#EC4899] flex items-center justify-center shadow-lg shadow-pink-500/30">
-              <Crown className="w-7 h-7 text-white" />
+          <div className="flex flex-col gap-5 text-center items-center max-w-xl animate-in zoom-in-95 duration-150">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-xl shadow-amber-500/20 border border-amber-300/40">
+              <Crown className="w-9 h-9 text-slate-950 fill-slate-950" />
             </div>
 
             <div>
-              <h3 className="text-xl font-bold text-white">Nâng cấp CapCut Web Pro</h3>
-              <p className="text-xs text-[#9CA3AF] mt-1">
-                Khai phá chất lượng xuất 4K 60fps, toàn bộ kho Hook viral và bộ công cụ AI thông minh
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-black uppercase tracking-wider mb-2">
+                <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                <span>Mức hạn cao nhất • VIP Unlimited</span>
+              </div>
+              <h3 className="text-xl font-black text-white tracking-tight">Tài khoản PRO VIP Vĩnh Viễn</h3>
+              <p className="text-xs text-[#9CA3AF] mt-1 max-w-md mx-auto">
+                Tài khoản của bạn đã được kích hoạt vĩnh viễn với toàn bộ đặc quyền cao cấp nhất. Mọi tính năng cốt lõi và công cụ AI đều sẵn sàng sử dụng.
               </p>
             </div>
 
-            {/* 3 Pricing Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full text-left">
-              {/* Gói Free */}
-              <div className="p-4 rounded-2xl bg-[#0B0F19] border border-[#1F2937] flex flex-col justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-[#9CA3AF] uppercase">Gói Free</span>
-                  <div className="text-lg font-black text-white">
-                    0đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span>
-                  </div>
-                  <span className="text-[10px] text-[#9CA3AF]">Dành cho người mới bắt đầu dựng video</span>
+            {/* Unlocked Privileges List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 w-full text-left">
+              <div className="p-3.5 rounded-xl bg-[#10141E] border border-amber-500/20 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Xuất siêu nét 4K 60fps</span>
                 </div>
-                <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Xuất video 1080p 30fps
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Không giới hạn độ dài
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Lưu trữ Dexie IndexedDB
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[#9CA3AF]">
-                    <X className="w-3.5 h-3.5 text-slate-600 shrink-0" /> Không hỗ trợ xuất 4K
-                  </div>
-                </div>
-                <span className="py-2 text-center text-xs font-semibold text-[#9CA3AF] bg-[#111827] rounded-xl border border-[#1F2937]">
-                  Gói hiện tại
+                <span className="text-[11px] text-[#9CA3AF] pl-6">
+                  Render WebCodecs phần cứng tối đa, không nén mờ, không giới hạn độ dài video.
                 </span>
               </div>
 
-              {/* Gói Pro Tháng */}
-              <div className="p-4 rounded-2xl bg-[#111827] border-2 border-purple-500/50 flex flex-col justify-between gap-3 shadow-lg">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-400 uppercase">Pro Tháng</span>
-                  </div>
-                  <div className="text-lg font-black text-white">
-                    199.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span>
-                  </div>
-                  <span className="text-[10px] text-[#9CA3AF]">Dành cho Content Creator chuyên nghiệp</span>
+              <div className="p-3.5 rounded-xl bg-[#10141E] border border-amber-500/20 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>AI Studio không giới hạn</span>
                 </div>
-                <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Xuất siêu nét 4K 60fps
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Tự động tạo phụ đề AI
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Toàn bộ kho Hook viral
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" /> Khử ồn thông minh
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsPro(true);
-                    showToast('🎉 Đã kích hoạt gói Pro Tháng (Bản demo)!', 'success');
-                    closeModal();
-                  }}
-                  className="py-2 text-center text-xs font-bold text-white bg-gradient-to-r from-[#7C3AED] to-[#EC4899] rounded-xl hover-lift shadow transition-all"
-                >
-                  Chọn gói Tháng
-                </button>
-              </div>
-
-              {/* Gói Pro Năm (Tiết kiệm 40%) */}
-              <div className="p-4 rounded-2xl bg-[#111827] border-2 border-[#22D3EE]/80 flex flex-col justify-between gap-3 relative shadow-xl shadow-cyan-500/10">
-                <span className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#22D3EE] to-sky-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
-                  Tiết kiệm 40%
+                <span className="text-[11px] text-[#9CA3AF] pl-6">
+                  Tự động phụ đề Whisper AI, phát hiện nhịp trống, tách cảnh viral và khử ồn thông minh.
                 </span>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-[#22D3EE] uppercase">Pro Năm (VIP)</span>
-                  <div className="text-lg font-black text-white">
-                    99.000đ <span className="text-xs font-normal text-[#9CA3AF]">/ tháng</span>
-                  </div>
-                  <span className="text-[10px] text-[#9CA3AF]">Thanh toán 1.190.000đ / năm</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#10141E] border border-amber-500/20 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Toàn bộ kho Hook & Hiệu ứng</span>
                 </div>
-                <div className="flex flex-col gap-1.5 text-[11px] text-[#E5E7EB] pt-2 border-t border-[#1F2937]">
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Toàn bộ quyền lợi Pro
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Đám mây Supabase Cloud
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Bộ lọc màu độc quyền
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#22D3EE] shrink-0" /> Hỗ trợ ưu tiên 24/7
-                  </div>
+                <span className="text-[11px] text-[#9CA3AF] pl-6">
+                  Mở khóa 100% template mẫu 9:16, bộ lọc màu điện ảnh 3D LUT và chuyển cảnh độc quyền.
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#10141E] border border-amber-500/20 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Lưu trữ Cloud & IndexedDB</span>
                 </div>
-                <button
-                  onClick={() => {
-                    setIsPro(true);
-                    showToast('🎉 Đã kích hoạt gói Pro Năm (Bản demo)!', 'success');
-                    closeModal();
-                  }}
-                  className="py-2 text-center text-xs font-bold text-slate-950 bg-[#22D3EE] hover:bg-cyan-300 rounded-xl hover-lift shadow transition-all"
-                >
-                  Chọn gói Năm
-                </button>
+                <span className="text-[11px] text-[#9CA3AF] pl-6">
+                  Lưu trữ vĩnh viễn trên máy không giới hạn số lượng dự án, hỗ trợ sao lưu Supabase.
+                </span>
               </div>
             </div>
 
-            {/* Nút lớn "Try Pro free" */}
-            <div className="w-full pt-3 border-t border-[#1F2937] flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setIsPro(true);
-                  showToast(
-                    '🎉 Đã bật cờ isPro trong localStorage (hiện huy hiệu PRO)! Bản demo: mọi tính năng cốt lõi vẫn miễn phí.',
-                    'success'
-                  );
-                  closeModal();
-                }}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#7C3AED] via-[#EC4899] to-pink-500 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-purple-900/30 hover-lift transition-all flex items-center justify-center gap-2"
-              >
-                <Crown className="w-4 h-4 text-amber-300" />
-                <span>Try Pro free / Dùng thử Pro miễn phí</span>
-              </button>
-              <span className="text-[10px] text-[#9CA3AF]">
-                * Đây là bản demo: Bấm để bật huy hiệu PRO và trải nghiệm không giới hạn. Không yêu cầu thanh toán hay
-                thẻ tín dụng.
-              </span>
-            </div>
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={closeModal}
+              className="w-full py-3 rounded-xl bg-[#1FC8DB] hover:bg-cyan-300 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all active:scale-98 cursor-pointer mt-1"
+            >
+              Tiếp tục sáng tạo video
+            </button>
           </div>
         )}
 

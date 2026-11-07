@@ -99,11 +99,10 @@ export const TelemetryDashboard: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={toggleConsent}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-              consent === 'granted'
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-            }`}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${consent === 'granted'
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+              : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+              }`}
           >
             {consent === 'granted' ? (
               <>

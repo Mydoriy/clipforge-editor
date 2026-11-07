@@ -55,11 +55,10 @@ export const Sidebar: React.FC = () => {
                 <div className="flex flex-col truncate">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-[#E5E7EB] truncate">{user.name}</span>
-                    {user.isPro && (
-                      <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-gradient-to-r from-[#7C3AED] to-[#EC4899] text-white">
-                        PRO
-                      </span>
-                    )}
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 flex items-center gap-0.5 shadow-sm">
+                      <Crown className="w-2.5 h-2.5" />
+                      PRO VIP
+                    </span>
                   </div>
                   <span className="text-[10px] text-[#9CA3AF] truncate">{user.email}</span>
                 </div>
@@ -78,10 +77,10 @@ export const Sidebar: React.FC = () => {
                     setAccountMenuOpen(false);
                     openModal('pro');
                   }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-[#22D3EE]/10 hover:text-[#22D3EE] flex items-center gap-2"
+                  className="w-full text-left px-3.5 py-2 hover:bg-amber-500/10 hover:text-amber-300 flex items-center gap-2"
                 >
-                  <Crown className="w-4 h-4 text-amber-300" />
-                  <span>Quản lý gói Pro (VIP)</span>
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  <span>Đặc quyền PRO VIP (Mức cao nhất)</span>
                 </button>
                 <div className="border-t border-[#1F2937] my-1" />
                 <button
@@ -121,13 +120,14 @@ export const Sidebar: React.FC = () => {
               </button>
             </div>
 
-            <button
-              onClick={() => openModal('pro')}
-              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-purple-900/20 hover-lift transition-all"
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-300" />
-              <span>{t.joinPro}</span>
-            </button>
+            {/* Huy hiệu PRO VIP kích hoạt sẵn ở mức hạn cao nhất */}
+            <div className="py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-amber-500/20 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+              <div className="flex items-center gap-1.5 font-bold">
+                <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
+                <span>PRO VIP (Mức cao nhất)</span>
+              </div>
+              <span className="text-[10px] text-amber-400/90 font-semibold">Đã mở khóa</span>
+            </div>
           </div>
         )}
 
