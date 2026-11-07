@@ -57,3 +57,4 @@ test('L7.3: Evaluation of Desktop app (Tauri) with FFmpeg native and GPU assessm
   assert.ok(content.includes('KHUYẾN NGHỊ') || content.includes('Khuyến nghị'), 'Must provide clear strategic recommendation');
   assert.ok(content.includes('ProRes') || content.includes('H.265') || content.includes('HEVC'), 'Must analyze extended codecs');
 });
+

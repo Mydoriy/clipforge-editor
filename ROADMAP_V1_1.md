@@ -163,3 +163,4 @@ Nhờ kiến trúc module hóa chặt chẽ của ClipForge v1.0, **khoảng 85%
 | 9. Whisper ONNX INT8 Quantization (~18MB) | Hiệu năng | 2.5 ngày | P1 |
 | 10. Virtual Texture Pooling WebGL | Hiệu năng | 2 ngày | P2 |
 | **TỔNG CỘNG** | **10 Hạng mục** | **26.5 ngày công** | **Sprint 4 tuần** |
+

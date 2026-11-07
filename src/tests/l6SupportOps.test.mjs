@@ -104,3 +104,4 @@ test('L6.5: RUNBOOK.md includes rollback drill evidence, uptime monitor & mainte
   assert.ok(content.includes('robots.txt'), 'Must document heartbeat endpoint');
   assert.ok(content.includes('LỊCH TRÌNH BẢO TRÌ') || content.includes('MONTHLY MAINTENANCE'), 'Must document monthly maintenance schedule');
 });
+

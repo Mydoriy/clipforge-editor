@@ -140,3 +140,4 @@ ClipForge Desktop Web ứng dụng công nghệ WebCodecs và WebGL2 mới nhấ
 Bạn có thể kiểm tra mức độ tương thích của trình duyệt hiện tại bằng cách truy cập:  
 👉 https://clipforge-editor.vercel.app/help và bấm nút **"Kiểm tra hệ thống"**.
 ```
+

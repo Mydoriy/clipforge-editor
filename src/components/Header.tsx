@@ -5,6 +5,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { db } from '../db';
 import { APP_VERSION, APP_NAME } from '../constants/version';
+import { markCleanExit } from '../utils/crashRecovery';
 import {
   Menu as MenuIcon,
   Crown,
@@ -69,6 +70,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     notifications,
     markAllNotificationsAsRead,
     autosaveStatus,
+    setAutosaveStatus,
     isOffline,
     panelTopHeight,
     panelLeftWidth,
@@ -107,15 +109,25 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
   const t = translations[language];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Navigate to Home safely
-  const handleHomeNavigation = () => {
-    if (isEditor) {
-      if (window.confirm('Quay về trang chủ? Mọi thay đổi của dự án đã được tự động lưu vào IndexedDB.')) {
-        navigate('/');
+  // Navigate to Home immediately & autosave project without blocking popup
+  const handleHomeNavigation = async () => {
+    if (isEditor && currentProjectId) {
+      try {
+        setAutosaveStatus('saving');
+        await db.projects.update(currentProjectId, {
+          title: projectTitle,
+          name: projectTitle,
+          duration,
+          updatedAt: Date.now(),
+          tracksData: { clips }
+        });
+        markCleanExit(currentProjectId);
+        setAutosaveStatus('saved');
+      } catch (err) {
+        console.warn('Autosave before navigating home error:', err);
       }
-    } else {
-      navigate('/');
     }
+    navigate('/');
   };
 
   // Manual Save project to IndexedDB
@@ -278,7 +290,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           </button>
         )}
 
-        {/* Logo CapCut placeholder: click confirms & navigates to Home */}
+        {/* Logo: click autosaves and navigates to Home immediately without blocking popup */}
         <Logo size={isEditor ? 'sm' : 'md'} onClick={isEditor ? handleHomeNavigation : undefined} />
 
         {/* Menu ▾ Dropdown for Editor */}
