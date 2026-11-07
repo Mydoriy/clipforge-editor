@@ -38,3 +38,4 @@ test('PRO VIP Default: User account is permanently Pro VIP at highest tier with 
   assert.ok(sidebarContent.includes('PRO VIP'), 'Sidebar must display PRO VIP badge');
   assert.ok(!sidebarContent.includes('{t.joinPro}'), 'Sidebar must not show joinPro upsell button');
 });
+

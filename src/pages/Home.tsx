@@ -215,8 +215,18 @@ export const Home: React.FC = () => {
       )}
 
       {/* 1. HERO BANNER: gradient teal → xanh dương đậm (#12A8C9 → #0B4A66), bo góc 16px, nút "Create project" nằm giữa */}
-      <div className="relative w-full h-48 rounded-[16px] bg-gradient-to-r from-[#12A8C9] to-[#0B4A66] flex items-center justify-center shadow-2xl shadow-cyan-950/40 overflow-hidden border border-cyan-400/20">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/15 via-transparent to-transparent pointer-events-none" />
+      <div className="relative w-full h-48 rounded-[16px] bg-gradient-to-r from-[#12A8C9] to-[#0B4A66] flex items-center justify-center shadow-2xl shadow-cyan-950/40 overflow-hidden border border-cyan-400/20 group">
+        {/* Background Film Studio Layer */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=1200&auto=format&fit=crop&q=80"
+            alt="Studio Background"
+            className="w-full h-full object-cover object-center opacity-25 mix-blend-overlay group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#12A8C9]/90 via-[#0E7A99]/85 to-[#0B4A66]/90" />
+        </div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent pointer-events-none" />
 
         <button
           onClick={() => openModal('newProject')}
@@ -232,8 +242,9 @@ export const Home: React.FC = () => {
       {/* 2. EDITPILOT & 4 QUICK CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* EditPilot Prompt Card */}
-        <div className="lg:col-span-5 rounded-[16px] bg-[#111827] border border-[#1F2937] p-5 flex flex-col justify-between gap-4 shadow-lg">
-          <div className="flex flex-col gap-1.5">
+        <div className="lg:col-span-5 rounded-[16px] bg-[#111827] border border-[#1F2937] p-5 flex flex-col justify-between gap-4 shadow-lg relative overflow-hidden">
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="flex flex-col gap-1.5 relative z-10">
             <div className="flex items-center gap-2 text-[#22D3EE]">
               <Sparkles className="w-4 h-4" />
               <span className="font-bold text-xs tracking-wider uppercase">EditPilot AI Assistant</span>
@@ -249,7 +260,7 @@ export const Home: React.FC = () => {
               setEditPilotOpen(true);
               setPromptText('');
             }}
-            className="relative flex items-center"
+            className="relative flex items-center z-10"
           >
             <input
               type="text"
@@ -267,7 +278,7 @@ export const Home: React.FC = () => {
           </form>
 
           {/* Quick suggestions */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap gap-1.5 pt-1 relative z-10">
             {[t.chip1, t.chip2, t.chip3, t.chip4].map((chip) => (
               <button
                 key={chip}
@@ -289,65 +300,145 @@ export const Home: React.FC = () => {
         <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {/* AI Image */}
           <button
+            type="button"
             onClick={() => openModal('aiImage')}
-            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-pink-500/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="relative h-36 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-pink-500/60 hover-lift text-left flex flex-col justify-between p-3.5 group shadow-lg overflow-hidden cursor-pointer transition-all"
           >
-            <div className="w-8 h-8 rounded-xl bg-pink-500/15 text-pink-400 flex items-center justify-center border border-pink-500/30">
-              <ImageIcon className="w-4 h-4" />
+            {/* Background Image Thumbnail */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80"
+                alt="AI Image"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-50 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/25" />
             </div>
-            <div>
-              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-pink-400 transition-colors">
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center border border-pink-500/40 backdrop-blur-md shadow-sm">
+                <ImageIcon className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-pink-500/25 text-pink-300 border border-pink-500/40 backdrop-blur-md uppercase tracking-wider">
+                AI 4K
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
+              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-pink-300 transition-colors">
                 {t.quickAiImage}
               </span>
-              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickAiImageDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5 line-clamp-1">{t.quickAiImageDesc}</span>
             </div>
           </button>
 
           {/* Extend Video */}
           <button
+            type="button"
             onClick={() => openModal('extendVideo')}
-            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-sky-500/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="relative h-36 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-sky-500/60 hover-lift text-left flex flex-col justify-between p-3.5 group shadow-lg overflow-hidden cursor-pointer transition-all"
           >
-            <div className="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center border border-sky-500/30">
-              <Clock className="w-4 h-4" />
+            {/* Background Image Thumbnail */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop&q=80"
+                alt="Extend Video"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-50 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/25" />
             </div>
-            <div>
-              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-sky-400 transition-colors">
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/40 backdrop-blur-md shadow-sm">
+                <Clock className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-sky-500/25 text-sky-300 border border-sky-500/40 backdrop-blur-md uppercase tracking-wider">
+                Motion AI
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
+              <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-sky-300 transition-colors">
                 {t.quickExtendVideo}
               </span>
-              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickExtendVideoDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5 line-clamp-1">{t.quickExtendVideoDesc}</span>
             </div>
           </button>
 
           {/* AI Edit */}
           <button
+            type="button"
             onClick={() => openModal('aiEdit')}
-            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-[#22D3EE]/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="relative h-36 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE]/60 hover-lift text-left flex flex-col justify-between p-3.5 group shadow-lg overflow-hidden cursor-pointer transition-all"
           >
-            <div className="w-8 h-8 rounded-xl bg-[#22D3EE]/15 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/30">
-              <Wand2 className="w-4 h-4" />
+            {/* Background Image Thumbnail */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=500&auto=format&fit=crop&q=80"
+                alt="AI Edit"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-50 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/25" />
             </div>
-            <div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-8 h-8 rounded-xl bg-[#22D3EE]/20 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/40 backdrop-blur-md shadow-sm">
+                <Wand2 className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 backdrop-blur-md uppercase tracking-wider">
+                Smart Cut
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
               <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-[#22D3EE] transition-colors">
                 {t.quickAiEdit}
               </span>
-              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickAiEditDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5 line-clamp-1">{t.quickAiEditDesc}</span>
             </div>
           </button>
 
           {/* Enhance Quality */}
           <button
+            type="button"
             onClick={() => openModal('enhanceQuality')}
-            className="p-4 rounded-[16px] bg-[#111827] hover:bg-[#111827]/80 border border-[#1F2937] hover:border-amber-500/50 hover-lift text-left flex flex-col justify-between gap-3 group shadow-md"
+            className="relative h-36 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-amber-500/60 hover-lift text-left flex flex-col justify-between p-3.5 group shadow-lg overflow-hidden cursor-pointer transition-all"
           >
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30">
-              <Sliders className="w-4 h-4" />
+            {/* Background Image Thumbnail */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=500&auto=format&fit=crop&q=80"
+                alt="Enhance Quality"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-50 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/25" />
             </div>
-            <div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40 backdrop-blur-md shadow-sm">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/40 backdrop-blur-md uppercase tracking-wider">
+                HD HDR
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
               <span className="font-bold text-[#E5E7EB] text-xs block group-hover:text-amber-400 transition-colors">
                 {t.quickEnhanceQuality}
               </span>
-              <span className="text-[10px] text-[#9CA3AF] block mt-0.5">{t.quickEnhanceQualityDesc}</span>
+              <span className="text-[10px] text-[#9CA3AF] block mt-0.5 line-clamp-1">{t.quickEnhanceQualityDesc}</span>
             </div>
           </button>
         </div>
@@ -360,12 +451,31 @@ export const Home: React.FC = () => {
           {/* Card 1: Video Studio */}
           <div
             onClick={() => openModal('videoStudio')}
-            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE] p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE] p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg transition-all"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#22D3EE]/15 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/30">
-              <Video className="w-5 h-5" />
+            {/* Background Thumbnail Image with Gradient */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=600&auto=format&fit=crop&q=80"
+                alt="Video Studio"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-45 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/30" />
             </div>
-            <div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-10 h-10 rounded-xl bg-[#22D3EE]/20 text-[#22D3EE] flex items-center justify-center border border-[#22D3EE]/40 backdrop-blur-md shadow-sm">
+                <Video className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 backdrop-blur-md uppercase tracking-wider">
+                Seedance 2.5
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
               <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-[#22D3EE] transition-colors">
                 {t.videoStudioCard}
               </span>
@@ -376,12 +486,31 @@ export const Home: React.FC = () => {
           {/* Card 2: Design Studio (Konva Canvas) */}
           <div
             onClick={() => navigate('/design')}
-            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-purple-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-purple-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg transition-all"
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center border border-purple-500/30">
-              <Palette className="w-5 h-5" />
+            {/* Background Thumbnail Image with Gradient */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&auto=format&fit=crop&q=80"
+                alt="Design Studio"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-45 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/30" />
             </div>
-            <div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/40 backdrop-blur-md shadow-sm">
+                <Palette className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/40 backdrop-blur-md uppercase tracking-wider">
+                Canvas 9:16
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
               <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-purple-300 transition-colors">
                 {t.designStudioCard}
               </span>
@@ -392,12 +521,31 @@ export const Home: React.FC = () => {
           {/* Card 3: AI Ad Maker */}
           <div
             onClick={() => openModal('aiAdMaker')}
-            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-blue-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-blue-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg transition-all"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center border border-blue-500/30">
-              <Megaphone className="w-5 h-5" />
+            {/* Background Thumbnail Image with Gradient */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80"
+                alt="AI Ad Maker"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-45 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/30" />
             </div>
-            <div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/40 backdrop-blur-md shadow-sm">
+                <Megaphone className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-500/25 text-blue-300 border border-blue-500/40 backdrop-blur-md uppercase tracking-wider">
+                Viral Ads
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
               <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-blue-300 transition-colors">
                 {t.aiAdMakerCard}
               </span>
@@ -408,12 +556,31 @@ export const Home: React.FC = () => {
           {/* Card 4: Long video to shorts */}
           <div
             onClick={() => openModal('longToShorts')}
-            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-teal-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg"
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-[#1F2937] hover:border-teal-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg transition-all"
           >
-            <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center border border-teal-500/30">
-              <Scissors className="w-5 h-5" />
+            {/* Background Thumbnail Image with Gradient */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80"
+                alt="Long to Shorts"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-45 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/30" />
             </div>
-            <div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/40 backdrop-blur-md shadow-sm">
+                <Scissors className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-teal-500/25 text-teal-300 border border-teal-500/40 backdrop-blur-md uppercase tracking-wider">
+                Auto Shorts
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
               <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-teal-300 transition-colors">
                 {t.longToShortsCard}
               </span>
