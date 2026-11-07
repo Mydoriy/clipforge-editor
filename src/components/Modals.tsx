@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEditorStore } from '../store/useEditorStore';
+import { useEditorStore, confirmDialog } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import {
   exportTimelineVideo,
@@ -3024,13 +3024,16 @@ export const Modals: React.FC = () => {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (
-                      window.confirm(
-                        'Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu cục bộ (Factory Reset)?\n\n' +
-                          'Hành động này sẽ xóa vĩnh viễn mọi dự án, tệp media, bản nháp tự động trong IndexedDB, OPFS, Cache và Web Storage trên trình duyệt này.\n' +
-                          'Hành động không thể hoàn tác!'
-                      )
-                    ) {
+                    const confirmed = await confirmDialog({
+                      title: 'Xóa toàn bộ dữ liệu cục bộ?',
+                      message:
+                        'Hành động này sẽ xóa vĩnh viễn mọi dự án, tệp media, bản nháp tự động trong IndexedDB, OPFS, Cache và Web Storage trên trình duyệt này.\n\nHành động không thể hoàn tác!',
+                      confirmText: 'Xóa vĩnh viễn',
+                      cancelText: 'Hủy',
+                      type: 'danger',
+                      badgeIcon: 'trash'
+                    });
+                    if (confirmed) {
                       const res = await wipeAllLocalData();
                       if (res.success) {
                         showToast('Đã xóa sạch toàn bộ dữ liệu cục bộ. Đang tải lại...', 'warning');
@@ -3051,13 +3054,16 @@ export const Modals: React.FC = () => {
                   <button
                     type="button"
                     onClick={async () => {
-                      if (
-                        window.confirm(
-                          'CẢNH BÁO QUAN TRỌNG: Bạn có chắc chắn muốn XÓA TÀI KHOẢN VÀ TOÀN BỘ DỮ LIỆU CLOUD?\n\n' +
-                            'Toàn bộ dự án đã đồng bộ và các tệp video tải lên Supabase Storage của bạn sẽ bị XÓA VĨNH VIỄN, sau đó phiên đăng nhập sẽ kết thúc.\n' +
-                            'Hành động không thể hoàn tác!'
-                        )
-                      ) {
+                      const confirmed = await confirmDialog({
+                        title: 'Xóa tài khoản & Dữ liệu Cloud?',
+                        message:
+                          'Toàn bộ dự án đã đồng bộ và các tệp video tải lên Supabase Storage của bạn sẽ bị XÓA VĨNH VIỄN, sau đó phiên đăng nhập sẽ kết thúc.\n\nHành động không thể hoàn tác!',
+                        confirmText: 'Xóa Cloud',
+                        cancelText: 'Hủy',
+                        type: 'danger',
+                        badgeIcon: 'cloud'
+                      });
+                      if (confirmed) {
                         const res = await deleteCloudAccountAndData(user.id);
                         if (res.success) {
                           showToast(`Đã xóa ${res.projectsDeleted} dự án cloud và đăng xuất thành công!`, 'success');
@@ -3098,8 +3104,18 @@ export const Modals: React.FC = () => {
                 <button
                   type="button"
                   onClick={async () => {
-                    await db.trash.clear();
-                    showToast('Đã dọn sạch toàn bộ thùng rác!', 'success');
+                    const confirmed = await confirmDialog({
+                      title: 'Dọn sạch Thùng rác?',
+                      message: 'Toàn bộ các dự án trong thùng rác sẽ bị xóa vĩnh viễn khỏi thiết bị và không thể khôi phục.',
+                      confirmText: 'Dọn sạch',
+                      cancelText: 'Hủy',
+                      type: 'danger',
+                      badgeIcon: 'trash'
+                    });
+                    if (confirmed) {
+                      await db.trash.clear();
+                      showToast('Đã dọn sạch toàn bộ thùng rác!', 'success');
+                    }
                   }}
                   className="px-2.5 py-1 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-600/40 text-rose-300 font-bold text-[10px] shrink-0 ml-2"
                 >
@@ -3141,8 +3157,18 @@ export const Modals: React.FC = () => {
                       </button>
                       <button
                         onClick={async () => {
-                          await db.trash.delete(item.id);
-                          showToast(`Đã xóa vĩnh viễn: ${item.title}`);
+                          const confirmed = await confirmDialog({
+                            title: `Xóa vĩnh viễn "${item.title}"?`,
+                            message: 'Dự án này sẽ bị xóa hoàn toàn khỏi IndexedDB và không thể khôi phục lại.',
+                            confirmText: 'Xóa vĩnh viễn',
+                            cancelText: 'Hủy',
+                            type: 'danger',
+                            badgeIcon: 'trash'
+                          });
+                          if (confirmed) {
+                            await db.trash.delete(item.id);
+                            showToast(`Đã xóa vĩnh viễn: ${item.title}`);
+                          }
                         }}
                         className="p-1.5 rounded-lg hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors"
                         title={t.deletePermanent}

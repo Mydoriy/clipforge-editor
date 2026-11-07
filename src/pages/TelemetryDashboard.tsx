@@ -27,6 +27,7 @@ import {
   type TelemetryMetrics
 } from '../utils/telemetry';
 import { APP_VERSION } from '../constants/version';
+import { confirmDialog } from '../store/useEditorStore';
 
 export const TelemetryDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<TelemetryMetrics | null>(null);
@@ -55,8 +56,16 @@ export const TelemetryDashboard: React.FC = () => {
     showToast(next === 'granted' ? 'Đã bật thu thập telemetry ẩn danh' : 'Đã tắt hoàn toàn telemetry');
   };
 
-  const handleClear = () => {
-    if (window.confirm('Bạn có chắc muốn xóa sạch toàn bộ sự kiện đo lường đã lưu cục bộ trên trình duyệt?')) {
+  const handleClear = async () => {
+    const confirmed = await confirmDialog({
+      title: 'Xóa dữ liệu đo lường?',
+      message: 'Toàn bộ các sự kiện telemetry và nhật ký đo lường đã lưu cục bộ trên trình duyệt sẽ bị xóa sạch.',
+      confirmText: 'Xóa dữ liệu',
+      cancelText: 'Hủy',
+      type: 'warning',
+      badgeIcon: 'warning'
+    });
+    if (confirmed) {
       clearStoredTelemetryEvents();
       loadData();
       showToast('Đã xóa toàn bộ dữ liệu đo lường cục bộ!');

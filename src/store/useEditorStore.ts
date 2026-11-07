@@ -52,6 +52,15 @@ export interface ToastState {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+export interface ConfirmDialogOptions {
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'warning' | 'danger' | 'info';
+  badgeIcon?: 'warning' | 'trash' | 'cloud' | 'info';
+}
+
 interface EditorState {
   // Settings & Localization
   language: Language;
@@ -99,6 +108,11 @@ interface EditorState {
   toasts: ToastState[];
   showToast: (message: string, type?: ToastState['type']) => void;
   removeToast: (id: string) => void;
+
+  // Confirmation Dialog
+  confirmDialogState: ConfirmDialogOptions | null;
+  openConfirmDialog: (options: ConfirmDialogOptions) => Promise<boolean>;
+  closeConfirmDialog: (result: boolean) => void;
 
   // Editor View State & Formal Project Model
   currentProjectId: string | null;
@@ -214,6 +228,12 @@ interface EditorState {
   crashCheckpoint: any | null;
   setCrashCheckpoint: (cp: any | null) => void;
 }
+
+let confirmResolver: ((value: boolean) => void) | null = null;
+
+export const confirmDialog = (options: ConfirmDialogOptions): Promise<boolean> => {
+  return useEditorStore.getState().openConfirmDialog(options);
+};
 
 export const useEditorStore = create<EditorState>()(
   persist(
@@ -348,6 +368,21 @@ export const useEditorStore = create<EditorState>()(
         }, 3200);
       },
       removeToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+
+      confirmDialogState: null,
+      openConfirmDialog: (options) => {
+        return new Promise<boolean>((resolve) => {
+          confirmResolver = resolve;
+          set({ confirmDialogState: options });
+        });
+      },
+      closeConfirmDialog: (result) => {
+        if (confirmResolver) {
+          confirmResolver(result);
+          confirmResolver = null;
+        }
+        set({ confirmDialogState: null });
+      },
 
       currentProjectId: null,
       setCurrentProjectId: (id) => set({ currentProjectId: id }),

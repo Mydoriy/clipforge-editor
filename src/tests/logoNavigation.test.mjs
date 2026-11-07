@@ -48,3 +48,4 @@ test('Logo and Home navigation in Header: Immediate return to Home and autosave 
     'Logo must be wired to handleHomeNavigation in editor'
   );
 });
+

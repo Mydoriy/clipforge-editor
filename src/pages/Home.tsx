@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEditorStore } from '../store/useEditorStore';
+import { useEditorStore, confirmDialog } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import { Footer } from '../components/Footer';
 import { db, seedDemoProjects, autoCleanTrash, requestPersistentStorage, type ProjectEntity } from '../db';
@@ -121,11 +121,22 @@ export const Home: React.FC = () => {
     navigate(`/editor/${id}`);
   };
 
-  // Delete project -> move to trash with confirmation
+  // Delete project -> move to trash with beautiful modal confirmation (CapCut style)
   const handleDeleteProject = async (proj: ProjectEntity, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setMenuOpenId(null);
-    if (!window.confirm(`Bạn có chắc muốn chuyển dự án "${proj.title}" vào Thùng rác?`)) {
+    const isVi = language === 'VN';
+    const confirmed = await confirmDialog({
+      title: isVi ? 'Chuyển vào Thùng rác?' : 'Move to Trash?',
+      message: isVi
+        ? 'Các mục chuyển vào Thùng rác sẽ xuất hiện tại đây và tự động bị xóa sau 30 ngày.'
+        : 'Items moved to Trash will appear here and be deleted after 30 days.',
+      confirmText: isVi ? 'Đồng ý' : 'OK',
+      cancelText: isVi ? 'Hủy' : 'Cancel',
+      type: 'warning',
+      badgeIcon: 'warning'
+    });
+    if (!confirmed) {
       return;
     }
     await db.projects.delete(proj.id);

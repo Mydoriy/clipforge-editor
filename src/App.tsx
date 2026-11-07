@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { EditPilot } from './components/EditPilot';
 import { OnboardingTour } from './components/OnboardingTour';
 import { TelemetryConsentBanner } from './components/TelemetryConsentBanner';
@@ -103,6 +104,7 @@ export const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <ConfirmDialog />
     </BrowserRouter>
   );
 };
