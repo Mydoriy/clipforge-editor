@@ -80,3 +80,4 @@ export const LAB_COPYRIGHT_NOTICE = {
   vi: 'NHẮC NHỞ BẢN QUYỀN: Vui lòng chỉ sử dụng video tham chiếu bạn có quyền sở hữu hoặc quyền sử dụng hợp pháp. Phòng Lab chỉ trích xuất thông số kỹ thuật (đường cong, bảng màu, nhịp cắt) và tuyệt đối không sao chép, lưu trữ hay phát tán nội dung của người khác.',
   en: 'COPYRIGHT NOTICE: Please only use reference videos you legally own or have explicit rights to analyze. ClipForge Lab extracts purely technical parameters (curves, color palettes, pacing) and strictly never replicates, stores, or redistributes third-party content.',
 };
+

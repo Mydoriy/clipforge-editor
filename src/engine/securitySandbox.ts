@@ -329,8 +329,8 @@ export function analyzeGlslStaticSecurity(
   while ((forHeaderMatch = forHeaderRegex.exec(cleanCode)) !== null) {
     loopCount++;
     const condPart = forHeaderMatch[2].trim();
-    // Match comparison: <var> (<|<=) <bound>
-    const compMatch = condPart.match(/([a-zA-Z0-9_]+)\s*(<|<=)\s*(.+)/);
+    // Match comparison: <var> (<=|<) <bound>
+    const compMatch = condPart.match(/([a-zA-Z0-9_]+)\s*(<=|<)\s*(.+)/);
     if (!compMatch) {
       return {
         safe: false,

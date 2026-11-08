@@ -177,3 +177,4 @@ test('T1.6 - Copyright Reminder & Legal Guard', () => {
   assert.ok(LAB_COPYRIGHT_NOTICE.vi.includes('tuyệt đối không sao chép'));
   assert.ok(LAB_COPYRIGHT_NOTICE.en.includes('COPYRIGHT NOTICE'));
 });
+
