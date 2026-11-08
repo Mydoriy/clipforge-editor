@@ -198,3 +198,4 @@ test('M5.6 - Export Composite Graph to .capfx ZIP Package', async () => {
   assert.equal(capfxBytes[2], 0x03, 'ZIP byte 2 must be 0x03');
   assert.equal(capfxBytes[3], 0x04, 'ZIP byte 3 must be 0x04');
 });
+

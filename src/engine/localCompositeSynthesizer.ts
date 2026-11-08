@@ -829,7 +829,9 @@ export async function saveCompositeToMyEffects(
       isVerified: false,
     };
 
-    await db.installedAssets.put(entity);
+    if (typeof indexedDB !== 'undefined' && typeof db?.installedAssets?.put === 'function') {
+      await db.installedAssets.put(entity);
+    }
     return { success: true, id };
   } catch (err: any) {
     return { success: false, id: item.id, error: err.message };

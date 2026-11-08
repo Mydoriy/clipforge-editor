@@ -82,6 +82,7 @@ export interface ResolverEnvironment {
   aiConfig?: {
     hasKey: boolean;
     userConsented: boolean;
+    enabled?: boolean;
   };
 }
 
@@ -414,7 +415,7 @@ function checkAiGeneration(
   req: ResolveRequest,
   aiConfig?: ResolverEnvironment['aiConfig']
 ): ResolveResult | null {
-  if (!aiConfig?.hasKey || !aiConfig?.userConsented) {
+  if (!aiConfig?.hasKey || !aiConfig?.userConsented || aiConfig?.enabled === false) {
     return null;
   }
 
