@@ -109,3 +109,4 @@ test('Folder Import 2: Recursive directory entry reader simulation', async () =>
     ['clipA.mp4', 'photoB.jpg', 'audioC.wav']
   );
 });
+

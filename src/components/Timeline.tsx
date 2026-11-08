@@ -81,8 +81,19 @@ export const Timeline: React.FC = () => {
     toggleSnap,
     showToast,
     isPlaying,
-    relinkClipMedia
+    relinkClipMedia,
+    projectSettings
   } = useEditorStore();
+
+  const fps = projectSettings?.fps || 30;
+  const formatSmpte = (seconds: number) => {
+    const totalFrames = Math.floor(seconds * fps);
+    const ff = (totalFrames % fps).toString().padStart(2, '0');
+    const ss = (Math.floor(seconds) % 60).toString().padStart(2, '0');
+    const mm = (Math.floor(seconds / 60) % 60).toString().padStart(2, '0');
+    const hh = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    return `${hh}:${mm}:${ss}:${ff}`;
+  };
 
   const t = translations[language];
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -2059,26 +2070,36 @@ export const Timeline: React.FC = () => {
                             width: `${Math.max(2.5, widthPercent)}%`,
                             height: `${clipHeight}px`
                           }}
-                          className={`absolute rounded-md border px-2 flex items-center justify-between text-xs font-semibold select-none group transition-all shadow-md overflow-hidden ${
+                          className={`absolute rounded-md border flex items-center justify-between text-xs font-semibold select-none group transition-all shadow-md overflow-hidden ${
                             track.color
                           } ${
                             isSelected
-                              ? 'ring-2 ring-[#1FC8DB] border-[#1FC8DB] brightness-125 z-20 shadow-cyan-500/30'
-                              : 'hover:brightness-110 z-10'
+                              ? 'ring-2 ring-white border-[#00E5FF] brightness-110 z-20 shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                              : 'hover:brightness-105 z-10'
                           } ${isGrouped ? 'border-dashed border-amber-400/80' : ''}`}
                         >
-                          {/* Filmstrip Repeating Thumbnails for Video/Image (Capped to max 16 to conserve DOM/memory) */}
+                          {/* CapCut Header Strip: Clip Name + SMPTE Timecode Duration */}
+                          <div className="absolute top-0 left-0 right-0 h-4 bg-black/70 backdrop-blur-[2px] flex items-center px-1.5 gap-1.5 z-20 pointer-events-none text-[10px]">
+                            <span className="font-semibold text-white truncate max-w-[130px]">
+                              {clip.text || clip.name}
+                            </span>
+                            <span className="font-mono text-[#AAA] text-[9px]">
+                              {formatSmpte(clip.duration)}
+                            </span>
+                          </div>
+
+                          {/* Filmstrip Repeating Thumbnails for Video/Image (CapCut Desktop Style) */}
                           {clip.thumbnailUrl && (clip.type === 'video' || clip.type === 'image') && (
-                            <div className="absolute inset-0 flex overflow-hidden pointer-events-none opacity-25 select-none">
+                            <div className="absolute inset-0 pt-4 flex overflow-hidden pointer-events-none opacity-90 select-none bg-black/40">
                               {Array.from({
-                                length: Math.min(16, Math.max(1, Math.ceil((clip.duration / duration) * 35 * timelineZoom)))
+                                length: Math.min(24, Math.max(1, Math.ceil((clip.duration / duration) * 40 * timelineZoom)))
                               }).map((_, idx) => (
                                 <img
                                   key={idx}
                                   src={clip.thumbnailUrl}
                                   alt=""
                                   loading="lazy"
-                                  className="h-full w-12 object-cover shrink-0 border-r border-black/20"
+                                  className="h-full w-14 object-cover shrink-0 border-r border-black/40"
                                 />
                               ))}
                             </div>
@@ -2097,12 +2118,12 @@ export const Timeline: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Trim Handle Left (Start) */}
+                          {/* Trim Handle Left (Start) - CapCut White Handle */}
                           <div
                             onMouseDown={(e) => handleTrimStartMouseDown(e, clip)}
                             title="Kéo để cắt đầu clip (Trim Start)"
-                            className={`absolute left-0 top-0 bottom-0 w-2.5 rounded-l-md cursor-ew-resize transition-all z-20 ${
-                              isSelected ? 'bg-[#1FC8DB] opacity-90' : 'bg-white/20 opacity-0 group-hover:opacity-100'
+                            className={`absolute left-0 top-0 bottom-0 w-2 rounded-l-md cursor-ew-resize transition-all z-30 ${
+                              isSelected ? 'bg-white shadow-[0_0_4px_white]' : 'bg-white/20 opacity-0 group-hover:opacity-100'
                             }`}
                           />
 
@@ -2172,22 +2193,12 @@ export const Timeline: React.FC = () => {
                             </span>
                           )}
 
-                          {/* Clip Content Label */}
-                          <span className="truncate px-1 text-[11px] font-medium pointer-events-none z-10">
-                            {clip.text || clip.name}
-                          </span>
-
-                          {/* Duration Badge */}
-                          <span className="text-[10px] opacity-75 shrink-0 ml-1 font-mono pointer-events-none z-10">
-                            {clip.duration.toFixed(1)}s
-                          </span>
-
-                          {/* Trim Handle Right (End) */}
+                          {/* Trim Handle Right (End) - CapCut White Handle */}
                           <div
                             onMouseDown={(e) => handleTrimEndMouseDown(e, clip)}
                             title="Kéo để cắt đuôi clip (Trim End)"
-                            className={`absolute right-0 top-0 bottom-0 w-2.5 rounded-r-md cursor-ew-resize transition-all z-20 ${
-                              isSelected ? 'bg-[#1FC8DB] opacity-90' : 'bg-white/20 opacity-0 group-hover:opacity-100'
+                            className={`absolute right-0 top-0 bottom-0 w-2 rounded-r-md cursor-ew-resize transition-all z-30 ${
+                              isSelected ? 'bg-white shadow-[0_0_4px_white]' : 'bg-white/20 opacity-0 group-hover:opacity-100'
                             }`}
                           />
                         </div>

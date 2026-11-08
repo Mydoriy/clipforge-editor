@@ -720,6 +720,18 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             </button>
           </div>
         )}
+
+        {/* CapCut Auto-saved green status badge */}
+        {isEditor && (
+          <div className="flex items-center gap-1.5 text-[11px] text-[#888] font-mono ml-1.5 pl-2 border-l border-[#333333] hidden md:flex select-none">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                autosaveStatus === 'saving' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'
+              }`}
+            />
+            <span>{autosaveStatus === 'saving' ? 'Saving…' : 'Auto saved'}</span>
+          </div>
+        )}
       </div>
 
       {/* CENTER: Project Name Inline Rename + Saved/Saving Status */}

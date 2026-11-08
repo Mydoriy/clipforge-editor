@@ -55,11 +55,18 @@ export const PlayerCanvas: React.FC = () => {
   } = useEditorStore();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasWrapperRef = useRef<HTMLDivElement | null>(null);
 
   // Drag over canvas state
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Canvas Viewport Zoom & Pan states (CapCut style)
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; originX: number; originY: number }>({ x: 0, y: 0, originX: 0, originY: 0 });
 
   // Top Bar ☰ Menu states
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,7 +98,7 @@ export const PlayerCanvas: React.FC = () => {
   // Direct Manipulation States
   const [isDraggingClip, setIsDraggingClip] = useState(false);
   const [dragAction, setDragAction] = useState<'move' | 'scale' | 'rotate' | null>(null);
-  const [scaleCorner, setScaleCorner] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
+  const [scaleCorner, setScaleCorner] = useState<'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r' | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [initialClipPos, setInitialClipPos] = useState<{ x: number; y: number; scale: number; rotation: number }>({
     x: 0,
@@ -400,8 +407,74 @@ export const PlayerCanvas: React.FC = () => {
     return () => window.removeEventListener('click', handleOutside);
   }, []);
 
-  // Mouse Handlers for Direct Manipulation on Canvas
-  const handleMouseDownOnClip = (e: React.MouseEvent, action: 'move' | 'scale' | 'rotate', corner?: 'tl' | 'tr' | 'bl' | 'br') => {
+  // Space key detection for canvas panning (CapCut style)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (e.code === 'Space' && !e.repeat) {
+        setIsSpacePressed(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpacePressed(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // Non-passive wheel event on viewport for smooth CapCut-style zooming
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+      setZoomMode((prev) => {
+        const current = typeof prev === 'number' ? prev : 1.0;
+        const next = Math.max(0.15, Math.min(6.0, current * zoomFactor));
+        return parseFloat(next.toFixed(2));
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Viewport Pan Start (Middle click or Space + Left click)
+  const handleViewportMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 1 || (e.button === 0 && isSpacePressed)) {
+      e.preventDefault();
+      setIsPanning(true);
+      panStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        originX: panOffset.x,
+        originY: panOffset.y
+      };
+    }
+  };
+
+  // Double click viewport to reset zoom & pan to Fit
+  const handleViewportDoubleClick = (e: React.MouseEvent) => {
+    if (e.target === viewportRef.current || (canvasWrapperRef.current && !canvasWrapperRef.current.contains(e.target as Node))) {
+      setZoomMode('fit');
+      setPanOffset({ x: 0, y: 0 });
+      showToast('Đã đặt lại khung hình (Fit)', 'info');
+    }
+  };
+
+  // Mouse Handlers for Direct Manipulation on Canvas (8-point handles)
+  const handleMouseDownOnClip = (
+    e: React.MouseEvent,
+    action: 'move' | 'scale' | 'rotate',
+    corner?: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'
+  ) => {
     e.stopPropagation();
     if (!selectedClip) return;
 
@@ -417,9 +490,19 @@ export const PlayerCanvas: React.FC = () => {
     });
   };
 
-  // Window MouseMove / MouseUp for Direct Manipulation
+  // Window MouseMove / MouseUp for Direct Manipulation & Panning
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      if (isPanning) {
+        const dx = e.clientX - panStartRef.current.x;
+        const dy = e.clientY - panStartRef.current.y;
+        setPanOffset({
+          x: panStartRef.current.originX + dx,
+          y: panStartRef.current.originY + dy
+        });
+        return;
+      }
+
       if (!isDraggingClip || !selectedClip || !dragAction) return;
 
       const deltaX = e.clientX - dragStart.x;
@@ -454,9 +537,18 @@ export const PlayerCanvas: React.FC = () => {
           }
         });
       } else if (dragAction === 'scale') {
-        // Distance based scaling
-        const distChange = (deltaX + deltaY) / 150;
-        let newScale = Math.max(0.2, Math.min(5.0, initialClipPos.scale + distChange));
+        let distChange = 0;
+        if (scaleCorner === 'tl') distChange = (-deltaX - deltaY) / 150;
+        else if (scaleCorner === 'tr') distChange = (deltaX - deltaY) / 150;
+        else if (scaleCorner === 'bl') distChange = (-deltaX + deltaY) / 150;
+        else if (scaleCorner === 'br') distChange = (deltaX + deltaY) / 150;
+        else if (scaleCorner === 't') distChange = -deltaY / 120;
+        else if (scaleCorner === 'b') distChange = deltaY / 120;
+        else if (scaleCorner === 'l') distChange = -deltaX / 120;
+        else if (scaleCorner === 'r') distChange = deltaX / 120;
+        else distChange = (deltaX + deltaY) / 150;
+
+        let newScale = Math.max(0.1, Math.min(6.0, initialClipPos.scale + distChange));
         updateClip(selectedClip.id, {
           scale: parseFloat(newScale.toFixed(2)),
           transform: {
@@ -484,6 +576,9 @@ export const PlayerCanvas: React.FC = () => {
     };
 
     const handleMouseUp = () => {
+      if (isPanning) {
+        setIsPanning(false);
+      }
       if (isDraggingClip) {
         setIsDraggingClip(false);
         setDragAction(null);
@@ -493,7 +588,7 @@ export const PlayerCanvas: React.FC = () => {
       }
     };
 
-    if (isDraggingClip) {
+    if (isDraggingClip || isPanning) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -501,7 +596,7 @@ export const PlayerCanvas: React.FC = () => {
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDraggingClip, dragAction, dragStart, initialClipPos, selectedClip, updateClip]);
+  }, [isDraggingClip, isPanning, dragAction, dragStart, initialClipPos, selectedClip, updateClip, scaleCorner]);
 
   // Double click text to edit inline
   const handleDoubleClickText = (clip: Clip) => {
@@ -719,8 +814,13 @@ export const PlayerCanvas: React.FC = () => {
       {/* 2. MAIN VIEWPORT: Canvas with Rulers & Guides            */}
       {/* ======================================================== */}
       <div
+        ref={viewportRef}
         onClick={() => selectClip(null)}
-        className="flex-1 relative flex items-center justify-center p-3 overflow-hidden bg-[#0D0D0D]"
+        onDoubleClick={handleViewportDoubleClick}
+        onMouseDown={handleViewportMouseDown}
+        className={`flex-1 relative flex items-center justify-center p-3 overflow-hidden bg-[#0D0D0D] select-none ${
+          isPanning ? 'cursor-grabbing' : isSpacePressed ? 'cursor-grab' : ''
+        }`}
       >
         {/* Rulers: Top & Left */}
         {showRulers && (
@@ -742,15 +842,17 @@ export const PlayerCanvas: React.FC = () => {
           </>
         )}
 
-        {/* Canvas Display Wrapper */}
+        {/* Canvas Display Wrapper (CapCut Zoom & Pan) */}
         <div
           ref={canvasWrapperRef}
           onClick={(e) => e.stopPropagation()}
           style={{
             aspectRatio: aspectConfig.cssRatio,
-            transform: typeof zoomMode === 'number' ? `scale(${zoomMode})` : undefined
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${typeof zoomMode === 'number' ? zoomMode : 1.0})`,
+            transformOrigin: 'center center',
+            transition: isPanning || isDraggingClip ? 'none' : 'transform 0.12s ease-out'
           }}
-          className={`relative max-h-[92%] max-w-[94%] rounded border border-[#2E2E2E] shadow-2xl flex items-center justify-center overflow-hidden transition-all ${getBackgroundStyle()}`}
+          className={`relative max-h-[92%] max-w-[94%] rounded border border-[#2E2E2E] shadow-2xl flex items-center justify-center overflow-hidden ${getBackgroundStyle()}`}
         >
           {/* Main Rendering Canvas */}
           <canvas
@@ -908,23 +1010,45 @@ export const PlayerCanvas: React.FC = () => {
               {/* 4 Corner Scale Handles */}
               <div
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'tl')}
-                className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform"
-                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+                className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo góc trên-trái"
               />
               <div
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'tr')}
-                className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform"
-                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+                className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo góc trên-phải"
               />
               <div
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'bl')}
-                className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform"
-                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+                className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo góc dưới-trái"
               />
               <div
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'br')}
-                className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform"
-                title="Kéo để phóng to/thu nhỏ (Giữ Shift để giữ tỉ lệ)"
+                className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo góc dưới-phải"
+              />
+
+              {/* 4 Edge Center Scale Handles (CapCut style) */}
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 't')}
+                className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ns-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo cạnh trên"
+              />
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'b')}
+                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ns-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo cạnh dưới"
+              />
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'l')}
+                className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ew-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo cạnh trái"
+              />
+              <div
+                onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'r')}
+                className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ew-resize shadow hover:scale-125 transition-transform z-30"
+                title="Kéo cạnh phải"
               />
 
               {/* Inline Text Editing Input */}
@@ -1116,7 +1240,12 @@ export const PlayerCanvas: React.FC = () => {
                   <button
                     key={String(z.id)}
                     onClick={() => {
-                      setZoomMode(z.id as any);
+                      if (z.id === 'fit') {
+                        setZoomMode('fit');
+                        setPanOffset({ x: 0, y: 0 });
+                      } else {
+                        setZoomMode(z.id as any);
+                      }
                       setZoomDropdownOpen(false);
                     }}
                     className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
