@@ -17,6 +17,7 @@ const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.P
 const Help = lazy(() => import('./pages/Help').then((m) => ({ default: m.Help })));
 const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })));
 const TelemetryDashboard = lazy(() => import('./pages/TelemetryDashboard').then((m) => ({ default: m.TelemetryDashboard })));
+const Lab = lazy(() => import('./pages/Lab').then((m) => ({ default: m.Lab })));
 const Modals = lazy(() => import('./components/Modals').then((m) => ({ default: m.Modals })));
 
 const PageLoader: React.FC = () => (
@@ -64,6 +65,7 @@ export const App: React.FC = () => {
             <Route path="/privacy" element={<Privacy initialTab="privacy" />} />
             <Route path="/terms" element={<Privacy initialTab="terms" />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/lab" element={<Lab />} />
           </Route>
 
           {/* Fullscreen Video Editor */}

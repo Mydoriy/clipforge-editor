@@ -159,8 +159,13 @@ export class FrameCompositor {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
 
+    // CHỐT CHẶN XUẤT: Khi ở chế độ export, loại bỏ 100% mọi lớp refOnly (hình và tiếng)
+    const effectiveClips = options.isExport
+      ? clips.filter((c) => !c.refOnly && !c.isReferenceOnly && (c as any).role !== 'reference')
+      : clips;
+
     // Filter active clips at current timestamp
-    const activeClips = clips.filter((c) => currentTime >= c.start && currentTime <= c.start + c.duration);
+    const activeClips = effectiveClips.filter((c) => currentTime >= c.start && currentTime <= c.start + c.duration);
     const scaleFactor = width / 540;
 
     // Check if camera shake is active from any effect clip
@@ -243,6 +248,9 @@ export class FrameCompositor {
 
     // Opacity
     let clipAlpha = clip.opacity ?? 1;
+    if (clip.refOnly || clip.isReferenceOnly) {
+      clipAlpha = Math.min(clipAlpha, 0.35); // Lớp tham chiếu hiển thị mờ
+    }
 
     // Position, Scale & Rotation (including smartphone EXIF / orientation metadata)
     let posX = canvasW / 2 + (clip.x || 0) * scaleFactor;
@@ -393,6 +401,25 @@ export class FrameCompositor {
       }
     } else {
       this.drawFallbackCard(ctx, clip, canvasW, canvasH, scaleFactor);
+    }
+
+    // Badge "Tham chiếu – không xuất" on preview
+    if (clip.refOnly || clip.isReferenceOnly) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+      const badgeText = 'Tham chiếu – không xuất';
+      ctx.font = `bold ${Math.max(10, Math.round(13 * scaleFactor))}px sans-serif`;
+      const textMetrics = ctx.measureText(badgeText);
+      const badgeW = textMetrics.width + 16 * scaleFactor;
+      const badgeH = 22 * scaleFactor;
+      const badgeX = (canvasW - badgeW) / 2;
+      const badgeY = 16 * scaleFactor;
+      ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText, canvasW / 2, badgeY + badgeH / 2);
+      ctx.restore();
     }
 
     ctx.restore();

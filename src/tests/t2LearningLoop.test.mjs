@@ -279,3 +279,4 @@ test('T2.6 - Full Orchestration: executeLearningLoop end-to-end', async () => {
   assert.ok(typeof item.verifiedScore === 'number');
   assert.ok(['verified', 'unverified'].includes(item.status));
 });
+

@@ -131,3 +131,4 @@ export interface LearningLoopSessionResult {
   neededNewPrimitives: Array<{ eventId: string; description: string }>;
   techniques: LearnedTechniqueItem[];
 }
+

@@ -149,6 +149,8 @@ export interface Clip {
   letterSpacing?: number;
   hasError?: boolean;
   missingMedia?: boolean;
+  refOnly?: boolean;
+  isReferenceOnly?: boolean;
 }
 
 export interface Track {

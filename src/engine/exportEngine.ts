@@ -30,10 +30,15 @@ export async function exportVideoWithWebCodecs(
   options: AdvancedExportOptions = {},
   onProgress?: (p: ExportProgress) => void
 ): Promise<Blob> {
+  // CHỐT CHẶN XUẤT: Loại bỏ 100% mọi clip refOnly (hình và tiếng)
+  const exportClips = clips.filter(
+    (c) => !c.refOnly && !c.isReferenceOnly && (c as any).role !== 'reference'
+  );
+
   // If audio-only is requested
   if (options.audioOnly) {
     const audioFmt = options.format === 'wav' ? 'wav' : 'mp3';
-    return exportAudioOnly(clips, duration, audioFmt, onProgress);
+    return exportAudioOnly(exportClips, duration, audioFmt, onProgress);
   }
 
   const res = options.resolution || '1080p';
@@ -158,7 +163,7 @@ export async function exportVideoWithWebCodecs(
         if (encodeError) throw encodeError;
 
         const time = startTime + (f / fps);
-        sharedCompositor.renderFrame(canvas, clips, time, {
+        sharedCompositor.renderFrame(canvas, exportClips, time, {
           isExport: true,
           targetWidth: width,
           targetHeight: height
@@ -231,7 +236,7 @@ export async function exportVideoWithWebCodecs(
   }
 
   // Fallback: Realtime MediaRecorder
-  return exportWithMediaRecorderFallback(clips, startTime, endTime, width, height, fps, format, options, onProgress);
+  return exportWithMediaRecorderFallback(exportClips, startTime, endTime, width, height, fps, format, options, onProgress);
 }
 
 // MediaRecorder Fallback
