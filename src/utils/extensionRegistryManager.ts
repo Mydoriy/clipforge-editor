@@ -551,7 +551,7 @@ export async function atomicInstallPackage(
       await storeExtensionInCache(pkg.id, pkg.version, contentStr);
       cacheStored = true;
     } catch (cacheErr: any) {
-      if (typeof window === 'undefined') {
+      if (typeof window === 'undefined' || typeof caches === 'undefined') {
         cacheStored = true;
       } else {
         throw cacheErr;
@@ -581,7 +581,7 @@ export async function atomicInstallPackage(
       await db.installedAssets.put(entity);
       dbStored = true;
     } catch (dbErr: any) {
-      if (typeof window === 'undefined') {
+      if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
         dbStored = true;
       } else {
         throw dbErr;
@@ -760,15 +760,23 @@ export function reconnectGhostReferences(
 
   const updatedClips = clips.map((clip) => {
     // Check if clip has ghost reference matching newly installed package
-    if (clip.ghostRef && clip.ghostRef.originalId === newlyInstalledPkgId) {
+    const matchesGhost =
+      clip.ghostRef &&
+      (clip.ghostRef.originalId === newlyInstalledPkgId ||
+        clip.ghostRef.originalId?.startsWith(newlyInstalledPkgId + '@') ||
+        clip.ghostRef.originalId?.startsWith(newlyInstalledPkgId + '/') ||
+        clip.ghostRef.packId === newlyInstalledPkgId);
+
+    if (matchesGhost) {
       reconnectedCount++;
-      const { ghostRef, ...rest } = clip;
+      const { ghostRef, ghostReason, ...rest } = clip;
       return {
         ...rest,
         dynamicEffectId: newlyInstalledPkgId,
         dynamicEffectVersion: installedSpec.version,
         dynamicSpec: installedSpec,
         isGhostPlaceholder: false,
+        ghostReason: undefined,
       };
     }
 

@@ -87,7 +87,7 @@ export const GLSL_SECURITY_LIMITS = {
     'GL_EXT_shader_texture_lod',
     'GL_KHR_parallel_shader_compile',
   ],
-  ALLOWED_HOST_SAMPLERS: ['uTexA', 'uTexB'],
+  ALLOWED_HOST_SAMPLERS: ['uTexA', 'uTexB', 'uTexture', 'u_image', 'uImage'],
 };
 
 export const SECURITY_FUNDAMENTAL_LIMITS_STATEMENT =

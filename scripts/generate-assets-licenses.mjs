@@ -66,3 +66,4 @@ const finalDoc = (currentContent + section7).trim() + '\n';
 fs.writeFileSync(assetsLicensesPath, finalDoc, 'utf8');
 
 console.log(`✅ Đã tự sinh ASSETS_LICENSES.md thành công (${packages.length} gói hiệu ứng được lập chỉ mục)!`);
+
