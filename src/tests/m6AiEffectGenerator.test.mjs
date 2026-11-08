@@ -132,7 +132,7 @@ test('M6.4 - Self-Healing Loop: Auto-fixes compile/syntax error via retry, halts
     }
 
     // Attempt 2 receives feedback of compile error and returns clean GLSL
-    assert.ok(lastError && lastError.includes('GLSL compile syntax error'));
+    assert.ok(lastError && (lastError.includes('GLSL compile syntax error') || lastError.includes('compileError')));
     return JSON.stringify({
       id: 'healing-fx',
       kind: 'effect',

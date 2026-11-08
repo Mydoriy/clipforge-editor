@@ -18,6 +18,7 @@ import type { EffectSpecItem, EffectItemKind } from '../types/effectPack.ts';
 import type { EffectSpec } from '../types/extensionRegistry.ts';
 import { runStaticAnalysis, testCompileShaderSandbox } from '../utils/extensionRegistryManager.ts';
 import { wrapFragmentShader, validateFragmentBody } from './shaderHostWrapper.ts';
+import { analyzeGlslStaticSecurity, testCompileShaderInSandboxWatchdog } from './securitySandbox.ts';
 import { db } from '../db/index.ts';
 
 export const AI_PRIVACY_WARNING =
@@ -403,11 +404,23 @@ export async function generateEffectWithAI(req: AiEffectRequest): Promise<AiEffe
           lastError = `Fragment Body Violation: ${fragmentCheck.error}`;
           continue;
         }
+
+        // M7: Token-level GLSL lexical and syntax security analysis
+        const glslSec = analyzeGlslStaticSecurity(item.shader.fragmentBody, item.shader.passes || 1, item.shader.uniforms);
+        if (!glslSec.safe) {
+          lastError = `GLSL Security Violation: [${glslSec.errorCode}] ${glslSec.error}`;
+          continue;
+        }
       }
 
-      // 5. Step 3: WebGL2 Sandbox Dry-Run Compilation
+      // 5. Step 3: WebGL2 Sandbox Dry-Run Compilation with 200ms Watchdog
       if (item.shader?.fragmentBody) {
         const wrappedSource = wrapFragmentShader(item.shader.fragmentBody, item.shader.uniforms);
+        const watchdogRes = await testCompileShaderInSandboxWatchdog(wrappedSource, 200);
+        if (!watchdogRes.safe) {
+          lastError = `Sandbox Watchdog Timeout: [${watchdogRes.errorCode}] ${watchdogRes.error}`;
+          continue;
+        }
         const compileTest = testCompileShaderSandbox(wrappedSource);
         if (!compileTest.success) {
           lastError = `Sandbox Compile Error: ${compileTest.error}`;

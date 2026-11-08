@@ -29,6 +29,10 @@ import {
   type AiEffectResponse,
 } from '../engine/aiEffectSynthesizer';
 import {
+  generateDiagnosticInfo,
+  copyDiagnosticInfoToClipboard,
+} from '../engine/securitySandbox';
+import {
   searchLocalRegistry,
   installPackage,
   uninstallPackage,
@@ -85,6 +89,12 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
   const [aiResult, setAiResult] = useState<AiEffectResponse | null>(null);
   const [aiParamValues, setAiParamValues] = useState<Record<string, any>>({});
   const [aiSaveSuccess, setAiSaveSuccess] = useState(false);
+  const [lastErrorDiagnostic, setLastErrorDiagnostic] = useState<{
+    packId?: string;
+    version?: string;
+    sha256?: string;
+    message: string;
+  } | null>(null);
 
   const handleToggleAiEnabled = (enabled: boolean) => {
     setAiEnabled(enabled);
@@ -239,9 +249,16 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
     try {
       const res = await installPackage(pkg);
       if (!res.success) {
+        setLastErrorDiagnostic({
+          packId: pkg.id,
+          version: pkg.version,
+          sha256: pkg.sha256,
+          message: res.error || 'Cài đặt thất bại',
+        });
         showToast(res.error || 'Cài đặt thất bại', 'error');
         return;
       }
+      setLastErrorDiagnostic(null);
 
       // Automatically reconnect ghost clips on timeline
       const { reconnectedCount, updatedClips } = reconnectGhostReferences(clips, pkg.id, pkg.spec);
@@ -299,9 +316,14 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
 
     const res = await importPackageFromFile(file);
     if (!res.success || !res.pkg) {
+      setLastErrorDiagnostic({
+        packId: file.name,
+        message: res.error || 'Tệp không hợp lệ hoặc chứa mã độc!',
+      });
       showToast(res.error || 'Tệp không hợp lệ hoặc chứa mã độc!', 'error');
       return;
     }
+    setLastErrorDiagnostic(null);
 
     const { reconnectedCount, updatedClips } = reconnectGhostReferences(clips, res.pkg.id, res.pkg.spec);
     if (reconnectedCount > 0) {
@@ -534,6 +556,37 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
             Timeline hiện có <strong>{ghostClips.length}</strong> clip giữ vị trí tạm thời (Ghost Reference). Khi cài đặt
             gói tương ứng, hiệu ứng sẽ tự động kết nối lại mà không làm mất cấu trúc dự án!
           </span>
+        </div>
+      )}
+
+      {/* M7: Security Diagnostic Info Banner on Installation/Verification Error */}
+      {lastErrorDiagnostic && (
+        <div className="mt-2.5 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span className="text-rose-200">
+              <strong>Lỗi an toàn:</strong> {lastErrorDiagnostic.message}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              const codeMatch = lastErrorDiagnostic.message.match(/\[(ERR_[A-Z_]+)\]/);
+              const diag = generateDiagnosticInfo(
+                (codeMatch ? codeMatch[1] : 'ERR_GLSL_CODE_TOO_LONG') as any,
+                {
+                  packId: lastErrorDiagnostic.packId,
+                  version: lastErrorDiagnostic.version,
+                  sha256: lastErrorDiagnostic.sha256,
+                  message: lastErrorDiagnostic.message,
+                }
+              );
+              copyDiagnosticInfoToClipboard(diag);
+              showToast('Đã sao chép thông tin chẩn đoán lỗi (Diagnostic Info)!', 'info');
+            }}
+            className="px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 rounded-lg text-[11px] font-semibold text-rose-200 transition-colors shrink-0 flex items-center gap-1.5"
+          >
+            <span>Sao chép chẩn đoán (Copy Diagnostic)</span>
+          </button>
         </div>
       )}
 

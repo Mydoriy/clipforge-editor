@@ -38,6 +38,11 @@ import {
   computeSha256,
   OFFICIAL_REGISTRY_KEYS,
 } from './ed25519Verifier.ts';
+import {
+  analyzeGlslStaticSecurity,
+  testCompileShaderInSandboxWatchdog,
+  generateDiagnosticInfo,
+} from '../engine/securitySandbox.ts';
 
 // Cached in-memory index
 let memoryIndexCache: RegistryIndex | null = null;
@@ -460,8 +465,32 @@ export async function atomicInstallPackage(pkg: AssetPackage): Promise<AtomicIns
     return { success: false, stage: 'static_analysis', error: staticRes.error, rolledBack: false };
   }
 
-  // 4. Stage: sandbox dry-run compile
+  // M7: Deep Lexical GLSL Static Security Analysis (Token AST, loop bounds, sample count)
+  if (pkg.spec.shader?.fragmentShader) {
+    const glslSec = analyzeGlslStaticSecurity(pkg.spec.shader.fragmentShader, 1, pkg.spec.shader.uniforms);
+    if (!glslSec.safe) {
+      return {
+        success: false,
+        stage: 'static_analysis',
+        error: `[${glslSec.errorCode}] ${glslSec.error}`,
+        rolledBack: false,
+      };
+    }
+  }
+
+  // 4. Stage: sandbox dry-run compile with 200ms watchdog
   const shaderSource = pkg.spec.shader?.fragmentShader;
+  if (shaderSource) {
+    const watchdogRes = await testCompileShaderInSandboxWatchdog(shaderSource, 200);
+    if (!watchdogRes.safe) {
+      return {
+        success: false,
+        stage: 'sandbox_compile',
+        error: `[${watchdogRes.errorCode}] ${watchdogRes.error}`,
+        rolledBack: false,
+      };
+    }
+  }
   const compileRes = testCompileShaderSandbox(shaderSource);
   if (!compileRes.success) {
     return { success: false, stage: 'sandbox_compile', error: compileRes.error, rolledBack: false };

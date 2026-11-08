@@ -9,6 +9,7 @@
 
 import type { EffectPack, PackAssetMetadata } from '../types/effectPack.ts';
 import { validateEffectPack } from '../types/effectPackSchema.ts';
+import { validateArchiveSecurity } from '../engine/securitySandbox.ts';
 
 // CRC-32 Lookup Table
 const CRC_TABLE = new Uint32Array(256);
@@ -252,7 +253,13 @@ export async function unpackCapfx(
     cdPos += 46 + nameLen + extraLen + commentLen;
   }
 
-  // 3. Find and validate manifest.json
+  // 3. M7 Security: Validate archive limits, path traversal, zip bombs, and whitelisted extensions
+  const archiveSecurity = validateArchiveSecurity(files, zipBytes.byteLength);
+  if (!archiveSecurity.safe) {
+    throw new Error(`[${archiveSecurity.errorCode}] ${archiveSecurity.error}`);
+  }
+
+  // 4. Find and validate manifest.json
   const manifestData = files['manifest.json'];
   if (!manifestData) {
     throw new Error('Gói .capfx không chứa tệp cấu hình bắt buộc "manifest.json".');
