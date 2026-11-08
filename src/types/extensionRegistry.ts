@@ -18,11 +18,12 @@ export type AssetKind =
   | 'template';
 
 export type TrustLevel =
-  | 'official'       // In-House / Core team verified
-  | 'community'      // Verified open-source community
-  | 'manual'         // User manual import (.pkg.json, .cube)
-  | 'local_fallback' // Locally matched approximate fallback
-  | 'ai_generated';  // Procedurally generated via AI assistant
+  | 'official'            // In-House / Core team verified
+  | 'community'           // Verified open-source community
+  | 'manual'              // User manual import (.pkg.json, .cube)
+  | 'local_fallback'      // Locally matched approximate fallback
+  | 'ai_generated'        // Procedurally generated via AI assistant
+  | 'ai_learned_verified'; // Học từ AI – đã kiểm chứng cục bộ
 
 export type MatchLevel =
   | 'exact'          // Exact ID and compatible SemVer match
