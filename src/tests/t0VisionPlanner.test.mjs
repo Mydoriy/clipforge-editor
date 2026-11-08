@@ -340,3 +340,4 @@ test('T0.7 - Prompt Injection Defense & Neutral Descriptive Technique IDs', () =
 
   assert.equal(validOutput.detectedTechniques[0].id, 'film-halide-grain');
 });
+

@@ -205,3 +205,4 @@ export function clearStoredApiKey(): void {
     localStorage.removeItem(VISION_API_KEY_STORAGE_KEY);
   }
 }
+
