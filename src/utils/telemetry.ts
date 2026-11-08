@@ -96,6 +96,18 @@ const FORBIDDEN_KEYS = new Set([
   'keyword',
   'keywords',
   'prompt',
+  'frames',
+  'frame',
+  'filmstrip',
+  'link',
+  'refUrl',
+  'thumbnail',
+  'photo',
+  'evidence',
+  'evidencePack',
+  'videoData',
+  'audio',
+  'audioData',
 ]);
 
 /**

@@ -31,6 +31,14 @@ import {
   getVisionCache,
   setVisionCache,
 } from '../db/visionCache.ts';
+import {
+  enforceMaxFramesBudget,
+  calculateEstimatedTokensAndCost,
+  checkBudgetAvailable,
+  recordDailyUsage,
+  buildInjectionProofSystemPrompt,
+  validatePrimitiveInCatalog,
+} from './privacyCostSafetyManager.ts';
 
 export const VISION_SETTINGS_STORAGE_KEY = 'clipforge_vision_settings';
 
@@ -196,11 +204,15 @@ export class GeminiDirectVisionPlanner implements VisionPlanner {
     }
 
     const frames = req.evidencePack.referenceFrames || [];
-    // Cap at max 6 reference frames as per core privacy rule
-    const cappedFrames = frames.slice(0, 6);
+    // Enforce frame budget limit (max 48 frames)
+    const cappedFrames = enforceMaxFramesBudget(frames, 48);
+    const injectionProofPrompt = buildInjectionProofSystemPrompt(
+      VISION_SYSTEM_PROMPT,
+      `Reference Frames: ${cappedFrames.length}, Duration: ${req.evidencePack.videoDurationSec || 0}s.`
+    );
 
     const parts: any[] = [
-      { text: VISION_SYSTEM_PROMPT },
+      { text: injectionProofPrompt },
       { text: `Phân tích ${cappedFrames.length} khung hình tham chiếu sau để trích xuất kỹ thuật dựng phim. Thời lượng: ${req.evidencePack.videoDurationSec || 0}s.` },
     ];
 
@@ -283,6 +295,15 @@ export class GeminiDirectVisionPlanner implements VisionPlanner {
           throw new Error(`Lỗi định dạng Schema đầu ra từ AI sau ${attempt + 1} lần thử: ${issues}`);
         }
 
+        // Validate primitive IDs against catalog
+        if (validation.data?.detectedTechniques) {
+          for (const tech of validation.data.detectedTechniques) {
+            if (tech.primitiveGraphRef && !validatePrimitiveInCatalog(tech.primitiveGraphRef)) {
+              tech.primitiveGraphRef = 'core.primitive.color_grade';
+            }
+          }
+        }
+
         return {
           success: true,
           plannerId: 'gemini-direct',
@@ -327,7 +348,7 @@ export class ProxyVisionPlanner implements VisionPlanner {
       : settings.endpoint;
 
     const frames = req.evidencePack.referenceFrames || [];
-    const cappedFrames = frames.slice(0, 6);
+    const cappedFrames = enforceMaxFramesBudget(frames, 48);
 
     let lastError: string | undefined;
     let retriesUsed = 0;
@@ -526,9 +547,41 @@ export async function executeVisionAnalysis(
     ...(req.settings || {}),
   };
 
+  // Enforce frame budget limit (max 48 frames)
+  const budgetedFrames = enforceMaxFramesBudget(
+    req.evidencePack.referenceFrames || [],
+    48
+  );
+  const sanitizedReq: VisionAnalysisRequest = {
+    ...req,
+    evidencePack: {
+      ...req.evidencePack,
+      referenceFrames: budgetedFrames,
+    },
+  };
+
+  // Budget Enforcement (Token ceiling & Daily Cost limit)
+  if (settings.provider !== 'none') {
+    const { tokens, costUsd } = calculateEstimatedTokensAndCost(
+      budgetedFrames.length,
+      settings.estimatedPricePer1kTokens
+    );
+    const budgetCheck = checkBudgetAvailable(tokens, costUsd);
+
+    if (!budgetCheck.allowed) {
+      // Vượt trần ngân sách: Dừng phân tích AI và trả kết quả đo đạc cục bộ đang có
+      const fallbackPlanner = new NoneVisionPlanner();
+      const localResult = await fallbackPlanner.analyze(sanitizedReq);
+      return {
+        ...localResult,
+        fallbackReason: `${budgetCheck.reason}. Đã dừng phân tích AI để bảo toàn ngân sách và giữ lại kết quả đo đạc cục bộ.`,
+      };
+    }
+  }
+
   // 1. Check Cache first: hash(evidencePack, promptVersion, modelId)
   const cacheKey = await computeVisionCacheKey(
-    req.evidencePack,
+    sanitizedReq.evidencePack,
     settings.promptVersion,
     settings.model
   );
@@ -546,13 +599,20 @@ export async function executeVisionAnalysis(
 
   try {
     const result = await planner.analyze({
-      ...req,
+      ...sanitizedReq,
       settings,
     });
 
-    // 3. Persist successful result in cache
+    // 3. Persist successful result in cache & track daily usage
     if (result.success && result.data) {
       await setVisionCache(cacheKey, settings.model, result);
+      if (settings.provider !== 'none') {
+        const { tokens, costUsd } = calculateEstimatedTokensAndCost(
+          budgetedFrames.length,
+          settings.estimatedPricePer1kTokens
+        );
+        recordDailyUsage(tokens, costUsd);
+      }
     }
 
     return result;
