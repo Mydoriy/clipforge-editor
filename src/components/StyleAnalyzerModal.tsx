@@ -185,3 +185,4 @@ export const StyleAnalyzerModal: React.FC = () => {
     </div>
   );
 };
+

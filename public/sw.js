@@ -22,7 +22,9 @@ const PRECACHE_SHELL_URLS = [
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-maskable.png'
+  '/icons/icon-maskable.png',
+  '/registry/index.json',
+  '/registry/packages/official.glitch-pack.capfx'
 ];
 
 /**
@@ -37,6 +39,7 @@ function withIsolationHeaders(response) {
   headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
   headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  headers.set('Access-Control-Allow-Origin', '*');
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -119,7 +122,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // B. STRATEGY: Cache-First for Fonts, Icons, and Media Assets
+  // B. STRATEGY: Stale-While-Revalidate for Registry Index & Dynamic Packs (.capfx)
+  const isRegistryOrPack =
+    url.pathname.startsWith('/registry/') ||
+    url.pathname.startsWith('/packs/') ||
+    url.pathname.endsWith('.capfx');
+
+  if (isRegistryOrPack) {
+    event.respondWith(
+      caches.open(CACHE_ASSETS).then(async (cache) => {
+        const cached = await cache.match(request);
+        const fetchPromise = fetch(request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              cache.put(request, networkResponse.clone());
+            }
+            return withIsolationHeaders(networkResponse);
+          })
+          .catch(() => cached || new Response('Offline registry asset missing', { status: 503 }));
+
+        return cached ? withIsolationHeaders(cached) : fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // C. STRATEGY: Cache-First for Fonts, Icons, and Media Assets
   const isFontOrAsset =
     url.hostname.includes('fonts.googleapis.com') ||
     url.hostname.includes('fonts.gstatic.com') ||

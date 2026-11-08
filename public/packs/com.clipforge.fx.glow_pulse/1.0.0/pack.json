@@ -1,0 +1,43 @@
+{
+  "id": "com.clipforge.fx.glow_pulse",
+  "version": "1.0.0",
+  "name": "Phát quang đập nhịp (Neon Pulse Glow)",
+  "description": "Tăng sáng dạ quang theo nhịp điệu thở mượt mà",
+  "kind": "effect",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "364ec70972ea9db570018a82596d7cbc6bda8bdbda34d4c825dae6897364954f",
+  "sha256": "364ec70972ea9db570018a82596d7cbc6bda8bdbda34d4c825dae6897364954f",
+  "sizeBytes": 942,
+  "createdAt": "2026-11-08T07:34:04.049Z",
+  "spec": {
+    "id": "com.clipforge.fx.glow_pulse",
+    "version": "1.0.0",
+    "name": "Phát quang đập nhịp (Neon Pulse Glow)",
+    "kind": "effect",
+    "description": "Tăng sáng dạ quang theo nhịp điệu thở mượt mà",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "glow",
+      "neon",
+      "pulse",
+      "light"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nvoid main() {\n  vec4 c = texture(u_image, v_uv);\n  float pulse = (sin(u_time * 4.0) * 0.5 + 0.5) * 0.3 * u_intensity;\n  fragColor = vec4(c.rgb + c.rgb * pulse, c.a);\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0,
+          "max": 2,
+          "label": "Độ sáng"
+        }
+      }
+    }
+  },
+  "signature": "a0a37afd8df7d9fc139b10c45779f00de77d94334266e86dc761ac35def0d98586be2e241f592c9c41b6399e83fb6d4abc669837251ba0920d5d08e7083fc609"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "com.clipforge.fx.zoom_blur",
+  "version": "1.0.0",
+  "name": "Mờ hướng tâm (Zoom Radial Blur)",
+  "description": "Tạo cảm giác bùng nổ hoặc lao nhanh vào tâm khung hình",
+  "kind": "effect",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "bc14982f0e97fdb181c933500ddc142dca2975c17a2a7a65b41b43feb0aa5972",
+  "sha256": "bc14982f0e97fdb181c933500ddc142dca2975c17a2a7a65b41b43feb0aa5972",
+  "sizeBytes": 1043,
+  "createdAt": "2026-11-08T07:34:04.046Z",
+  "spec": {
+    "id": "com.clipforge.fx.zoom_blur",
+    "version": "1.0.0",
+    "name": "Mờ hướng tâm (Zoom Radial Blur)",
+    "kind": "effect",
+    "description": "Tạo cảm giác bùng nổ hoặc lao nhanh vào tâm khung hình",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "zoom",
+      "blur",
+      "radial",
+      "impact"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_intensity;\nvoid main() {\n  vec2 center = vec2(0.5, 0.5);\n  vec2 toCenter = center - v_uv;\n  vec4 col = vec4(0.0);\n  for (int i = 0; i < 8; i++) {\n    float scale = 1.0 - 0.015 * float(i) * u_intensity;\n    col += texture(u_image, center - toCenter * scale);\n  }\n  fragColor = col / 8.0;\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0.1,
+          "max": 2.5,
+          "label": "Cường độ"
+        }
+      }
+    }
+  },
+  "signature": "d9080ce2021a4c4266a218ab3372632a8b2b16a58feae36adbe0a88f3e4c6d49c96c23241c5c53c4e9d6ac153a40724b87c5acd3ab08e33d8d54a3a753e1850e"
+}

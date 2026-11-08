@@ -1,0 +1,42 @@
+{
+  "id": "com.clipforge.text.neon_cyan_glow",
+  "version": "1.0.0",
+  "name": "Cyber Neon Cyan (Phát Quang Xanh)",
+  "description": "Chữ phát sáng xanh lam dạ quang nổi bật trên nền tối",
+  "kind": "textPreset",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "61ba3e8318de46c96d7eb6e59ba35dbc4b21270665bf652cddcb465364da44d0",
+  "sha256": "61ba3e8318de46c96d7eb6e59ba35dbc4b21270665bf652cddcb465364da44d0",
+  "sizeBytes": 579,
+  "createdAt": "2026-11-08T07:34:04.083Z",
+  "spec": {
+    "id": "com.clipforge.text.neon_cyan_glow",
+    "version": "1.0.0",
+    "name": "Cyber Neon Cyan (Phát Quang Xanh)",
+    "kind": "textPreset",
+    "description": "Chữ phát sáng xanh lam dạ quang nổi bật trên nền tối",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "text",
+      "preset",
+      "cyan",
+      "neon",
+      "glow"
+    ],
+    "textPreset": {
+      "fontFamily": "Inter",
+      "fontSize": 30,
+      "color": "#1FC8DB",
+      "shadow": {
+        "color": "#1FC8DB",
+        "blur": 12,
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "signature": "8ce64e733b64374beba4ec83ddeae2442b40d5e19f33272a3427d458e066f69764c25c7dcf83a58b5eb75270943e70341f87241666f9de518d6eadbc5ac4630c"
+}

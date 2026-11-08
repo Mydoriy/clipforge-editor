@@ -1,32 +1,33 @@
 {
   "id": "com.clipforge.trans.cross_zoom",
   "version": "1.0.0",
-  "name": "Thu phóng chuyển tiếp (Cross Zoom)",
-  "description": "Chuyển cảnh phóng to mượt mà kết hợp hòa trộn khung hình hiện đại",
+  "name": "Thu phóng chéo (Cross Zoom)",
+  "description": "Chuyển cảnh phóng to mượt mà nối liền 2 phân đoạn video",
   "kind": "transition",
   "trustLevel": "official",
   "license": "In-House",
-  "hash": "6a6fddad9af2ff8d229fa3504dc7dc02d5521c829c97c7aa1dd9e4a03f496891",
-  "sizeBytes": 915,
-  "createdAt": "2026-11-08T06:31:52.366Z",
+  "hash": "3940233d8c2aed3b77040315e0b51706492b67a485b7635bf2f1a9fc5858d9fd",
+  "sha256": "3940233d8c2aed3b77040315e0b51706492b67a485b7635bf2f1a9fc5858d9fd",
+  "sizeBytes": 1085,
+  "createdAt": "2026-11-08T07:34:04.053Z",
   "spec": {
     "id": "com.clipforge.trans.cross_zoom",
     "version": "1.0.0",
-    "name": "Thu phóng chuyển tiếp (Cross Zoom)",
+    "name": "Thu phóng chéo (Cross Zoom)",
     "kind": "transition",
-    "description": "Chuyển cảnh phóng to mượt mà kết hợp hòa trộn khung hình hiện đại",
+    "description": "Chuyển cảnh phóng to mượt mà nối liền 2 phân đoạn video",
     "author": "ClipForge Studio",
     "license": "In-House",
     "trustLevel": "official",
     "tags": [
       "transition",
       "zoom",
-      "crossfade",
-      "smooth"
+      "cross",
+      "dynamic"
     ],
     "shader": {
       "glslVersion": "300 es",
-      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_progress;\n\nvoid main() {\n  vec2 center = vec2(0.5);\n  float zoom = 1.0 + u_progress * 0.4;\n  vec2 uv = (v_uv - center) / zoom + center;\n  vec4 color = texture(u_image, uv);\n  fragColor = color * (1.0 - u_progress * 0.15);\n}",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  vec2 center = vec2(0.5, 0.5);\n  float p = u_progress;\n  vec2 uvA = center + (v_uv - center) * (1.0 + p * 1.5);\n  vec2 uvB = center + (v_uv - center) * (0.5 + p * 0.5);\n  vec4 colA = texture(u_texA, uvA);\n  vec4 colB = texture(u_texB, uvB);\n  fragColor = mix(colA, colB, p);\n}",
       "uniforms": {
         "u_progress": {
           "type": "float",
@@ -36,12 +37,7 @@
           "label": "Tiến độ"
         }
       }
-    },
-    "canvasFallback": {
-      "fn": "cross_zoom",
-      "params": {
-        "maxZoom": 1.4
-      }
     }
-  }
+  },
+  "signature": "1c004ad77d4bf7efafb2b3244feb3ad43dd25c504b45895cbdef82b2511d5f9ded8b38b861d030b004aa5a549f6796649ded0e321581324b6dd4331ff9bc1004"
 }

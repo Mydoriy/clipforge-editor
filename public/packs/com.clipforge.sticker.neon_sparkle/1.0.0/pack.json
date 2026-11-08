@@ -1,0 +1,32 @@
+{
+  "id": "com.clipforge.sticker.neon_sparkle",
+  "version": "1.0.0",
+  "name": "Ngôi sao dạ quang (Neon Sparkle Star)",
+  "description": "Icon lấp lánh neon phát sáng chuẩn SVG vector",
+  "kind": "sticker",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "d4b9521646cb8757232630e5385706cfca29c7c60b98e35602af744569a46181",
+  "sha256": "d4b9521646cb8757232630e5385706cfca29c7c60b98e35602af744569a46181",
+  "sizeBytes": 602,
+  "createdAt": "2026-11-08T07:34:04.079Z",
+  "spec": {
+    "id": "com.clipforge.sticker.neon_sparkle",
+    "version": "1.0.0",
+    "name": "Ngôi sao dạ quang (Neon Sparkle Star)",
+    "kind": "sticker",
+    "description": "Icon lấp lánh neon phát sáng chuẩn SVG vector",
+    "author": "ClipForge Studio",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sticker",
+      "svg",
+      "sparkle",
+      "star",
+      "neon"
+    ],
+    "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"50,5 64,36 98,36 70,57 81,91 50,70 19,91 30,57 2,36 36,36\" fill=\"#1FC8DB\" stroke=\"#ffffff\" stroke-width=\"2\"/></svg>"
+  },
+  "signature": "6690bb50be343ab4ec6af0723f9699366c17a514c6fa5ad32529910561b184359dd800b0fc0d90b511c4ef951f1c7a0bad24e32fceabee9cb3b24e692e18e90b"
+}

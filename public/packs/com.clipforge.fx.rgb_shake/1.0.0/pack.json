@@ -1,0 +1,57 @@
+{
+  "id": "com.clipforge.fx.rgb_shake",
+  "version": "1.0.0",
+  "name": "Rung RGB (RGB Shake)",
+  "description": "Hiệu ứng tách kênh RGB và rung lắc theo tần số âm thanh / nhịp điệu",
+  "kind": "effect",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "a321b38fd13572d202aa50fa89142f619ed34a3cad23508b5f6cfe0aafb67261",
+  "sha256": "a321b38fd13572d202aa50fa89142f619ed34a3cad23508b5f6cfe0aafb67261",
+  "sizeBytes": 1396,
+  "createdAt": "2026-11-08T07:34:04.039Z",
+  "spec": {
+    "id": "com.clipforge.fx.rgb_shake",
+    "version": "1.0.0",
+    "name": "Rung RGB (RGB Shake)",
+    "kind": "effect",
+    "description": "Hiệu ứng tách kênh RGB và rung lắc theo tần số âm thanh / nhịp điệu",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "rgb",
+      "shake",
+      "glitch",
+      "aberration",
+      "dynamic"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform vec2 u_resolution;\nuniform float u_intensity;\nuniform float u_speed;\nvoid main() {\n  vec2 uv = v_uv;\n  float shift = sin(u_time * 25.0 * u_speed) * 0.015 * u_intensity;\n  float r = texture(u_image, uv + vec2(shift, 0.0)).r;\n  float g = texture(u_image, uv).g;\n  float b = texture(u_image, uv - vec2(shift, 0.0)).b;\n  fragColor = vec4(r, g, b, texture(u_image, uv).a);\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0,
+          "max": 2,
+          "label": "Độ mạnh RGB"
+        },
+        "u_speed": {
+          "type": "float",
+          "default": 1,
+          "min": 0.1,
+          "max": 3,
+          "label": "Tốc độ rung"
+        }
+      }
+    },
+    "canvasFallback": {
+      "fn": "rgb_shake",
+      "params": {
+        "shift": 8
+      }
+    }
+  },
+  "signature": "aeba6e0eaeac45b79898e7dcb7b454727954d30edd3086747488b2e9059278b76932f801517d8bf7256437dd55fad966d37335abcc88fe58f6b7ea1471438a0e"
+}

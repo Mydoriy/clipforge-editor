@@ -1,0 +1,45 @@
+{
+  "id": "com.clipforge.text.gold_luxury_3d",
+  "version": "1.0.0",
+  "name": "Vàng Kim Hoàng Gia (3D Gold Luxury)",
+  "description": "Sắc vàng kim loại sang trọng tạo điểm nhấn thương hiệu",
+  "kind": "textPreset",
+  "trustLevel": "community",
+  "license": "OFL",
+  "hash": "290e0f5abcbd12eace16b18c5ac0d5b2e4b728643a777a6656f1416cc7a1b7a3",
+  "sha256": "290e0f5abcbd12eace16b18c5ac0d5b2e4b728643a777a6656f1416cc7a1b7a3",
+  "sizeBytes": 666,
+  "createdAt": "2026-11-08T07:34:04.083Z",
+  "spec": {
+    "id": "com.clipforge.text.gold_luxury_3d",
+    "version": "1.0.0",
+    "name": "Vàng Kim Hoàng Gia (3D Gold Luxury)",
+    "kind": "textPreset",
+    "description": "Sắc vàng kim loại sang trọng tạo điểm nhấn thương hiệu",
+    "author": "Cộng đồng Typography",
+    "license": "OFL",
+    "trustLevel": "community",
+    "tags": [
+      "text",
+      "preset",
+      "gold",
+      "luxury",
+      "vip"
+    ],
+    "textPreset": {
+      "fontFamily": "Inter",
+      "fontSize": 28,
+      "color": "#F59E0B",
+      "stroke": {
+        "color": "#78350F",
+        "width": 2
+      },
+      "shadow": {
+        "color": "rgba(0,0,0,0.9)",
+        "blur": 4,
+        "x": 3,
+        "y": 3
+      }
+    }
+  }
+}

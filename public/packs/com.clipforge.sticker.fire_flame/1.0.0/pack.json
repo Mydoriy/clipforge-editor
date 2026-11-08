@@ -1,0 +1,31 @@
+{
+  "id": "com.clipforge.sticker.fire_flame",
+  "version": "1.0.0",
+  "name": "Ngọn lửa rực cháy (Blazing Fire)",
+  "description": "Biểu tượng ngọn lửa hừng hực nhiệt huyết",
+  "kind": "sticker",
+  "trustLevel": "community",
+  "license": "CC0",
+  "hash": "10c009bb92041933719180bf7cb9f57b8a55e5385881b73964b8c769e53b0748",
+  "sha256": "10c009bb92041933719180bf7cb9f57b8a55e5385881b73964b8c769e53b0748",
+  "sizeBytes": 655,
+  "createdAt": "2026-11-08T07:34:04.081Z",
+  "spec": {
+    "id": "com.clipforge.sticker.fire_flame",
+    "version": "1.0.0",
+    "name": "Ngọn lửa rực cháy (Blazing Fire)",
+    "kind": "sticker",
+    "description": "Biểu tượng ngọn lửa hừng hực nhiệt huyết",
+    "author": "Cộng đồng Vector",
+    "license": "CC0",
+    "trustLevel": "community",
+    "tags": [
+      "sticker",
+      "fire",
+      "flame",
+      "hot",
+      "viral"
+    ],
+    "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M50 5 Q75 40 70 70 Q65 95 50 95 Q35 95 30 70 Q25 40 50 5 Z\" fill=\"#F97316\"/><path d=\"M50 35 Q65 60 60 80 Q55 90 50 90 Q45 90 40 80 Q35 60 50 35 Z\" fill=\"#FACC15\"/></svg>"
+  }
+}

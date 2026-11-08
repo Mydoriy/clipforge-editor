@@ -1,0 +1,32 @@
+{
+  "id": "com.clipforge.filter.noir_bw",
+  "version": "1.0.0",
+  "name": "Đen trắng điện ảnh (Film Noir B&W)",
+  "description": "Đen trắng tương phản cao nghệ thuật đậm chất điện ảnh cổ điển",
+  "kind": "filter",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "58e1e5e4daa0324fec772f8d075ef5060b36ce1da12fef738741839392f599b9",
+  "sha256": "58e1e5e4daa0324fec772f8d075ef5060b36ce1da12fef738741839392f599b9",
+  "sizeBytes": 485,
+  "createdAt": "2026-11-08T07:34:04.065Z",
+  "spec": {
+    "id": "com.clipforge.filter.noir_bw",
+    "version": "1.0.0",
+    "name": "Đen trắng điện ảnh (Film Noir B&W)",
+    "kind": "filter",
+    "description": "Đen trắng tương phản cao nghệ thuật đậm chất điện ảnh cổ điển",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "filter",
+      "noir",
+      "bw",
+      "black_white",
+      "contrast"
+    ],
+    "cssFilter": "grayscale(100%) contrast(140%) brightness(90%)"
+  },
+  "signature": "7cd7e3cb290e3f1e34703e7f0b8bdfe243683f8135041d3d038f5b1133546b8d1a1b1f6db705aed3331f1a1a0eb54e963e4488c7589564cc8c94b0c599997e04"
+}

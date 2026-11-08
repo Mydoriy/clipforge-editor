@@ -1,0 +1,42 @@
+{
+  "id": "com.clipforge.text.minimal_white",
+  "version": "1.0.0",
+  "name": "Trắng Tinh Tế (Minimal Clean White)",
+  "description": "Phông chữ trắng thanh lịch kèm bóng mờ nhẹ nhàng hiện đại",
+  "kind": "textPreset",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "38afea5975a5f361b4c5d923516ce85d4ec052b825e525cce23cd71a812b7050",
+  "sha256": "38afea5975a5f361b4c5d923516ce85d4ec052b825e525cce23cd71a812b7050",
+  "sizeBytes": 604,
+  "createdAt": "2026-11-08T07:34:04.084Z",
+  "spec": {
+    "id": "com.clipforge.text.minimal_white",
+    "version": "1.0.0",
+    "name": "Trắng Tinh Tế (Minimal Clean White)",
+    "kind": "textPreset",
+    "description": "Phông chữ trắng thanh lịch kèm bóng mờ nhẹ nhàng hiện đại",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "text",
+      "preset",
+      "minimal",
+      "clean",
+      "white"
+    ],
+    "textPreset": {
+      "fontFamily": "Inter",
+      "fontSize": 26,
+      "color": "#FFFFFF",
+      "shadow": {
+        "color": "rgba(0,0,0,0.6)",
+        "blur": 4,
+        "x": 1,
+        "y": 2
+      }
+    }
+  },
+  "signature": "9035b5c65f8acbd249a3ae1d2b5ce83232e3449d39833a880909056be58e477b18285e5cec8982ae1fbe573ad84bdcca24580611b86a23927e93492e1db2890c"
+}

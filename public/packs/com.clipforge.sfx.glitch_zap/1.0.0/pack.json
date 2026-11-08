@@ -1,0 +1,38 @@
+{
+  "id": "com.clipforge.sfx.glitch_zap",
+  "version": "1.0.0",
+  "name": "Chớp giật điện từ (Electric Glitch Zap)",
+  "description": "Tiếng giật tia lửa điện khớp với hiệu ứng rung quang sai",
+  "kind": "sfx",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "0f4f2cbd4c5627b5871db80523bc2aa93ce2f8ac03babdc266e9120d1db392d6",
+  "sha256": "0f4f2cbd4c5627b5871db80523bc2aa93ce2f8ac03babdc266e9120d1db392d6",
+  "sizeBytes": 546,
+  "createdAt": "2026-11-08T07:34:04.075Z",
+  "spec": {
+    "id": "com.clipforge.sfx.glitch_zap",
+    "version": "1.0.0",
+    "name": "Chớp giật điện từ (Electric Glitch Zap)",
+    "kind": "sfx",
+    "description": "Tiếng giật tia lửa điện khớp với hiệu ứng rung quang sai",
+    "author": "ClipForge Audio Lab",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sfx",
+      "glitch",
+      "zap",
+      "electric",
+      "laser"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "square",
+      "startFreq": 450,
+      "endFreq": 1500,
+      "duration": 0.18,
+      "noiseAmount": 0.6
+    }
+  },
+  "signature": "18a8319be9f190d43dedcc6e7b4afc8ccbef9f3b104f85737e0c5ca038fe3980664f614448894cbe65b3b2d7c990e86d2dd73f02891f1ba7556f975d8fcd7a0b"
+}

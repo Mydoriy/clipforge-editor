@@ -1,0 +1,37 @@
+{
+  "id": "com.clipforge.sfx.deep_hit",
+  "version": "1.0.0",
+  "name": "Cú đập âm trầm (Deep Bass Impact)",
+  "description": "Âm trầm rung dội nhấn mạnh khoảnh khắc giật gân (Boom Impact)",
+  "kind": "sfx",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "251eda7752e028e63acee7f5e0a9d47d59908995c90824558cd6fa704f34253e",
+  "sha256": "251eda7752e028e63acee7f5e0a9d47d59908995c90824558cd6fa704f34253e",
+  "sizeBytes": 507,
+  "createdAt": "2026-11-08T07:34:04.073Z",
+  "spec": {
+    "id": "com.clipforge.sfx.deep_hit",
+    "version": "1.0.0",
+    "name": "Cú đập âm trầm (Deep Bass Impact)",
+    "kind": "sfx",
+    "description": "Âm trầm rung dội nhấn mạnh khoảnh khắc giật gân (Boom Impact)",
+    "author": "ClipForge Audio Lab",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sfx",
+      "impact",
+      "bass",
+      "hit",
+      "boom"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "sine",
+      "startFreq": 180,
+      "endFreq": 30,
+      "duration": 0.65
+    }
+  },
+  "signature": "398f940d22481d81db177950287b82588b0868b1f0fc417d039ef8eb0f3d3ab05d9f0578fd98a450a5d74962e134f8b31a39aa3874df53eb20eb6d5b8be2f308"
+}

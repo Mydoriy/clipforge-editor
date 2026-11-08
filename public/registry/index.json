@@ -1,7 +1,25 @@
 {
+  "formatVersion": "1.0.0",
   "version": "1.0.0",
-  "lastUpdated": "2026-11-08T06:31:52.369Z",
+  "lastUpdated": "2026-11-08T07:34:04.086Z",
   "repositoryName": "ClipForge Official & Community Open Registry",
+  "repositoryUrl": "/registry/index.json",
+  "revoked": [
+    {
+      "id": "com.clipforge.fx.unstable_glitch",
+      "version": "0.8.0",
+      "reason": "Lỗi rò rỉ bộ nhớ GPU WebGL gây treo tab trình duyệt trên card tích hợp",
+      "revokedAt": "2026-11-01T00:00:00Z",
+      "replacementId": "com.clipforge.fx.rgb_shake@1.0.0"
+    },
+    {
+      "id": "com.clipforge.filter.vintage_leaked",
+      "version": "*",
+      "reason": "Thu hồi do vi phạm bản quyền bảng màu điện ảnh thương mại",
+      "revokedAt": "2026-11-05T00:00:00Z",
+      "replacementId": "com.clipforge.filter.teal_orange_3d@1.0.0"
+    }
+  ],
   "packages": [
     {
       "id": "com.clipforge.fx.rgb_shake",
@@ -11,9 +29,10 @@
       "kind": "effect",
       "trustLevel": "official",
       "license": "In-House",
-      "hash": "8f1bc1363bba017603ba83a1518119136a24a89eb52d2b1860586e293a7512a1",
-      "sizeBytes": 1157,
-      "createdAt": "2026-11-08T06:31:52.351Z",
+      "hash": "a321b38fd13572d202aa50fa89142f619ed34a3cad23508b5f6cfe0aafb67261",
+      "sha256": "a321b38fd13572d202aa50fa89142f619ed34a3cad23508b5f6cfe0aafb67261",
+      "sizeBytes": 1396,
+      "createdAt": "2026-11-08T07:34:04.039Z",
       "spec": {
         "id": "com.clipforge.fx.rgb_shake",
         "version": "1.0.0",
@@ -32,7 +51,7 @@
         ],
         "shader": {
           "glslVersion": "300 es",
-          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform vec2 u_resolution;\nuniform float u_intensity;\nuniform float u_speed;\n\nvoid main() {\n  vec2 uv = v_uv;\n  float shift = sin(u_time * 25.0 * u_speed) * 0.015 * u_intensity;\n  float r = texture(u_image, uv + vec2(shift, 0.0)).r;\n  float g = texture(u_image, uv).g;\n  float b = texture(u_image, uv - vec2(shift, 0.0)).b;\n  float a = texture(u_image, uv).a;\n  fragColor = vec4(r, g, b, a);\n}",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform vec2 u_resolution;\nuniform float u_intensity;\nuniform float u_speed;\nvoid main() {\n  vec2 uv = v_uv;\n  float shift = sin(u_time * 25.0 * u_speed) * 0.015 * u_intensity;\n  float r = texture(u_image, uv + vec2(shift, 0.0)).r;\n  float g = texture(u_image, uv).g;\n  float b = texture(u_image, uv - vec2(shift, 0.0)).b;\n  fragColor = vec4(r, g, b, texture(u_image, uv).a);\n}",
           "uniforms": {
             "u_intensity": {
               "type": "float",
@@ -56,7 +75,8 @@
             "shift": 8
           }
         }
-      }
+      },
+      "signature": "aeba6e0eaeac45b79898e7dcb7b454727954d30edd3086747488b2e9059278b76932f801517d8bf7256437dd55fad966d37335abcc88fe58f6b7ea1471438a0e"
     },
     {
       "id": "com.clipforge.fx.motion_blur",
@@ -66,9 +86,10 @@
       "kind": "effect",
       "trustLevel": "official",
       "license": "In-House",
-      "hash": "c571601d18f35ecea633f2d531a0f27933835d76e4f3dd3b5158bca9be1502cb",
-      "sizeBytes": 1035,
-      "createdAt": "2026-11-08T06:31:52.364Z",
+      "hash": "39c1b4d317289a8e3c161f1ce4cd6c2dd34ef6743acf95c173201d743fb22aa0",
+      "sha256": "39c1b4d317289a8e3c161f1ce4cd6c2dd34ef6743acf95c173201d743fb22aa0",
+      "sizeBytes": 1220,
+      "createdAt": "2026-11-08T07:34:04.041Z",
       "spec": {
         "id": "com.clipforge.fx.motion_blur",
         "version": "1.0.0",
@@ -86,7 +107,7 @@
         ],
         "shader": {
           "glslVersion": "300 es",
-          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_intensity;\n\nvoid main() {\n  vec2 uv = v_uv;\n  vec4 color = vec4(0.0);\n  float total = 0.0;\n  vec2 dir = vec2(0.008 * u_intensity, 0.0);\n  for (float i = -4.0; i <= 4.0; i += 1.0) {\n    float weight = 1.0 - abs(i) / 5.0;\n    color += texture(u_image, uv + dir * i) * weight;\n    total += weight;\n  }\n  fragColor = color / total;\n}",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_intensity;\nvoid main() {\n  vec2 uv = v_uv;\n  vec4 color = vec4(0.0);\n  float total = 0.0;\n  vec2 dir = vec2(0.008 * u_intensity, 0.0);\n  for (float i = -4.0; i <= 4.0; i += 1.0) {\n    float weight = 1.0 - abs(i) / 5.0;\n    color += texture(u_image, uv + dir * i) * weight;\n    total += weight;\n  }\n  fragColor = color / total;\n}",
           "uniforms": {
             "u_intensity": {
               "type": "float",
@@ -103,7 +124,8 @@
             "steps": 4
           }
         }
-      }
+      },
+      "signature": "867a20ffafb695a1e4b5c5c186d098a2c846b5e00c7bb8bb53d01c2c6673a862d371a0589b3a705badf7a3bc67e7b1d223ddd86f9028c0ce162185468c6e1205"
     },
     {
       "id": "com.clipforge.fx.film_halide",
@@ -113,9 +135,10 @@
       "kind": "effect",
       "trustLevel": "community",
       "license": "CC0",
-      "hash": "b3af4e13e2ab1bf8e9c26b9bed3cc28a9e2aefc430928ba861391c7c05997404",
-      "sizeBytes": 1031,
-      "createdAt": "2026-11-08T06:31:52.365Z",
+      "hash": "74f45cf560e474452d464de8766f5bac6546d5810045b6b73d6f11997a4910a6",
+      "sha256": "74f45cf560e474452d464de8766f5bac6546d5810045b6b73d6f11997a4910a6",
+      "sizeBytes": 1212,
+      "createdAt": "2026-11-08T07:34:04.045Z",
       "spec": {
         "id": "com.clipforge.fx.film_halide",
         "version": "1.0.0",
@@ -126,62 +149,279 @@
         "license": "CC0",
         "trustLevel": "community",
         "tags": [
-          "grain",
           "film",
+          "grain",
+          "analog",
           "vintage",
-          "halide",
-          "retro"
+          "cinema"
         ],
         "shader": {
           "glslVersion": "300 es",
-          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\n\nfloat rand(vec2 co) {\n  return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);\n}\n\nvoid main() {\n  vec4 base = texture(u_image, v_uv);\n  float noise = (rand(v_uv * 100.0 + fract(u_time)) - 0.5) * 0.2 * u_intensity;\n  fragColor = vec4(clamp(base.rgb + noise, 0.0, 1.0), base.a);\n}",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\nvoid main() {\n  vec4 src = texture(u_image, v_uv);\n  float n = (hash(v_uv * 600.0 + fract(u_time * 12.0)) - 0.5) * 0.18 * u_intensity;\n  fragColor = vec4(clamp(src.rgb + n, 0.0, 1.0), src.a);\n}",
           "uniforms": {
             "u_intensity": {
               "type": "float",
               "default": 1,
-              "min": 0.1,
+              "min": 0,
               "max": 2,
-              "label": "Mật độ hạt"
+              "label": "Độ đậm hạt"
             }
           }
         },
         "canvasFallback": {
-          "fn": "film_halide",
+          "fn": "film_grain",
           "params": {
-            "density": 60
+            "amount": 15
           }
         }
       }
     },
     {
+      "id": "com.clipforge.fx.zoom_blur",
+      "version": "1.0.0",
+      "name": "Mờ hướng tâm (Zoom Radial Blur)",
+      "description": "Tạo cảm giác bùng nổ hoặc lao nhanh vào tâm khung hình",
+      "kind": "effect",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "bc14982f0e97fdb181c933500ddc142dca2975c17a2a7a65b41b43feb0aa5972",
+      "sha256": "bc14982f0e97fdb181c933500ddc142dca2975c17a2a7a65b41b43feb0aa5972",
+      "sizeBytes": 1043,
+      "createdAt": "2026-11-08T07:34:04.046Z",
+      "spec": {
+        "id": "com.clipforge.fx.zoom_blur",
+        "version": "1.0.0",
+        "name": "Mờ hướng tâm (Zoom Radial Blur)",
+        "kind": "effect",
+        "description": "Tạo cảm giác bùng nổ hoặc lao nhanh vào tâm khung hình",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "zoom",
+          "blur",
+          "radial",
+          "impact"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_intensity;\nvoid main() {\n  vec2 center = vec2(0.5, 0.5);\n  vec2 toCenter = center - v_uv;\n  vec4 col = vec4(0.0);\n  for (int i = 0; i < 8; i++) {\n    float scale = 1.0 - 0.015 * float(i) * u_intensity;\n    col += texture(u_image, center - toCenter * scale);\n  }\n  fragColor = col / 8.0;\n}",
+          "uniforms": {
+            "u_intensity": {
+              "type": "float",
+              "default": 1,
+              "min": 0.1,
+              "max": 2.5,
+              "label": "Cường độ"
+            }
+          }
+        }
+      },
+      "signature": "d9080ce2021a4c4266a218ab3372632a8b2b16a58feae36adbe0a88f3e4c6d49c96c23241c5c53c4e9d6ac153a40724b87c5acd3ab08e33d8d54a3a753e1850e"
+    },
+    {
+      "id": "com.clipforge.fx.vhs_distortion",
+      "version": "1.0.0",
+      "name": "Nhiễu từ băng VHS (VHS Distortion Tape)",
+      "description": "Vệt scanline giật ngang đặc trưng của băng từ những năm 90",
+      "kind": "effect",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "7db741373dd4befa47686043871d77aac52e3647dcacdfe2a0bdb421ca37c0e9",
+      "sha256": "7db741373dd4befa47686043871d77aac52e3647dcacdfe2a0bdb421ca37c0e9",
+      "sizeBytes": 1116,
+      "createdAt": "2026-11-08T07:34:04.047Z",
+      "spec": {
+        "id": "com.clipforge.fx.vhs_distortion",
+        "version": "1.0.0",
+        "name": "Nhiễu từ băng VHS (VHS Distortion Tape)",
+        "kind": "effect",
+        "description": "Vệt scanline giật ngang đặc trưng của băng từ những năm 90",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "vhs",
+          "retro",
+          "tape",
+          "scanlines",
+          "analog"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nvoid main() {\n  vec2 uv = v_uv;\n  float scanline = sin(uv.y * 800.0) * 0.04 * u_intensity;\n  float glitch = step(0.98, fract(sin(uv.y * 20.0 + u_time * 5.0) * 43758.54)) * 0.02 * u_intensity;\n  vec4 col = texture(u_image, vec2(uv.x + glitch, uv.y));\n  fragColor = vec4(col.rgb - scanline, col.a);\n}",
+          "uniforms": {
+            "u_intensity": {
+              "type": "float",
+              "default": 1,
+              "min": 0,
+              "max": 2,
+              "label": "Độ giật VHS"
+            }
+          }
+        }
+      },
+      "signature": "f3e8c1469acd1dcc513d8b9bca8ad6afb455bc7b08194a55118cc184831b5b1ab5022c4404c90f41529ccf9d08d2f982059a5b0fceec76a7254e31cf4691f80e"
+    },
+    {
+      "id": "com.clipforge.fx.glow_pulse",
+      "version": "1.0.0",
+      "name": "Phát quang đập nhịp (Neon Pulse Glow)",
+      "description": "Tăng sáng dạ quang theo nhịp điệu thở mượt mà",
+      "kind": "effect",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "364ec70972ea9db570018a82596d7cbc6bda8bdbda34d4c825dae6897364954f",
+      "sha256": "364ec70972ea9db570018a82596d7cbc6bda8bdbda34d4c825dae6897364954f",
+      "sizeBytes": 942,
+      "createdAt": "2026-11-08T07:34:04.049Z",
+      "spec": {
+        "id": "com.clipforge.fx.glow_pulse",
+        "version": "1.0.0",
+        "name": "Phát quang đập nhịp (Neon Pulse Glow)",
+        "kind": "effect",
+        "description": "Tăng sáng dạ quang theo nhịp điệu thở mượt mà",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "glow",
+          "neon",
+          "pulse",
+          "light"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nvoid main() {\n  vec4 c = texture(u_image, v_uv);\n  float pulse = (sin(u_time * 4.0) * 0.5 + 0.5) * 0.3 * u_intensity;\n  fragColor = vec4(c.rgb + c.rgb * pulse, c.a);\n}",
+          "uniforms": {
+            "u_intensity": {
+              "type": "float",
+              "default": 1,
+              "min": 0,
+              "max": 2,
+              "label": "Độ sáng"
+            }
+          }
+        }
+      },
+      "signature": "a0a37afd8df7d9fc139b10c45779f00de77d94334266e86dc761ac35def0d98586be2e241f592c9c41b6399e83fb6d4abc669837251ba0920d5d08e7083fc609"
+    },
+    {
+      "id": "com.clipforge.fx.chromatic_aberration",
+      "version": "1.0.0",
+      "name": "Quang sai viền (Lens Edge Dispersion)",
+      "description": "Tách tán sắc thấu kính quang học ở các góc rìa khung hình",
+      "kind": "effect",
+      "trustLevel": "community",
+      "license": "MIT",
+      "hash": "fab850e766275067131e4fea04cfa1d552f42c0ca07d78cb9f8d8497c59fec1d",
+      "sha256": "fab850e766275067131e4fea04cfa1d552f42c0ca07d78cb9f8d8497c59fec1d",
+      "sizeBytes": 1071,
+      "createdAt": "2026-11-08T07:34:04.051Z",
+      "spec": {
+        "id": "com.clipforge.fx.chromatic_aberration",
+        "version": "1.0.0",
+        "name": "Quang sai viền (Lens Edge Dispersion)",
+        "kind": "effect",
+        "description": "Tách tán sắc thấu kính quang học ở các góc rìa khung hình",
+        "author": "Cộng đồng Optics",
+        "license": "MIT",
+        "trustLevel": "community",
+        "tags": [
+          "chromatic",
+          "lens",
+          "dispersion",
+          "optics"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_intensity;\nvoid main() {\n  vec2 dist = v_uv - 0.5;\n  float r = texture(u_image, 0.5 + dist * (1.0 + 0.02 * u_intensity)).r;\n  float g = texture(u_image, v_uv).g;\n  float b = texture(u_image, 0.5 + dist * (1.0 - 0.02 * u_intensity)).b;\n  fragColor = vec4(r, g, b, texture(u_image, v_uv).a);\n}",
+          "uniforms": {
+            "u_intensity": {
+              "type": "float",
+              "default": 1,
+              "min": 0,
+              "max": 2,
+              "label": "Độ tách viền"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "com.clipforge.fx.light_leak",
+      "version": "1.0.0",
+      "name": "Lọt sáng cổ điển (Warm Light Leak)",
+      "description": "Vệt lọt sáng màu cam vàng ấm áp như chụp bằng máy ảnh film",
+      "kind": "effect",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "c955906a05d399465b5f9b204956153ed6ab6226a2a53c996f8223fd6f9f21c5",
+      "sha256": "c955906a05d399465b5f9b204956153ed6ab6226a2a53c996f8223fd6f9f21c5",
+      "sizeBytes": 1071,
+      "createdAt": "2026-11-08T07:34:04.051Z",
+      "spec": {
+        "id": "com.clipforge.fx.light_leak",
+        "version": "1.0.0",
+        "name": "Lọt sáng cổ điển (Warm Light Leak)",
+        "kind": "effect",
+        "description": "Vệt lọt sáng màu cam vàng ấm áp như chụp bằng máy ảnh film",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "light",
+          "leak",
+          "warm",
+          "vintage",
+          "film"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nvoid main() {\n  vec4 c = texture(u_image, v_uv);\n  float leak = max(0.0, 1.0 - distance(v_uv, vec2(0.1, 0.1)) * 1.5) * (0.8 + 0.2 * sin(u_time * 2.0)) * u_intensity;\n  vec3 warm = vec3(1.0, 0.55, 0.15);\n  fragColor = vec4(c.rgb + warm * leak * 0.45, c.a);\n}",
+          "uniforms": {
+            "u_intensity": {
+              "type": "float",
+              "default": 1,
+              "min": 0,
+              "max": 2,
+              "label": "Cường độ sáng"
+            }
+          }
+        }
+      },
+      "signature": "b97b6b738211490e1921bc63143565efdafa560c019fbe536b7148b2ae96fc3c1e92cf90cf1051dc5ea68492750f7f95df8010053ba524c9e4fd0910ae296f01"
+    },
+    {
       "id": "com.clipforge.trans.cross_zoom",
       "version": "1.0.0",
-      "name": "Thu phóng chuyển tiếp (Cross Zoom)",
-      "description": "Chuyển cảnh phóng to mượt mà kết hợp hòa trộn khung hình hiện đại",
+      "name": "Thu phóng chéo (Cross Zoom)",
+      "description": "Chuyển cảnh phóng to mượt mà nối liền 2 phân đoạn video",
       "kind": "transition",
       "trustLevel": "official",
       "license": "In-House",
-      "hash": "6a6fddad9af2ff8d229fa3504dc7dc02d5521c829c97c7aa1dd9e4a03f496891",
-      "sizeBytes": 915,
-      "createdAt": "2026-11-08T06:31:52.366Z",
+      "hash": "3940233d8c2aed3b77040315e0b51706492b67a485b7635bf2f1a9fc5858d9fd",
+      "sha256": "3940233d8c2aed3b77040315e0b51706492b67a485b7635bf2f1a9fc5858d9fd",
+      "sizeBytes": 1085,
+      "createdAt": "2026-11-08T07:34:04.053Z",
       "spec": {
         "id": "com.clipforge.trans.cross_zoom",
         "version": "1.0.0",
-        "name": "Thu phóng chuyển tiếp (Cross Zoom)",
+        "name": "Thu phóng chéo (Cross Zoom)",
         "kind": "transition",
-        "description": "Chuyển cảnh phóng to mượt mà kết hợp hòa trộn khung hình hiện đại",
+        "description": "Chuyển cảnh phóng to mượt mà nối liền 2 phân đoạn video",
         "author": "ClipForge Studio",
         "license": "In-House",
         "trustLevel": "official",
         "tags": [
           "transition",
           "zoom",
-          "crossfade",
-          "smooth"
+          "cross",
+          "dynamic"
         ],
         "shader": {
           "glslVersion": "300 es",
-          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_progress;\n\nvoid main() {\n  vec2 center = vec2(0.5);\n  float zoom = 1.0 + u_progress * 0.4;\n  vec2 uv = (v_uv - center) / zoom + center;\n  vec4 color = texture(u_image, uv);\n  fragColor = color * (1.0 - u_progress * 0.15);\n}",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  vec2 center = vec2(0.5, 0.5);\n  float p = u_progress;\n  vec2 uvA = center + (v_uv - center) * (1.0 + p * 1.5);\n  vec2 uvB = center + (v_uv - center) * (0.5 + p * 0.5);\n  vec4 colA = texture(u_texA, uvA);\n  vec4 colB = texture(u_texB, uvB);\n  fragColor = mix(colA, colB, p);\n}",
           "uniforms": {
             "u_progress": {
               "type": "float",
@@ -191,44 +431,40 @@
               "label": "Tiến độ"
             }
           }
-        },
-        "canvasFallback": {
-          "fn": "cross_zoom",
-          "params": {
-            "maxZoom": 1.4
-          }
         }
-      }
+      },
+      "signature": "1c004ad77d4bf7efafb2b3244feb3ad43dd25c504b45895cbdef82b2511d5f9ded8b38b861d030b004aa5a549f6796649ded0e321581324b6dd4331ff9bc1004"
     },
     {
       "id": "com.clipforge.trans.glitch_swipe",
       "version": "1.0.0",
-      "name": "Lướt Glitch (Glitch Swipe)",
-      "description": "Chuyển cảnh giật tín hiệu kỹ thuật số kèm vuốt ngang thời thượng",
+      "name": "Gạt nhiễu giật (Glitch Swipe)",
+      "description": "Chuyển tiếp hiện đại bằng cách quét vạch nhiễu kỹ thuật số",
       "kind": "transition",
-      "trustLevel": "community",
-      "license": "MIT",
-      "hash": "13fdebfd6a0a3e4462dde6dcd6a03cc46d9646da804b975630a04e0f44ccb2e3",
-      "sizeBytes": 888,
-      "createdAt": "2026-11-08T06:31:52.366Z",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "91a6ae14ebf2d6c8b0d360dfb6ce0fe00aeed32382e433dd777a1b11402d83f7",
+      "sha256": "91a6ae14ebf2d6c8b0d360dfb6ce0fe00aeed32382e433dd777a1b11402d83f7",
+      "sizeBytes": 1046,
+      "createdAt": "2026-11-08T07:34:04.055Z",
       "spec": {
         "id": "com.clipforge.trans.glitch_swipe",
         "version": "1.0.0",
-        "name": "Lướt Glitch (Glitch Swipe)",
+        "name": "Gạt nhiễu giật (Glitch Swipe)",
         "kind": "transition",
-        "description": "Chuyển cảnh giật tín hiệu kỹ thuật số kèm vuốt ngang thời thượng",
-        "author": "PixelForge Labs",
-        "license": "MIT",
-        "trustLevel": "community",
+        "description": "Chuyển tiếp hiện đại bằng cách quét vạch nhiễu kỹ thuật số",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
         "tags": [
           "transition",
           "glitch",
           "swipe",
-          "cyber"
+          "stutter"
         ],
         "shader": {
           "glslVersion": "300 es",
-          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_progress;\n\nvoid main() {\n  vec2 uv = v_uv;\n  float slice = step(0.5, fract(uv.y * 14.0));\n  float offset = (slice - 0.5) * 0.07 * sin(u_progress * 3.14159);\n  uv.x += offset;\n  fragColor = texture(u_image, uv);\n}",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float p = u_progress;\n  float slice = fract(sin(floor(v_uv.y * 30.0) * 123.45) * 43758.54);\n  float threshold = p + (slice - 0.5) * 0.2;\n  fragColor = v_uv.x < threshold ? texture(u_texB, v_uv) : texture(u_texA, v_uv);\n}",
           "uniforms": {
             "u_progress": {
               "type": "float",
@@ -238,33 +474,204 @@
               "label": "Tiến độ"
             }
           }
-        },
-        "canvasFallback": {
-          "fn": "glitch",
-          "params": {
-            "displacement": 12
+        }
+      },
+      "signature": "475a302006d4af00a6480b0517939d3bc56b055050e3349cbcb6790649d6286279968edb2a14e494a75dda478876b10dbcfa499a118d34c6185d030161189c0c"
+    },
+    {
+      "id": "com.clipforge.trans.whip_pan",
+      "version": "1.0.0",
+      "name": "Gạt lia máy nhanh (Whip Pan Speed)",
+      "description": "Lia máy tốc độ cao kèm vệt nhòe phương ngang nối giữa 2 cảnh",
+      "kind": "transition",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "22bd43bd1b91b52dc1ddb90b60aa5b99ac7a84c81d07f04e72a638e643d08334",
+      "sha256": "22bd43bd1b91b52dc1ddb90b60aa5b99ac7a84c81d07f04e72a638e643d08334",
+      "sizeBytes": 994,
+      "createdAt": "2026-11-08T07:34:04.057Z",
+      "spec": {
+        "id": "com.clipforge.trans.whip_pan",
+        "version": "1.0.0",
+        "name": "Gạt lia máy nhanh (Whip Pan Speed)",
+        "kind": "transition",
+        "description": "Lia máy tốc độ cao kèm vệt nhòe phương ngang nối giữa 2 cảnh",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "transition",
+          "whip",
+          "pan",
+          "motion",
+          "fast"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float p = u_progress;\n  vec2 uvA = v_uv - vec2(p, 0.0);\n  vec2 uvB = v_uv + vec2(1.0 - p, 0.0);\n  fragColor = p < 0.5 ? texture(u_texA, uvA) : texture(u_texB, uvB);\n}",
+          "uniforms": {
+            "u_progress": {
+              "type": "float",
+              "default": 0,
+              "min": 0,
+              "max": 1,
+              "label": "Tiến độ"
+            }
           }
         }
-      }
+      },
+      "signature": "73ada6df068bba99e992c54e5cb4c3c5744decffdc607ff89c50c222ff045daa2bc06ffee12df8bd675058d97d73e11cabd23999eafa0522cab1ac18d6a34203"
+    },
+    {
+      "id": "com.clipforge.trans.fade_black",
+      "version": "1.0.0",
+      "name": "Hòa tan đen (Dip to Black)",
+      "description": "Chuyển cảnh trầm lắng sang màu đen trước khi mở phân cảnh mới",
+      "kind": "transition",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "75574de6c6096979a8ab46d01cb0bee3cd8f506c96f54789185510c8c35c5d37",
+      "sha256": "75574de6c6096979a8ab46d01cb0bee3cd8f506c96f54789185510c8c35c5d37",
+      "sizeBytes": 978,
+      "createdAt": "2026-11-08T07:34:04.058Z",
+      "spec": {
+        "id": "com.clipforge.trans.fade_black",
+        "version": "1.0.0",
+        "name": "Hòa tan đen (Dip to Black)",
+        "kind": "transition",
+        "description": "Chuyển cảnh trầm lắng sang màu đen trước khi mở phân cảnh mới",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "transition",
+          "fade",
+          "black",
+          "classic",
+          "cinema"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float p = u_progress;\n  vec4 col = p < 0.5 ? texture(u_texA, v_uv) * (1.0 - p * 2.0) : texture(u_texB, v_uv) * ((p - 0.5) * 2.0);\n  fragColor = col;\n}",
+          "uniforms": {
+            "u_progress": {
+              "type": "float",
+              "default": 0,
+              "min": 0,
+              "max": 1,
+              "label": "Tiến độ"
+            }
+          }
+        }
+      },
+      "signature": "91c5ed935abef98bb296cf1f765d7e5ad183d8eb9bdcdee8804d92a1bf8c222c58c895b9b1562fb45e4f8155396f8d59e6429202d240f134bd089e69f112940c"
+    },
+    {
+      "id": "com.clipforge.trans.dissolve",
+      "version": "1.0.0",
+      "name": "Hòa tan mờ chồng (Cross Dissolve)",
+      "description": "Chuyển cảnh mượt mà tiêu chuẩn ngành điện ảnh",
+      "kind": "transition",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "f68e9a27ce4af5053fe8d26a840889a3ba799a307777014034cab6d21595a99a",
+      "sha256": "f68e9a27ce4af5053fe8d26a840889a3ba799a307777014034cab6d21595a99a",
+      "sizeBytes": 892,
+      "createdAt": "2026-11-08T07:34:04.060Z",
+      "spec": {
+        "id": "com.clipforge.trans.dissolve",
+        "version": "1.0.0",
+        "name": "Hòa tan mờ chồng (Cross Dissolve)",
+        "kind": "transition",
+        "description": "Chuyển cảnh mượt mà tiêu chuẩn ngành điện ảnh",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "transition",
+          "dissolve",
+          "cross",
+          "fade",
+          "smooth"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  fragColor = mix(texture(u_texA, v_uv), texture(u_texB, v_uv), u_progress);\n}",
+          "uniforms": {
+            "u_progress": {
+              "type": "float",
+              "default": 0,
+              "min": 0,
+              "max": 1,
+              "label": "Tiến độ"
+            }
+          }
+        }
+      },
+      "signature": "34b452ee9ce3a2672cf3e9ca692df5a8613cd4d26e3eadb1e99d8f3728b5d4c0183068161102dd81ec7a6aff6d4f8c55847a4e5cfec5943a3eb52d2c7a23080c"
+    },
+    {
+      "id": "com.clipforge.trans.spin_blur",
+      "version": "1.0.0",
+      "name": "Xoay tròn 360 độ (Spin Blur Cut)",
+      "description": "Xoay tít khung hình vào tâm tạo cảm giác chuyển động ấn tượng",
+      "kind": "transition",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "49b50b2f5d091b2400f5c6765b2014b28063c915e8294cec4b67fd92ede03bbd",
+      "sha256": "49b50b2f5d091b2400f5c6765b2014b28063c915e8294cec4b67fd92ede03bbd",
+      "sizeBytes": 1064,
+      "createdAt": "2026-11-08T07:34:04.061Z",
+      "spec": {
+        "id": "com.clipforge.trans.spin_blur",
+        "version": "1.0.0",
+        "name": "Xoay tròn 360 độ (Spin Blur Cut)",
+        "kind": "transition",
+        "description": "Xoay tít khung hình vào tâm tạo cảm giác chuyển động ấn tượng",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "transition",
+          "spin",
+          "rotate",
+          "vortex"
+        ],
+        "shader": {
+          "glslVersion": "300 es",
+          "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float angle = u_progress * 3.14159;\n  vec2 pt = v_uv - 0.5;\n  mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));\n  vec2 rotUv = 0.5 + rot * pt;\n  fragColor = u_progress < 0.5 ? texture(u_texA, rotUv) : texture(u_texB, rotUv);\n}",
+          "uniforms": {
+            "u_progress": {
+              "type": "float",
+              "default": 0,
+              "min": 0,
+              "max": 1,
+              "label": "Tiến độ"
+            }
+          }
+        }
+      },
+      "signature": "59b89e92dc6127d0460f5609d89cf320d30612ae619138a76ed100af2830e7c0a394f97278678883f954d3699ce64ae8f65ad01355d314a46d618b30552a6202"
     },
     {
       "id": "com.clipforge.filter.teal_orange_3d",
       "version": "1.0.0",
-      "name": "Điện ảnh Xanh Cam (Teal & Orange 3D)",
-      "description": "Phối màu Hollywood kinh điển: da cam ấm áp tương phản bóng xanh lam",
+      "name": "Điện ảnh Xanh Cam (Teal & Orange 3D LUT)",
+      "description": "Màu da cam ấm áp tương phản sắc sảo với bóng đổ xanh lam Hollywood",
       "kind": "filter",
       "trustLevel": "official",
       "license": "In-House",
-      "hash": "fea1da70821ff665195aef4c5dccdc962da28f6eb55c0596802639658c7c309f",
-      "sizeBytes": 585,
-      "createdAt": "2026-11-08T06:31:52.367Z",
+      "hash": "ceeb7a7d4b5b1b078b32cce6a35352fc84f9f33ab7b93bba9f7ba9bbf1777a34",
+      "sha256": "ceeb7a7d4b5b1b078b32cce6a35352fc84f9f33ab7b93bba9f7ba9bbf1777a34",
+      "sizeBytes": 615,
+      "createdAt": "2026-11-08T07:34:04.063Z",
       "spec": {
         "id": "com.clipforge.filter.teal_orange_3d",
         "version": "1.0.0",
-        "name": "Điện ảnh Xanh Cam (Teal & Orange 3D)",
+        "name": "Điện ảnh Xanh Cam (Teal & Orange 3D LUT)",
         "kind": "filter",
-        "description": "Phối màu Hollywood kinh điển: da cam ấm áp tương phản bóng xanh lam",
-        "author": "ClipForge Colorist",
+        "description": "Màu da cam ấm áp tương phản sắc sảo với bóng đổ xanh lam Hollywood",
+        "author": "ClipForge Studio",
         "license": "In-House",
         "trustLevel": "official",
         "tags": [
@@ -272,78 +679,779 @@
           "lut",
           "teal",
           "orange",
-          "cinematic"
+          "hollywood",
+          "color_grade"
         ],
-        "lutData": "TITLE \"Teal_Orange_3D\"\nLUT_3D_SIZE 2\n0.0 0.0 0.0\n1.0 0.1 0.0\n0.0 1.0 0.2\n1.0 1.0 0.1\n0.0 0.2 1.0\n1.0 0.1 1.0\n0.1 1.0 1.0\n1.0 0.95 0.9",
-        "cssFilter": "contrast(120%) saturate(135%) sepia(20%) hue-rotate(170deg)"
+        "cssFilter": "contrast(115%) saturate(125%) hue-rotate(-8deg)",
+        "lutData": "TITLE \"TealOrange3D\"\nLUT_3D_SIZE 2\n0.0 0.0 0.0\n0.0 0.2 0.4\n0.8 0.5 0.2\n1.0 0.7 0.3"
+      },
+      "signature": "2e635d1f65637ec5995dea69587c8409a8d54fb973362b4c52431ed92209de1613ce66179ec93e7dd53efd9310f23ce68127e37591b5668099be16b784b02f0e"
+    },
+    {
+      "id": "com.clipforge.filter.vintage_70s",
+      "version": "1.0.0",
+      "name": "Màu phim hoài niệm (1970s Vintage Film)",
+      "description": "Tông màu film ấm vàng ngả nâu hoài niệm cổ điển",
+      "kind": "filter",
+      "trustLevel": "community",
+      "license": "CC0",
+      "hash": "8367bf0152632227778a72382d0472f502bd7680a519eecd66bb4a33aabcc50c",
+      "sha256": "8367bf0152632227778a72382d0472f502bd7680a519eecd66bb4a33aabcc50c",
+      "sizeBytes": 459,
+      "createdAt": "2026-11-08T07:34:04.064Z",
+      "spec": {
+        "id": "com.clipforge.filter.vintage_70s",
+        "version": "1.0.0",
+        "name": "Màu phim hoài niệm (1970s Vintage Film)",
+        "kind": "filter",
+        "description": "Tông màu film ấm vàng ngả nâu hoài niệm cổ điển",
+        "author": "Cộng đồng Vintage",
+        "license": "CC0",
+        "trustLevel": "community",
+        "tags": [
+          "filter",
+          "vintage",
+          "retro",
+          "sepia",
+          "warm"
+        ],
+        "cssFilter": "sepia(35%) contrast(105%) brightness(95%)"
       }
+    },
+    {
+      "id": "com.clipforge.filter.noir_bw",
+      "version": "1.0.0",
+      "name": "Đen trắng điện ảnh (Film Noir B&W)",
+      "description": "Đen trắng tương phản cao nghệ thuật đậm chất điện ảnh cổ điển",
+      "kind": "filter",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "58e1e5e4daa0324fec772f8d075ef5060b36ce1da12fef738741839392f599b9",
+      "sha256": "58e1e5e4daa0324fec772f8d075ef5060b36ce1da12fef738741839392f599b9",
+      "sizeBytes": 485,
+      "createdAt": "2026-11-08T07:34:04.065Z",
+      "spec": {
+        "id": "com.clipforge.filter.noir_bw",
+        "version": "1.0.0",
+        "name": "Đen trắng điện ảnh (Film Noir B&W)",
+        "kind": "filter",
+        "description": "Đen trắng tương phản cao nghệ thuật đậm chất điện ảnh cổ điển",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "filter",
+          "noir",
+          "bw",
+          "black_white",
+          "contrast"
+        ],
+        "cssFilter": "grayscale(100%) contrast(140%) brightness(90%)"
+      },
+      "signature": "7cd7e3cb290e3f1e34703e7f0b8bdfe243683f8135041d3d038f5b1133546b8d1a1b1f6db705aed3331f1a1a0eb54e963e4488c7589564cc8c94b0c599997e04"
+    },
+    {
+      "id": "com.clipforge.filter.cyber_neon",
+      "version": "1.0.0",
+      "name": "Neon Viễn Tưởng (Cyberpunk Neon 2077)",
+      "description": "Sắc tím hồng và xanh cyan dạ quang nổi bật cho cảnh đêm",
+      "kind": "filter",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "83df3c01cf033741bbc939fc6c13aaf6ba95b2d26f37678429c4a51989d7d356",
+      "sha256": "83df3c01cf033741bbc939fc6c13aaf6ba95b2d26f37678429c4a51989d7d356",
+      "sizeBytes": 473,
+      "createdAt": "2026-11-08T07:34:04.068Z",
+      "spec": {
+        "id": "com.clipforge.filter.cyber_neon",
+        "version": "1.0.0",
+        "name": "Neon Viễn Tưởng (Cyberpunk Neon 2077)",
+        "kind": "filter",
+        "description": "Sắc tím hồng và xanh cyan dạ quang nổi bật cho cảnh đêm",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "filter",
+          "neon",
+          "cyberpunk",
+          "vibrant",
+          "night"
+        ],
+        "cssFilter": "saturate(180%) contrast(120%) hue-rotate(35deg)"
+      },
+      "signature": "3595d1b1dbbcc6411a034d1b1fecde336fd94aee10d5e171db07ee5e9a2a77c4bec41b7a4b5c86794a46723ece0aeed3904532b7fd7658d87773ce874ea1ae0f"
+    },
+    {
+      "id": "com.clipforge.filter.warm_sunset",
+      "version": "1.0.0",
+      "name": "Hoàng hôn rực rỡ (Golden Sunset Glow)",
+      "description": "Ánh nắng chiều vàng óng ả làm bừng sáng khung hình",
+      "kind": "filter",
+      "trustLevel": "community",
+      "license": "MIT",
+      "hash": "8c863d1b786a1f388c79f9a00864a301bd47f3adad8939a85ff306989cc6a05e",
+      "sha256": "8c863d1b786a1f388c79f9a00864a301bd47f3adad8939a85ff306989cc6a05e",
+      "sizeBytes": 460,
+      "createdAt": "2026-11-08T07:34:04.070Z",
+      "spec": {
+        "id": "com.clipforge.filter.warm_sunset",
+        "version": "1.0.0",
+        "name": "Hoàng hôn rực rỡ (Golden Sunset Glow)",
+        "kind": "filter",
+        "description": "Ánh nắng chiều vàng óng ả làm bừng sáng khung hình",
+        "author": "Cộng đồng Indie",
+        "license": "MIT",
+        "trustLevel": "community",
+        "tags": [
+          "filter",
+          "sunset",
+          "warm",
+          "golden",
+          "travel"
+        ],
+        "cssFilter": "saturate(130%) sepia(20%) brightness(105%)"
+      }
+    },
+    {
+      "id": "com.clipforge.filter.film_chrome",
+      "version": "1.0.0",
+      "name": "Dương bản Kodak (Kodak Color Chrome)",
+      "description": "Độ no màu cao và sắc đỏ vàng rực rỡ chuẩn máy cơ Kodak",
+      "kind": "filter",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "91ae41a12fe33aac166505e472abc438e3bc21d1c54f4c109b9968c72ce6ff25",
+      "sha256": "91ae41a12fe33aac166505e472abc438e3bc21d1c54f4c109b9968c72ce6ff25",
+      "sizeBytes": 452,
+      "createdAt": "2026-11-08T07:34:04.071Z",
+      "spec": {
+        "id": "com.clipforge.filter.film_chrome",
+        "version": "1.0.0",
+        "name": "Dương bản Kodak (Kodak Color Chrome)",
+        "kind": "filter",
+        "description": "Độ no màu cao và sắc đỏ vàng rực rỡ chuẩn máy cơ Kodak",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "filter",
+          "kodak",
+          "chrome",
+          "film",
+          "analog"
+        ],
+        "cssFilter": "contrast(125%) saturate(140%)"
+      },
+      "signature": "317d1a70a7d174968aa4495dd7b0828d4fc4ebc473f81baed9c3ec2ae75f7edf5d626813611879f42b9e29f87f789915991596ae20d1b46c9f2f25ac7c5db60e"
     },
     {
       "id": "com.clipforge.sfx.whoosh_sweep",
       "version": "1.0.0",
-      "name": "Vút gió chuyển cảnh (Whoosh Sweep)",
-      "description": "Âm thanh vút gió tần số kép tổng hợp bằng Web Audio API không tốn dung lượng",
+      "name": "Gió vụt nhanh (Fast Air Whoosh)",
+      "description": "Âm thanh chuyển động lướt qua dứt khoát dùng khi chuyển cảnh",
       "kind": "sfx",
       "trustLevel": "official",
-      "license": "In-House",
-      "hash": "ee688f4d5ca26cffdb4a726021f24704fe81d3e1be19cb5b415430d8f5200072",
-      "sizeBytes": 478,
-      "createdAt": "2026-11-08T06:31:52.368Z",
+      "license": "CC0",
+      "hash": "fd29b341c9c76aab80f3b07bcbab51dcd7f5f78cf661144e734b646d75ca5c40",
+      "sha256": "fd29b341c9c76aab80f3b07bcbab51dcd7f5f78cf661144e734b646d75ca5c40",
+      "sizeBytes": 544,
+      "createdAt": "2026-11-08T07:34:04.072Z",
       "spec": {
         "id": "com.clipforge.sfx.whoosh_sweep",
         "version": "1.0.0",
-        "name": "Vút gió chuyển cảnh (Whoosh Sweep)",
+        "name": "Gió vụt nhanh (Fast Air Whoosh)",
         "kind": "sfx",
-        "description": "Âm thanh vút gió tần số kép tổng hợp bằng Web Audio API không tốn dung lượng",
-        "author": "ClipForge Sound",
-        "license": "In-House",
+        "description": "Âm thanh chuyển động lướt qua dứt khoát dùng khi chuyển cảnh",
+        "author": "ClipForge Audio Lab",
+        "license": "CC0",
         "trustLevel": "official",
         "tags": [
           "sfx",
           "whoosh",
-          "sweep",
+          "fast",
           "transition",
-          "audio"
+          "movement"
+        ],
+        "sfxSynthesis": {
+          "oscillatorType": "sawtooth",
+          "startFreq": 600,
+          "endFreq": 80,
+          "duration": 0.28,
+          "noiseAmount": 0.5
+        }
+      },
+      "signature": "eb8e6ea3f22c422ab015d09aab2e883dba8d45e57c99bfe2b0431e3da37b6ab3ab5cc121bd31e7f7cac1f1881423a6ab5bcadc0f610fd906d72b4395fcac8b0f"
+    },
+    {
+      "id": "com.clipforge.sfx.deep_hit",
+      "version": "1.0.0",
+      "name": "Cú đập âm trầm (Deep Bass Impact)",
+      "description": "Âm trầm rung dội nhấn mạnh khoảnh khắc giật gân (Boom Impact)",
+      "kind": "sfx",
+      "trustLevel": "official",
+      "license": "CC0",
+      "hash": "251eda7752e028e63acee7f5e0a9d47d59908995c90824558cd6fa704f34253e",
+      "sha256": "251eda7752e028e63acee7f5e0a9d47d59908995c90824558cd6fa704f34253e",
+      "sizeBytes": 507,
+      "createdAt": "2026-11-08T07:34:04.073Z",
+      "spec": {
+        "id": "com.clipforge.sfx.deep_hit",
+        "version": "1.0.0",
+        "name": "Cú đập âm trầm (Deep Bass Impact)",
+        "kind": "sfx",
+        "description": "Âm trầm rung dội nhấn mạnh khoảnh khắc giật gân (Boom Impact)",
+        "author": "ClipForge Audio Lab",
+        "license": "CC0",
+        "trustLevel": "official",
+        "tags": [
+          "sfx",
+          "impact",
+          "bass",
+          "hit",
+          "boom"
         ],
         "sfxSynthesis": {
           "oscillatorType": "sine",
-          "startFreq": 850,
-          "endFreq": 110,
-          "duration": 0.42,
-          "noiseAmount": 0.25,
-          "reverb": true
+          "startFreq": 180,
+          "endFreq": 30,
+          "duration": 0.65
+        }
+      },
+      "signature": "398f940d22481d81db177950287b82588b0868b1f0fc417d039ef8eb0f3d3ab05d9f0578fd98a450a5d74962e134f8b31a39aa3874df53eb20eb6d5b8be2f308"
+    },
+    {
+      "id": "com.clipforge.sfx.vinyl_click",
+      "version": "1.0.0",
+      "name": "Tách đĩa than (Vinyl Crackle Click)",
+      "description": "Tiếng nổ lách tách nhẹ của đĩa than analog mộc mạc",
+      "kind": "sfx",
+      "trustLevel": "community",
+      "license": "CC0",
+      "hash": "cfbd74c50d2fb76b6ebcd8d5c0d1f76cce047fa9c55fcfa02d2e5851838c5f48",
+      "sha256": "cfbd74c50d2fb76b6ebcd8d5c0d1f76cce047fa9c55fcfa02d2e5851838c5f48",
+      "sizeBytes": 532,
+      "createdAt": "2026-11-08T07:34:04.073Z",
+      "spec": {
+        "id": "com.clipforge.sfx.vinyl_click",
+        "version": "1.0.0",
+        "name": "Tách đĩa than (Vinyl Crackle Click)",
+        "kind": "sfx",
+        "description": "Tiếng nổ lách tách nhẹ của đĩa than analog mộc mạc",
+        "author": "Cộng đồng Lo-Fi",
+        "license": "CC0",
+        "trustLevel": "community",
+        "tags": [
+          "sfx",
+          "vinyl",
+          "click",
+          "lofi",
+          "analog"
+        ],
+        "sfxSynthesis": {
+          "oscillatorType": "triangle",
+          "startFreq": 1200,
+          "endFreq": 400,
+          "duration": 0.05,
+          "noiseAmount": 0.8
         }
       }
     },
     {
+      "id": "com.clipforge.sfx.ui_chime",
+      "version": "1.0.0",
+      "name": "Chuông pha lê (Crystal UI Chime)",
+      "description": "Âm thanh tinh tế khi hiển thị icon hoặc nhận thưởng",
+      "kind": "sfx",
+      "trustLevel": "official",
+      "license": "CC0",
+      "hash": "1a26d598e44a6c6cab0d63439292fcf961c5decb35b39873b3238e7aad26736d",
+      "sha256": "1a26d598e44a6c6cab0d63439292fcf961c5decb35b39873b3238e7aad26736d",
+      "sizeBytes": 501,
+      "createdAt": "2026-11-08T07:34:04.074Z",
+      "spec": {
+        "id": "com.clipforge.sfx.ui_chime",
+        "version": "1.0.0",
+        "name": "Chuông pha lê (Crystal UI Chime)",
+        "kind": "sfx",
+        "description": "Âm thanh tinh tế khi hiển thị icon hoặc nhận thưởng",
+        "author": "ClipForge Audio Lab",
+        "license": "CC0",
+        "trustLevel": "official",
+        "tags": [
+          "sfx",
+          "chime",
+          "bell",
+          "notification",
+          "clean"
+        ],
+        "sfxSynthesis": {
+          "oscillatorType": "sine",
+          "startFreq": 1046,
+          "endFreq": 2093,
+          "duration": 0.45
+        }
+      },
+      "signature": "598f298b11a64c724fb07f96cb37639c67d08e53ea6a00f532924d7ba5d9313597bd09fa0c52ff5dd18664979ade073c9f8cc21a005d7582effd06933069a50e"
+    },
+    {
+      "id": "com.clipforge.sfx.glitch_zap",
+      "version": "1.0.0",
+      "name": "Chớp giật điện từ (Electric Glitch Zap)",
+      "description": "Tiếng giật tia lửa điện khớp với hiệu ứng rung quang sai",
+      "kind": "sfx",
+      "trustLevel": "official",
+      "license": "CC0",
+      "hash": "0f4f2cbd4c5627b5871db80523bc2aa93ce2f8ac03babdc266e9120d1db392d6",
+      "sha256": "0f4f2cbd4c5627b5871db80523bc2aa93ce2f8ac03babdc266e9120d1db392d6",
+      "sizeBytes": 546,
+      "createdAt": "2026-11-08T07:34:04.075Z",
+      "spec": {
+        "id": "com.clipforge.sfx.glitch_zap",
+        "version": "1.0.0",
+        "name": "Chớp giật điện từ (Electric Glitch Zap)",
+        "kind": "sfx",
+        "description": "Tiếng giật tia lửa điện khớp với hiệu ứng rung quang sai",
+        "author": "ClipForge Audio Lab",
+        "license": "CC0",
+        "trustLevel": "official",
+        "tags": [
+          "sfx",
+          "glitch",
+          "zap",
+          "electric",
+          "laser"
+        ],
+        "sfxSynthesis": {
+          "oscillatorType": "square",
+          "startFreq": 450,
+          "endFreq": 1500,
+          "duration": 0.18,
+          "noiseAmount": 0.6
+        }
+      },
+      "signature": "18a8319be9f190d43dedcc6e7b4afc8ccbef9f3b104f85737e0c5ca038fe3980664f614448894cbe65b3b2d7c990e86d2dd73f02891f1ba7556f975d8fcd7a0b"
+    },
+    {
+      "id": "com.clipforge.sfx.camera_shutter",
+      "version": "1.0.0",
+      "name": "Màn trập máy ảnh (Camera Shutter Click)",
+      "description": "Tiếng bấm máy tách dứt khoát của máy ảnh cơ",
+      "kind": "sfx",
+      "trustLevel": "official",
+      "license": "CC0",
+      "hash": "04fd1e0379a3e0af487d66605f0941e4d0b64c04021612372c268bade058307e",
+      "sha256": "04fd1e0379a3e0af487d66605f0941e4d0b64c04021612372c268bade058307e",
+      "sizeBytes": 533,
+      "createdAt": "2026-11-08T07:34:04.078Z",
+      "spec": {
+        "id": "com.clipforge.sfx.camera_shutter",
+        "version": "1.0.0",
+        "name": "Màn trập máy ảnh (Camera Shutter Click)",
+        "kind": "sfx",
+        "description": "Tiếng bấm máy tách dứt khoát của máy ảnh cơ",
+        "author": "ClipForge Audio Lab",
+        "license": "CC0",
+        "trustLevel": "official",
+        "tags": [
+          "sfx",
+          "camera",
+          "shutter",
+          "photo",
+          "snap"
+        ],
+        "sfxSynthesis": {
+          "oscillatorType": "triangle",
+          "startFreq": 800,
+          "endFreq": 200,
+          "duration": 0.12,
+          "noiseAmount": 0.3
+        }
+      },
+      "signature": "a92a2f9bcaa941e0ea19f0f16ab4f48787c8643f5356fca34a706298bff03b887716918f3df97c1ed5f010ae4d1ad76e72b734f13d3959e8510fd54d51619103"
+    },
+    {
       "id": "com.clipforge.sticker.neon_sparkle",
       "version": "1.0.0",
-      "name": "Ngôi sao lấp lánh (Neon Sparkle)",
-      "description": "Ngôi sao vector 8 cánh phát sáng neon màu cyan sắc nét mọi độ phân giải",
+      "name": "Ngôi sao dạ quang (Neon Sparkle Star)",
+      "description": "Icon lấp lánh neon phát sáng chuẩn SVG vector",
       "kind": "sticker",
       "trustLevel": "official",
       "license": "CC0",
-      "hash": "70684ae960e0c49eeae50b27a25d03a6bbc63c8f924ab679ada57468b328e56a",
-      "sizeBytes": 875,
-      "createdAt": "2026-11-08T06:31:52.368Z",
+      "hash": "d4b9521646cb8757232630e5385706cfca29c7c60b98e35602af744569a46181",
+      "sha256": "d4b9521646cb8757232630e5385706cfca29c7c60b98e35602af744569a46181",
+      "sizeBytes": 602,
+      "createdAt": "2026-11-08T07:34:04.079Z",
       "spec": {
         "id": "com.clipforge.sticker.neon_sparkle",
         "version": "1.0.0",
-        "name": "Ngôi sao lấp lánh (Neon Sparkle)",
+        "name": "Ngôi sao dạ quang (Neon Sparkle Star)",
         "kind": "sticker",
-        "description": "Ngôi sao vector 8 cánh phát sáng neon màu cyan sắc nét mọi độ phân giải",
-        "author": "ClipForge Vectors",
+        "description": "Icon lấp lánh neon phát sáng chuẩn SVG vector",
+        "author": "ClipForge Studio",
         "license": "CC0",
         "trustLevel": "official",
         "tags": [
           "sticker",
-          "neon",
-          "star",
+          "svg",
           "sparkle",
-          "svg"
+          "star",
+          "neon"
         ],
-        "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\">\n  <defs>\n    <filter id=\"glow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feGaussianBlur stdDeviation=\"3\" result=\"blur\"/>\n      <feMerge>\n        <feMergeNode in=\"blur\"/>\n        <feMergeNode in=\"SourceGraphic\"/>\n      </feMerge>\n    </filter>\n  </defs>\n  <path d=\"M50 0 L58 38 L98 50 L58 62 L50 100 L42 62 L2 50 L42 38 Z\" fill=\"#06b6d4\" stroke=\"#ffffff\" stroke-width=\"2\" filter=\"url(#glow)\"/>\n</svg>"
+        "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"50,5 64,36 98,36 70,57 81,91 50,70 19,91 30,57 2,36 36,36\" fill=\"#1FC8DB\" stroke=\"#ffffff\" stroke-width=\"2\"/></svg>"
+      },
+      "signature": "6690bb50be343ab4ec6af0723f9699366c17a514c6fa5ad32529910561b184359dd800b0fc0d90b511c4ef951f1c7a0bad24e32fceabee9cb3b24e692e18e90b"
+    },
+    {
+      "id": "com.clipforge.sticker.confetti_burst",
+      "version": "1.0.0",
+      "name": "Pháo giấy tung bay (Confetti Celebration)",
+      "description": "Mảnh giấy đa sắc mừng sự kiện hoặc chiến thắng",
+      "kind": "sticker",
+      "trustLevel": "official",
+      "license": "CC0",
+      "hash": "342ed99878a45deaef25e1af53c8f2414ec7eec144a3e416d340bc4536ce3dca",
+      "sha256": "342ed99878a45deaef25e1af53c8f2414ec7eec144a3e416d340bc4536ce3dca",
+      "sizeBytes": 693,
+      "createdAt": "2026-11-08T07:34:04.080Z",
+      "spec": {
+        "id": "com.clipforge.sticker.confetti_burst",
+        "version": "1.0.0",
+        "name": "Pháo giấy tung bay (Confetti Celebration)",
+        "kind": "sticker",
+        "description": "Mảnh giấy đa sắc mừng sự kiện hoặc chiến thắng",
+        "author": "ClipForge Studio",
+        "license": "CC0",
+        "trustLevel": "official",
+        "tags": [
+          "sticker",
+          "confetti",
+          "party",
+          "celebrate"
+        ],
+        "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"20\" cy=\"25\" r=\"8\" fill=\"#F43F5E\"/><rect x=\"65\" y=\"15\" width=\"12\" height=\"12\" fill=\"#F59E0B\" transform=\"rotate(25 71 21)\"/><polygon points=\"45,60 55,78 35,78\" fill=\"#10B981\"/></svg>"
+      },
+      "signature": "d5485bd0a9289e23353228b2e478004abc027335d188f257cd3033a20fe42b0cdf49fe316c7a0a89145667642e27764919f0aa647b17cc42aed95684af55dc08"
+    },
+    {
+      "id": "com.clipforge.sticker.fire_flame",
+      "version": "1.0.0",
+      "name": "Ngọn lửa rực cháy (Blazing Fire)",
+      "description": "Biểu tượng ngọn lửa hừng hực nhiệt huyết",
+      "kind": "sticker",
+      "trustLevel": "community",
+      "license": "CC0",
+      "hash": "10c009bb92041933719180bf7cb9f57b8a55e5385881b73964b8c769e53b0748",
+      "sha256": "10c009bb92041933719180bf7cb9f57b8a55e5385881b73964b8c769e53b0748",
+      "sizeBytes": 655,
+      "createdAt": "2026-11-08T07:34:04.081Z",
+      "spec": {
+        "id": "com.clipforge.sticker.fire_flame",
+        "version": "1.0.0",
+        "name": "Ngọn lửa rực cháy (Blazing Fire)",
+        "kind": "sticker",
+        "description": "Biểu tượng ngọn lửa hừng hực nhiệt huyết",
+        "author": "Cộng đồng Vector",
+        "license": "CC0",
+        "trustLevel": "community",
+        "tags": [
+          "sticker",
+          "fire",
+          "flame",
+          "hot",
+          "viral"
+        ],
+        "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M50 5 Q75 40 70 70 Q65 95 50 95 Q35 95 30 70 Q25 40 50 5 Z\" fill=\"#F97316\"/><path d=\"M50 35 Q65 60 60 80 Q55 90 50 90 Q45 90 40 80 Q35 60 50 35 Z\" fill=\"#FACC15\"/></svg>"
       }
+    },
+    {
+      "id": "com.clipforge.sticker.heart_pulse",
+      "version": "1.0.0",
+      "name": "Trái tim đập (Heart Pulse Love)",
+      "description": "Trái tim hồng rực rỡ thể hiện tình cảm và yêu thích",
+      "kind": "sticker",
+      "trustLevel": "official",
+      "license": "CC0",
+      "hash": "3c89c239541480b8a6bacca7d0ecc6107127b09e5602bfcccf60ab930698cc78",
+      "sha256": "3c89c239541480b8a6bacca7d0ecc6107127b09e5602bfcccf60ab930698cc78",
+      "sizeBytes": 642,
+      "createdAt": "2026-11-08T07:34:04.081Z",
+      "spec": {
+        "id": "com.clipforge.sticker.heart_pulse",
+        "version": "1.0.0",
+        "name": "Trái tim đập (Heart Pulse Love)",
+        "kind": "sticker",
+        "description": "Trái tim hồng rực rỡ thể hiện tình cảm và yêu thích",
+        "author": "ClipForge Studio",
+        "license": "CC0",
+        "trustLevel": "official",
+        "tags": [
+          "sticker",
+          "heart",
+          "love",
+          "like",
+          "pink"
+        ],
+        "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M50 85 C20 60 5 40 5 25 A20 20 0 0 1 45 15 L50 22 L55 15 A20 20 0 0 1 95 25 C95 40 80 60 50 85 Z\" fill=\"#EC4899\" stroke=\"#BE185D\" stroke-width=\"3\"/></svg>"
+      },
+      "signature": "4f6efc6c9ad0024a9fb68519b41fb1b089ac815c4bfeec8ee623bd98ca481922b3f983e15e0d30c323cd6b19e2c23c207a9d4ba7980a31ce411dc17c89d2ca08"
+    },
+    {
+      "id": "com.clipforge.text.hormozi_bold",
+      "version": "1.0.0",
+      "name": "Hormozi Vàng Viền Đen (Hormozi Viral Title)",
+      "description": "Chữ hoa vàng tươi viền đen đậm phong cách triệu view",
+      "kind": "textPreset",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "648f314894eb59f9ac31faa9a54351313ac1da2e95e2ddb704e9c7f28f690453",
+      "sha256": "648f314894eb59f9ac31faa9a54351313ac1da2e95e2ddb704e9c7f28f690453",
+      "sizeBytes": 680,
+      "createdAt": "2026-11-08T07:34:04.082Z",
+      "spec": {
+        "id": "com.clipforge.text.hormozi_bold",
+        "version": "1.0.0",
+        "name": "Hormozi Vàng Viền Đen (Hormozi Viral Title)",
+        "kind": "textPreset",
+        "description": "Chữ hoa vàng tươi viền đen đậm phong cách triệu view",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "text",
+          "preset",
+          "hormozi",
+          "yellow",
+          "viral",
+          "hook"
+        ],
+        "textPreset": {
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "color": "#FDE047",
+          "stroke": {
+            "color": "#000000",
+            "width": 4
+          },
+          "shadow": {
+            "color": "rgba(0,0,0,0.8)",
+            "blur": 6,
+            "x": 2,
+            "y": 3
+          }
+        }
+      },
+      "signature": "0f6de2437c65da8844993fd637c24c0905d4ccc6e219f5fbcb375e91187203525e7c32e394cc400acc6ef00f31731ae3067dd7395ed311903853b13ae9d65300"
+    },
+    {
+      "id": "com.clipforge.text.neon_cyan_glow",
+      "version": "1.0.0",
+      "name": "Cyber Neon Cyan (Phát Quang Xanh)",
+      "description": "Chữ phát sáng xanh lam dạ quang nổi bật trên nền tối",
+      "kind": "textPreset",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "61ba3e8318de46c96d7eb6e59ba35dbc4b21270665bf652cddcb465364da44d0",
+      "sha256": "61ba3e8318de46c96d7eb6e59ba35dbc4b21270665bf652cddcb465364da44d0",
+      "sizeBytes": 579,
+      "createdAt": "2026-11-08T07:34:04.083Z",
+      "spec": {
+        "id": "com.clipforge.text.neon_cyan_glow",
+        "version": "1.0.0",
+        "name": "Cyber Neon Cyan (Phát Quang Xanh)",
+        "kind": "textPreset",
+        "description": "Chữ phát sáng xanh lam dạ quang nổi bật trên nền tối",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "text",
+          "preset",
+          "cyan",
+          "neon",
+          "glow"
+        ],
+        "textPreset": {
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "color": "#1FC8DB",
+          "shadow": {
+            "color": "#1FC8DB",
+            "blur": 12,
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "signature": "8ce64e733b64374beba4ec83ddeae2442b40d5e19f33272a3427d458e066f69764c25c7dcf83a58b5eb75270943e70341f87241666f9de518d6eadbc5ac4630c"
+    },
+    {
+      "id": "com.clipforge.text.gold_luxury_3d",
+      "version": "1.0.0",
+      "name": "Vàng Kim Hoàng Gia (3D Gold Luxury)",
+      "description": "Sắc vàng kim loại sang trọng tạo điểm nhấn thương hiệu",
+      "kind": "textPreset",
+      "trustLevel": "community",
+      "license": "OFL",
+      "hash": "290e0f5abcbd12eace16b18c5ac0d5b2e4b728643a777a6656f1416cc7a1b7a3",
+      "sha256": "290e0f5abcbd12eace16b18c5ac0d5b2e4b728643a777a6656f1416cc7a1b7a3",
+      "sizeBytes": 666,
+      "createdAt": "2026-11-08T07:34:04.083Z",
+      "spec": {
+        "id": "com.clipforge.text.gold_luxury_3d",
+        "version": "1.0.0",
+        "name": "Vàng Kim Hoàng Gia (3D Gold Luxury)",
+        "kind": "textPreset",
+        "description": "Sắc vàng kim loại sang trọng tạo điểm nhấn thương hiệu",
+        "author": "Cộng đồng Typography",
+        "license": "OFL",
+        "trustLevel": "community",
+        "tags": [
+          "text",
+          "preset",
+          "gold",
+          "luxury",
+          "vip"
+        ],
+        "textPreset": {
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "color": "#F59E0B",
+          "stroke": {
+            "color": "#78350F",
+            "width": 2
+          },
+          "shadow": {
+            "color": "rgba(0,0,0,0.9)",
+            "blur": 4,
+            "x": 3,
+            "y": 3
+          }
+        }
+      }
+    },
+    {
+      "id": "com.clipforge.text.minimal_white",
+      "version": "1.0.0",
+      "name": "Trắng Tinh Tế (Minimal Clean White)",
+      "description": "Phông chữ trắng thanh lịch kèm bóng mờ nhẹ nhàng hiện đại",
+      "kind": "textPreset",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "38afea5975a5f361b4c5d923516ce85d4ec052b825e525cce23cd71a812b7050",
+      "sha256": "38afea5975a5f361b4c5d923516ce85d4ec052b825e525cce23cd71a812b7050",
+      "sizeBytes": 604,
+      "createdAt": "2026-11-08T07:34:04.084Z",
+      "spec": {
+        "id": "com.clipforge.text.minimal_white",
+        "version": "1.0.0",
+        "name": "Trắng Tinh Tế (Minimal Clean White)",
+        "kind": "textPreset",
+        "description": "Phông chữ trắng thanh lịch kèm bóng mờ nhẹ nhàng hiện đại",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "text",
+          "preset",
+          "minimal",
+          "clean",
+          "white"
+        ],
+        "textPreset": {
+          "fontFamily": "Inter",
+          "fontSize": 26,
+          "color": "#FFFFFF",
+          "shadow": {
+            "color": "rgba(0,0,0,0.6)",
+            "blur": 4,
+            "x": 1,
+            "y": 2
+          }
+        }
+      },
+      "signature": "9035b5c65f8acbd249a3ae1d2b5ce83232e3449d39833a880909056be58e477b18285e5cec8982ae1fbe573ad84bdcca24580611b86a23927e93492e1db2890c"
+    },
+    {
+      "id": "com.clipforge.tmpl.viral_tiktok_hook",
+      "version": "1.0.0",
+      "name": "Mẫu TikTok Giật Gân (Viral Hook 3s)",
+      "description": "Template hoàn chỉnh 3 giây đầu giữ chân người xem bằng âm thanh và hiệu ứng rung",
+      "kind": "template",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "5ea76947603bc056d5291300771ae2a6de11be383dcb266d8ae36f7d407cf6cf",
+      "sha256": "5ea76947603bc056d5291300771ae2a6de11be383dcb266d8ae36f7d407cf6cf",
+      "sizeBytes": 568,
+      "createdAt": "2026-11-08T07:34:04.085Z",
+      "spec": {
+        "id": "com.clipforge.tmpl.viral_tiktok_hook",
+        "version": "1.0.0",
+        "name": "Mẫu TikTok Giật Gân (Viral Hook 3s)",
+        "kind": "template",
+        "description": "Template hoàn chỉnh 3 giây đầu giữ chân người xem bằng âm thanh và hiệu ứng rung",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "template",
+          "tiktok",
+          "hook",
+          "viral",
+          "shorts"
+        ],
+        "templateTracks": {
+          "duration": 15,
+          "tracks": [
+            "video",
+            "audio",
+            "text",
+            "effect"
+          ]
+        }
+      },
+      "signature": "c7d3d6305dc3bd46e38b179c0debbf171b9874472784376d3b21fa9b3a63ada57618f510fea4d9be5ff3fdb8271266fc2a9e4d2ff63de7e009c9c2d638e0080c"
+    },
+    {
+      "id": "com.clipforge.tmpl.ecommerce_sale",
+      "version": "1.0.0",
+      "name": "Mẫu Quảng Cáo Bán Hàng (Flash Sale Product)",
+      "description": "Template 9:16 tối ưu chuyển đổi bán hàng trên TikTok Shop & Reels",
+      "kind": "template",
+      "trustLevel": "official",
+      "license": "In-House",
+      "hash": "04a50aa32fc935f475d6cd19776116a5e5a96f154af3d9d5cc69ec0c4ffffb38",
+      "sha256": "04a50aa32fc935f475d6cd19776116a5e5a96f154af3d9d5cc69ec0c4ffffb38",
+      "sizeBytes": 555,
+      "createdAt": "2026-11-08T07:34:04.086Z",
+      "spec": {
+        "id": "com.clipforge.tmpl.ecommerce_sale",
+        "version": "1.0.0",
+        "name": "Mẫu Quảng Cáo Bán Hàng (Flash Sale Product)",
+        "kind": "template",
+        "description": "Template 9:16 tối ưu chuyển đổi bán hàng trên TikTok Shop & Reels",
+        "author": "ClipForge Studio",
+        "license": "In-House",
+        "trustLevel": "official",
+        "tags": [
+          "template",
+          "ecommerce",
+          "sale",
+          "ads",
+          "marketing"
+        ],
+        "templateTracks": {
+          "duration": 20,
+          "tracks": [
+            "video",
+            "audio",
+            "text",
+            "sticker"
+          ]
+        }
+      },
+      "signature": "ad6ecdd4b61cfd3fc6ed9ea26bdb58aa773d707ecda2bcb2ebb7c9e3d70167d0afdc8498a1bd6c9a6261f408d73b06435ec4a90235b3fd8da9ed46579669cd0b"
     }
-  ]
+  ],
+  "signature": "f4b66ad00acf2c5ac7796b81a24dd8c2297d60f88d891dff1262ddbb75bcca84d19789e5893581a264baf4992d66ea1f10e54940b1e8faf588f9779cc2ab380d"
 }

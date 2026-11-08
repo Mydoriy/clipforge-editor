@@ -1,0 +1,40 @@
+{
+  "id": "com.clipforge.tmpl.ecommerce_sale",
+  "version": "1.0.0",
+  "name": "Mẫu Quảng Cáo Bán Hàng (Flash Sale Product)",
+  "description": "Template 9:16 tối ưu chuyển đổi bán hàng trên TikTok Shop & Reels",
+  "kind": "template",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "04a50aa32fc935f475d6cd19776116a5e5a96f154af3d9d5cc69ec0c4ffffb38",
+  "sha256": "04a50aa32fc935f475d6cd19776116a5e5a96f154af3d9d5cc69ec0c4ffffb38",
+  "sizeBytes": 555,
+  "createdAt": "2026-11-08T07:34:04.086Z",
+  "spec": {
+    "id": "com.clipforge.tmpl.ecommerce_sale",
+    "version": "1.0.0",
+    "name": "Mẫu Quảng Cáo Bán Hàng (Flash Sale Product)",
+    "kind": "template",
+    "description": "Template 9:16 tối ưu chuyển đổi bán hàng trên TikTok Shop & Reels",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "template",
+      "ecommerce",
+      "sale",
+      "ads",
+      "marketing"
+    ],
+    "templateTracks": {
+      "duration": 20,
+      "tracks": [
+        "video",
+        "audio",
+        "text",
+        "sticker"
+      ]
+    }
+  },
+  "signature": "ad6ecdd4b61cfd3fc6ed9ea26bdb58aa773d707ecda2bcb2ebb7c9e3d70167d0afdc8498a1bd6c9a6261f408d73b06435ec4a90235b3fd8da9ed46579669cd0b"
+}

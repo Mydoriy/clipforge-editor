@@ -1,0 +1,44 @@
+{
+  "id": "com.clipforge.trans.dissolve",
+  "version": "1.0.0",
+  "name": "Hòa tan mờ chồng (Cross Dissolve)",
+  "description": "Chuyển cảnh mượt mà tiêu chuẩn ngành điện ảnh",
+  "kind": "transition",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "f68e9a27ce4af5053fe8d26a840889a3ba799a307777014034cab6d21595a99a",
+  "sha256": "f68e9a27ce4af5053fe8d26a840889a3ba799a307777014034cab6d21595a99a",
+  "sizeBytes": 892,
+  "createdAt": "2026-11-08T07:34:04.060Z",
+  "spec": {
+    "id": "com.clipforge.trans.dissolve",
+    "version": "1.0.0",
+    "name": "Hòa tan mờ chồng (Cross Dissolve)",
+    "kind": "transition",
+    "description": "Chuyển cảnh mượt mà tiêu chuẩn ngành điện ảnh",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "transition",
+      "dissolve",
+      "cross",
+      "fade",
+      "smooth"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  fragColor = mix(texture(u_texA, v_uv), texture(u_texB, v_uv), u_progress);\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    }
+  },
+  "signature": "34b452ee9ce3a2672cf3e9ca692df5a8613cd4d26e3eadb1e99d8f3728b5d4c0183068161102dd81ec7a6aff6d4f8c55847a4e5cfec5943a3eb52d2c7a23080c"
+}

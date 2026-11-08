@@ -1,0 +1,40 @@
+{
+  "id": "com.clipforge.tmpl.viral_tiktok_hook",
+  "version": "1.0.0",
+  "name": "Mẫu TikTok Giật Gân (Viral Hook 3s)",
+  "description": "Template hoàn chỉnh 3 giây đầu giữ chân người xem bằng âm thanh và hiệu ứng rung",
+  "kind": "template",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "5ea76947603bc056d5291300771ae2a6de11be383dcb266d8ae36f7d407cf6cf",
+  "sha256": "5ea76947603bc056d5291300771ae2a6de11be383dcb266d8ae36f7d407cf6cf",
+  "sizeBytes": 568,
+  "createdAt": "2026-11-08T07:34:04.085Z",
+  "spec": {
+    "id": "com.clipforge.tmpl.viral_tiktok_hook",
+    "version": "1.0.0",
+    "name": "Mẫu TikTok Giật Gân (Viral Hook 3s)",
+    "kind": "template",
+    "description": "Template hoàn chỉnh 3 giây đầu giữ chân người xem bằng âm thanh và hiệu ứng rung",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "template",
+      "tiktok",
+      "hook",
+      "viral",
+      "shorts"
+    ],
+    "templateTracks": {
+      "duration": 15,
+      "tracks": [
+        "video",
+        "audio",
+        "text",
+        "effect"
+      ]
+    }
+  },
+  "signature": "c7d3d6305dc3bd46e38b179c0debbf171b9874472784376d3b21fa9b3a63ada57618f510fea4d9be5ff3fdb8271266fc2a9e4d2ff63de7e009c9c2d638e0080c"
+}

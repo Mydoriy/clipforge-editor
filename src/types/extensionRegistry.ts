@@ -107,6 +107,14 @@ export interface EffectSpec {
   metadata?: Record<string, any>;
 }
 
+export interface RevocationEntry {
+  id: string; // Target package ID or namespaced ID
+  version: string; // Specific semantic version (e.g. "0.9.0") or "*" for all versions
+  reason: string; // Human-readable explanation of why revoked
+  revokedAt: string; // ISO timestamp
+  replacementId?: string; // Suggested safe replacement package ID
+}
+
 export interface AssetPackage {
   id: string;
   version: string;
@@ -116,6 +124,8 @@ export interface AssetPackage {
   trustLevel: TrustLevel;
   license: LicenseType;
   hash: string; // SHA-256 integrity hash
+  sha256?: string; // Canonical SHA-256 hash alias
+  signature?: string; // Ed25519 signature in hex
   sizeBytes: number;
   createdAt: string;
   spec: EffectSpec;
@@ -123,9 +133,13 @@ export interface AssetPackage {
 }
 
 export interface RegistryIndex {
+  formatVersion?: string;
   version: string;
   lastUpdated: string;
   repositoryName: string;
+  repositoryUrl?: string;
+  signature?: string;
+  revoked?: RevocationEntry[];
   packages: AssetPackage[];
 }
 

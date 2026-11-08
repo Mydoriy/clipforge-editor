@@ -1,0 +1,43 @@
+{
+  "id": "com.clipforge.trans.glitch_swipe",
+  "version": "1.0.0",
+  "name": "Gạt nhiễu giật (Glitch Swipe)",
+  "description": "Chuyển tiếp hiện đại bằng cách quét vạch nhiễu kỹ thuật số",
+  "kind": "transition",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "91a6ae14ebf2d6c8b0d360dfb6ce0fe00aeed32382e433dd777a1b11402d83f7",
+  "sha256": "91a6ae14ebf2d6c8b0d360dfb6ce0fe00aeed32382e433dd777a1b11402d83f7",
+  "sizeBytes": 1046,
+  "createdAt": "2026-11-08T07:34:04.055Z",
+  "spec": {
+    "id": "com.clipforge.trans.glitch_swipe",
+    "version": "1.0.0",
+    "name": "Gạt nhiễu giật (Glitch Swipe)",
+    "kind": "transition",
+    "description": "Chuyển tiếp hiện đại bằng cách quét vạch nhiễu kỹ thuật số",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "transition",
+      "glitch",
+      "swipe",
+      "stutter"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float p = u_progress;\n  float slice = fract(sin(floor(v_uv.y * 30.0) * 123.45) * 43758.54);\n  float threshold = p + (slice - 0.5) * 0.2;\n  fragColor = v_uv.x < threshold ? texture(u_texB, v_uv) : texture(u_texA, v_uv);\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    }
+  },
+  "signature": "475a302006d4af00a6480b0517939d3bc56b055050e3349cbcb6790649d6286279968edb2a14e494a75dda478876b10dbcfa499a118d34c6185d030161189c0c"
+}

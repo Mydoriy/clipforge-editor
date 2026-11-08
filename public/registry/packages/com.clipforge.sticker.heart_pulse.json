@@ -1,0 +1,32 @@
+{
+  "id": "com.clipforge.sticker.heart_pulse",
+  "version": "1.0.0",
+  "name": "Trái tim đập (Heart Pulse Love)",
+  "description": "Trái tim hồng rực rỡ thể hiện tình cảm và yêu thích",
+  "kind": "sticker",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "3c89c239541480b8a6bacca7d0ecc6107127b09e5602bfcccf60ab930698cc78",
+  "sha256": "3c89c239541480b8a6bacca7d0ecc6107127b09e5602bfcccf60ab930698cc78",
+  "sizeBytes": 642,
+  "createdAt": "2026-11-08T07:34:04.081Z",
+  "spec": {
+    "id": "com.clipforge.sticker.heart_pulse",
+    "version": "1.0.0",
+    "name": "Trái tim đập (Heart Pulse Love)",
+    "kind": "sticker",
+    "description": "Trái tim hồng rực rỡ thể hiện tình cảm và yêu thích",
+    "author": "ClipForge Studio",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sticker",
+      "heart",
+      "love",
+      "like",
+      "pink"
+    ],
+    "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M50 85 C20 60 5 40 5 25 A20 20 0 0 1 45 15 L50 22 L55 15 A20 20 0 0 1 95 25 C95 40 80 60 50 85 Z\" fill=\"#EC4899\" stroke=\"#BE185D\" stroke-width=\"3\"/></svg>"
+  },
+  "signature": "4f6efc6c9ad0024a9fb68519b41fb1b089ac815c4bfeec8ee623bd98ca481922b3f983e15e0d30c323cd6b19e2c23c207a9d4ba7980a31ce411dc17c89d2ca08"
+}

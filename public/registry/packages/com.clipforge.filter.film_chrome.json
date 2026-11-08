@@ -1,0 +1,32 @@
+{
+  "id": "com.clipforge.filter.film_chrome",
+  "version": "1.0.0",
+  "name": "Dương bản Kodak (Kodak Color Chrome)",
+  "description": "Độ no màu cao và sắc đỏ vàng rực rỡ chuẩn máy cơ Kodak",
+  "kind": "filter",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "91ae41a12fe33aac166505e472abc438e3bc21d1c54f4c109b9968c72ce6ff25",
+  "sha256": "91ae41a12fe33aac166505e472abc438e3bc21d1c54f4c109b9968c72ce6ff25",
+  "sizeBytes": 452,
+  "createdAt": "2026-11-08T07:34:04.071Z",
+  "spec": {
+    "id": "com.clipforge.filter.film_chrome",
+    "version": "1.0.0",
+    "name": "Dương bản Kodak (Kodak Color Chrome)",
+    "kind": "filter",
+    "description": "Độ no màu cao và sắc đỏ vàng rực rỡ chuẩn máy cơ Kodak",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "filter",
+      "kodak",
+      "chrome",
+      "film",
+      "analog"
+    ],
+    "cssFilter": "contrast(125%) saturate(140%)"
+  },
+  "signature": "317d1a70a7d174968aa4495dd7b0828d4fc4ebc473f81baed9c3ec2ae75f7edf5d626813611879f42b9e29f87f789915991596ae20d1b46c9f2f25ac7c5db60e"
+}

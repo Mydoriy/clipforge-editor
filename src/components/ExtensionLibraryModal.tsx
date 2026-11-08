@@ -16,6 +16,8 @@ import {
   Lock,
   Layers,
   ArrowRight,
+  Settings,
+  ShieldAlert,
 } from 'lucide-react';
 import { useEditorStore } from '../store/useEditorStore';
 import {
@@ -26,9 +28,15 @@ import {
   exportPackageToFile,
   reconnectGhostReferences,
   fetchOrLoadRegistryIndex,
+  checkAndApplyRevocations,
+  getRegistryUrl,
+  setCustomRegistryUrl,
+  resetRegistryUrl,
+  DEFAULT_REGISTRY_URL,
   type SearchResultItem,
 } from '../utils/extensionRegistryManager';
 import type { AssetKind, TrustLevel } from '../types/extensionRegistry';
+import type { InstalledAssetEntity } from '../db';
 
 interface ExtensionLibraryModalProps {
   initialKind?: AssetKind;
@@ -42,20 +50,31 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
   const [packages, setPackages] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [customRegistryInput, setCustomRegistryInput] = useState(getRegistryUrl());
+  const [revokedAssets, setRevokedAssets] = useState<InstalledAssetEntity[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scan for ghost clips in active timeline
   const ghostClips = clips.filter((c: any) => c.ghostRef || c.isGhostPlaceholder);
 
-  const loadData = async () => {
+  const loadData = async (forceOnline = false) => {
     setIsLoading(true);
     try {
+      if (forceOnline) {
+        await fetchOrLoadRegistryIndex(true);
+      }
       const results = await searchLocalRegistry(
         query,
         selectedKind === 'all' ? undefined : selectedKind,
         selectedTrust === 'all' ? undefined : selectedTrust
       );
       setPackages(results);
+
+      // Check revocations
+      const revResult = await checkAndApplyRevocations();
+      setRevokedAssets(revResult.revokedAssets || []);
     } catch (err) {
       console.error(err);
       showToast('Không thể nạp danh sách tài nguyên cục bộ', 'error');
@@ -67,6 +86,40 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
   useEffect(() => {
     loadData();
   }, [query, selectedKind, selectedTrust]);
+
+  const handleCheckUpdatesNow = async () => {
+    setIsCheckingUpdates(true);
+    try {
+      const idx = await fetchOrLoadRegistryIndex(true);
+      const revRes = await checkAndApplyRevocations(idx, clips);
+      if (revRes.updatedClips) {
+        setClips(revRes.updatedClips);
+      }
+      setRevokedAssets(revRes.revokedAssets || []);
+      await loadData();
+      showToast(`Đã đồng bộ chỉ mục kho thành công (${idx.packages.length} gói)!`, 'success');
+    } catch (err: any) {
+      showToast(`Đang hoạt động ngoại tuyến: sử dụng chỉ mục đã lưu trong máy.`, 'info');
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
+
+  const handleSaveCustomRegistry = () => {
+    const val = customRegistryInput.trim();
+    setCustomRegistryUrl(val);
+    setShowSettings(false);
+    showToast(`Đã cập nhật kho: ${val || DEFAULT_REGISTRY_URL}`, 'success');
+    loadData(true);
+  };
+
+  const handleResetCustomRegistry = () => {
+    resetRegistryUrl();
+    setCustomRegistryInput(DEFAULT_REGISTRY_URL);
+    setShowSettings(false);
+    showToast('Đã đặt lại về Kho chính thức mặc định', 'info');
+    loadData(true);
+  };
 
   const handleInstall = async (pkg: SearchResultItem) => {
     setInstallingId(pkg.id);
@@ -179,6 +232,30 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Check Updates Now (Bypass 24h throttle) */}
+          <button
+            onClick={handleCheckUpdatesNow}
+            disabled={isCheckingUpdates}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-700/60 rounded-lg text-xs font-semibold text-cyan-300 transition-colors disabled:opacity-50"
+            title="Đồng bộ chỉ mục mới nhất từ máy chủ tĩnh (bỏ qua giới hạn 24h)"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
+            <span>{isCheckingUpdates ? 'Đang đồng bộ...' : 'Kiểm tra ngay'}</span>
+          </button>
+
+          {/* Toggle Custom Registry Settings */}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-1.5 rounded-lg border transition-colors ${
+              showSettings
+                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-600'
+            }`}
+            title="Cài đặt đường dẫn Kho mở rộng tùy chỉnh"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
           <input
             type="file"
             ref={fileInputRef}
@@ -202,6 +279,67 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
           </button>
         </div>
       </div>
+
+      {/* Custom Registry Settings Panel */}
+      {showSettings && (
+        <div className="mt-3 p-3 bg-slate-900/90 border border-cyan-500/30 rounded-xl flex flex-col gap-2.5 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-slate-200 flex items-center gap-1.5">
+              <Settings className="w-3.5 h-3.5 text-cyan-400" /> Cấu hình Đường dẫn Kho Tùy Chỉnh (Custom Static Registry)
+            </span>
+            <span className="text-[10px] text-slate-400">Hỗ trợ Cloudflare R2 / Pages, GitHub Pages, Localhost</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={customRegistryInput}
+              onChange={(e) => setCustomRegistryInput(e.target.value)}
+              placeholder="https://my-team-effects.internal/registry/index.json hoặc /registry/index.json"
+              className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500"
+            />
+            <button
+              onClick={handleSaveCustomRegistry}
+              className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs transition-colors shrink-0"
+            >
+              Lưu kho
+            </button>
+            <button
+              onClick={handleResetCustomRegistry}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-lg text-xs transition-colors shrink-0"
+            >
+              Mặc định
+            </button>
+          </div>
+          <p className="text-[11px] text-amber-300/80 leading-relaxed">
+            * Lưu ý bảo mật: Các gói tải từ kho tự host mà không có chữ ký số Ed25519 chính thức sẽ tự động xếp mức "Cộng đồng" để bảo vệ an toàn cho thiết bị.
+          </p>
+        </div>
+      )}
+
+      {/* Revocation Kill Switch Alert Banner */}
+      {revokedAssets.length > 0 && (
+        <div className="mt-3 p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl flex flex-col gap-1.5 text-xs text-rose-300">
+          <div className="flex items-center gap-2 font-bold text-rose-200">
+            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>⚠️ Cảnh báo Kill Switch: Phát hiện {revokedAssets.length} tài nguyên đã bị thu hồi</span>
+          </div>
+          <p className="text-[11px] text-rose-300/90 pl-6">
+            Các gói này đã bị nhà phát triển vô hiệu hóa do lỗi bảo mật hoặc gây tràn bộ nhớ GPU. Toàn bộ vị trí trên timeline sử dụng gói này đã được tự động chuyển sang Ghost Reference an toàn:
+          </p>
+          <div className="flex flex-col gap-1 pl-6 pt-1">
+            {revokedAssets.map((rev) => (
+              <div key={rev.id} className="text-[11px] bg-rose-950/60 p-2 rounded border border-rose-500/30 flex items-center justify-between">
+                <span>• <strong>{rev.name}</strong> ({rev.id}): {rev.revokeReason}</span>
+                {rev.replacementId && (
+                  <span className="text-[10px] text-cyan-300 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/30">
+                    Đề xuất thay thế: {rev.replacementId}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Privacy Guarantee Pill */}
       <div className="mt-3 flex items-center justify-between px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-300">
@@ -310,6 +448,11 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
                     v{pkg.version}
                   </span>
                   {renderTrustBadge(pkg.trustLevel)}
+                  {pkg.trustLevel === 'official' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-300 bg-cyan-950/70 border border-cyan-500/30 px-1.5 py-0.5 rounded" title="Chữ ký mật mã Ed25519 chính thức">
+                      <Lock className="w-2.5 h-2.5 text-cyan-400" /> Ed25519
+                    </span>
+                  )}
                   <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
                     {pkg.license}
                   </span>

@@ -1,0 +1,31 @@
+{
+  "id": "com.clipforge.sticker.confetti_burst",
+  "version": "1.0.0",
+  "name": "Pháo giấy tung bay (Confetti Celebration)",
+  "description": "Mảnh giấy đa sắc mừng sự kiện hoặc chiến thắng",
+  "kind": "sticker",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "342ed99878a45deaef25e1af53c8f2414ec7eec144a3e416d340bc4536ce3dca",
+  "sha256": "342ed99878a45deaef25e1af53c8f2414ec7eec144a3e416d340bc4536ce3dca",
+  "sizeBytes": 693,
+  "createdAt": "2026-11-08T07:34:04.080Z",
+  "spec": {
+    "id": "com.clipforge.sticker.confetti_burst",
+    "version": "1.0.0",
+    "name": "Pháo giấy tung bay (Confetti Celebration)",
+    "kind": "sticker",
+    "description": "Mảnh giấy đa sắc mừng sự kiện hoặc chiến thắng",
+    "author": "ClipForge Studio",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sticker",
+      "confetti",
+      "party",
+      "celebrate"
+    ],
+    "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"20\" cy=\"25\" r=\"8\" fill=\"#F43F5E\"/><rect x=\"65\" y=\"15\" width=\"12\" height=\"12\" fill=\"#F59E0B\" transform=\"rotate(25 71 21)\"/><polygon points=\"45,60 55,78 35,78\" fill=\"#10B981\"/></svg>"
+  },
+  "signature": "d5485bd0a9289e23353228b2e478004abc027335d188f257cd3033a20fe42b0cdf49fe316c7a0a89145667642e27764919f0aa647b17cc42aed95684af55dc08"
+}

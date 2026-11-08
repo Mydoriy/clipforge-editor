@@ -1,0 +1,42 @@
+{
+  "id": "com.clipforge.fx.chromatic_aberration",
+  "version": "1.0.0",
+  "name": "Quang sai viền (Lens Edge Dispersion)",
+  "description": "Tách tán sắc thấu kính quang học ở các góc rìa khung hình",
+  "kind": "effect",
+  "trustLevel": "community",
+  "license": "MIT",
+  "hash": "fab850e766275067131e4fea04cfa1d552f42c0ca07d78cb9f8d8497c59fec1d",
+  "sha256": "fab850e766275067131e4fea04cfa1d552f42c0ca07d78cb9f8d8497c59fec1d",
+  "sizeBytes": 1071,
+  "createdAt": "2026-11-08T07:34:04.051Z",
+  "spec": {
+    "id": "com.clipforge.fx.chromatic_aberration",
+    "version": "1.0.0",
+    "name": "Quang sai viền (Lens Edge Dispersion)",
+    "kind": "effect",
+    "description": "Tách tán sắc thấu kính quang học ở các góc rìa khung hình",
+    "author": "Cộng đồng Optics",
+    "license": "MIT",
+    "trustLevel": "community",
+    "tags": [
+      "chromatic",
+      "lens",
+      "dispersion",
+      "optics"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_intensity;\nvoid main() {\n  vec2 dist = v_uv - 0.5;\n  float r = texture(u_image, 0.5 + dist * (1.0 + 0.02 * u_intensity)).r;\n  float g = texture(u_image, v_uv).g;\n  float b = texture(u_image, 0.5 + dist * (1.0 - 0.02 * u_intensity)).b;\n  fragColor = vec4(r, g, b, texture(u_image, v_uv).a);\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0,
+          "max": 2,
+          "label": "Độ tách viền"
+        }
+      }
+    }
+  }
+}

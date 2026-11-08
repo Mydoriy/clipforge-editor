@@ -1,30 +1,32 @@
 {
   "id": "com.clipforge.sticker.neon_sparkle",
   "version": "1.0.0",
-  "name": "Ngôi sao lấp lánh (Neon Sparkle)",
-  "description": "Ngôi sao vector 8 cánh phát sáng neon màu cyan sắc nét mọi độ phân giải",
+  "name": "Ngôi sao dạ quang (Neon Sparkle Star)",
+  "description": "Icon lấp lánh neon phát sáng chuẩn SVG vector",
   "kind": "sticker",
   "trustLevel": "official",
   "license": "CC0",
-  "hash": "70684ae960e0c49eeae50b27a25d03a6bbc63c8f924ab679ada57468b328e56a",
-  "sizeBytes": 875,
-  "createdAt": "2026-11-08T06:31:52.368Z",
+  "hash": "d4b9521646cb8757232630e5385706cfca29c7c60b98e35602af744569a46181",
+  "sha256": "d4b9521646cb8757232630e5385706cfca29c7c60b98e35602af744569a46181",
+  "sizeBytes": 602,
+  "createdAt": "2026-11-08T07:34:04.079Z",
   "spec": {
     "id": "com.clipforge.sticker.neon_sparkle",
     "version": "1.0.0",
-    "name": "Ngôi sao lấp lánh (Neon Sparkle)",
+    "name": "Ngôi sao dạ quang (Neon Sparkle Star)",
     "kind": "sticker",
-    "description": "Ngôi sao vector 8 cánh phát sáng neon màu cyan sắc nét mọi độ phân giải",
-    "author": "ClipForge Vectors",
+    "description": "Icon lấp lánh neon phát sáng chuẩn SVG vector",
+    "author": "ClipForge Studio",
     "license": "CC0",
     "trustLevel": "official",
     "tags": [
       "sticker",
-      "neon",
-      "star",
+      "svg",
       "sparkle",
-      "svg"
+      "star",
+      "neon"
     ],
-    "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\">\n  <defs>\n    <filter id=\"glow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">\n      <feGaussianBlur stdDeviation=\"3\" result=\"blur\"/>\n      <feMerge>\n        <feMergeNode in=\"blur\"/>\n        <feMergeNode in=\"SourceGraphic\"/>\n      </feMerge>\n    </filter>\n  </defs>\n  <path d=\"M50 0 L58 38 L98 50 L58 62 L50 100 L42 62 L2 50 L42 38 Z\" fill=\"#06b6d4\" stroke=\"#ffffff\" stroke-width=\"2\" filter=\"url(#glow)\"/>\n</svg>"
-  }
+    "svgData": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><polygon points=\"50,5 64,36 98,36 70,57 81,91 50,70 19,91 30,57 2,36 36,36\" fill=\"#1FC8DB\" stroke=\"#ffffff\" stroke-width=\"2\"/></svg>"
+  },
+  "signature": "6690bb50be343ab4ec6af0723f9699366c17a514c6fa5ad32529910561b184359dd800b0fc0d90b511c4ef951f1c7a0bad24e32fceabee9cb3b24e692e18e90b"
 }

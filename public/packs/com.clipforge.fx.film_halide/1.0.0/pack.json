@@ -1,0 +1,49 @@
+{
+  "id": "com.clipforge.fx.film_halide",
+  "version": "1.0.0",
+  "name": "Hạt phim 35mm (35mm Film Grain)",
+  "description": "Mô phỏng cấu trúc hạt muối bạc (silver halide) của cuộn phim nhựa 35mm cổ điển",
+  "kind": "effect",
+  "trustLevel": "community",
+  "license": "CC0",
+  "hash": "74f45cf560e474452d464de8766f5bac6546d5810045b6b73d6f11997a4910a6",
+  "sha256": "74f45cf560e474452d464de8766f5bac6546d5810045b6b73d6f11997a4910a6",
+  "sizeBytes": 1212,
+  "createdAt": "2026-11-08T07:34:04.045Z",
+  "spec": {
+    "id": "com.clipforge.fx.film_halide",
+    "version": "1.0.0",
+    "name": "Hạt phim 35mm (35mm Film Grain)",
+    "kind": "effect",
+    "description": "Mô phỏng cấu trúc hạt muối bạc (silver halide) của cuộn phim nhựa 35mm cổ điển",
+    "author": "Cộng đồng OpenGrain",
+    "license": "CC0",
+    "trustLevel": "community",
+    "tags": [
+      "film",
+      "grain",
+      "analog",
+      "vintage",
+      "cinema"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nfloat hash(vec2 p) {\n  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);\n}\nvoid main() {\n  vec4 src = texture(u_image, v_uv);\n  float n = (hash(v_uv * 600.0 + fract(u_time * 12.0)) - 0.5) * 0.18 * u_intensity;\n  fragColor = vec4(clamp(src.rgb + n, 0.0, 1.0), src.a);\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0,
+          "max": 2,
+          "label": "Độ đậm hạt"
+        }
+      }
+    },
+    "canvasFallback": {
+      "fn": "film_grain",
+      "params": {
+        "amount": 15
+      }
+    }
+  }
+}

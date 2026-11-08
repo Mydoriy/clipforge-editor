@@ -1,0 +1,44 @@
+{
+  "id": "com.clipforge.fx.vhs_distortion",
+  "version": "1.0.0",
+  "name": "Nhiễu từ băng VHS (VHS Distortion Tape)",
+  "description": "Vệt scanline giật ngang đặc trưng của băng từ những năm 90",
+  "kind": "effect",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "7db741373dd4befa47686043871d77aac52e3647dcacdfe2a0bdb421ca37c0e9",
+  "sha256": "7db741373dd4befa47686043871d77aac52e3647dcacdfe2a0bdb421ca37c0e9",
+  "sizeBytes": 1116,
+  "createdAt": "2026-11-08T07:34:04.047Z",
+  "spec": {
+    "id": "com.clipforge.fx.vhs_distortion",
+    "version": "1.0.0",
+    "name": "Nhiễu từ băng VHS (VHS Distortion Tape)",
+    "kind": "effect",
+    "description": "Vệt scanline giật ngang đặc trưng của băng từ những năm 90",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "vhs",
+      "retro",
+      "tape",
+      "scanlines",
+      "analog"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nvoid main() {\n  vec2 uv = v_uv;\n  float scanline = sin(uv.y * 800.0) * 0.04 * u_intensity;\n  float glitch = step(0.98, fract(sin(uv.y * 20.0 + u_time * 5.0) * 43758.54)) * 0.02 * u_intensity;\n  vec4 col = texture(u_image, vec2(uv.x + glitch, uv.y));\n  fragColor = vec4(col.rgb - scanline, col.a);\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0,
+          "max": 2,
+          "label": "Độ giật VHS"
+        }
+      }
+    }
+  },
+  "signature": "f3e8c1469acd1dcc513d8b9bca8ad6afb455bc7b08194a55118cc184831b5b1ab5022c4404c90f41529ccf9d08d2f982059a5b0fceec76a7254e31cf4691f80e"
+}

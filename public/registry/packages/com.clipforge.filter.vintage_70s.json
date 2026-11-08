@@ -1,0 +1,31 @@
+{
+  "id": "com.clipforge.filter.vintage_70s",
+  "version": "1.0.0",
+  "name": "Màu phim hoài niệm (1970s Vintage Film)",
+  "description": "Tông màu film ấm vàng ngả nâu hoài niệm cổ điển",
+  "kind": "filter",
+  "trustLevel": "community",
+  "license": "CC0",
+  "hash": "8367bf0152632227778a72382d0472f502bd7680a519eecd66bb4a33aabcc50c",
+  "sha256": "8367bf0152632227778a72382d0472f502bd7680a519eecd66bb4a33aabcc50c",
+  "sizeBytes": 459,
+  "createdAt": "2026-11-08T07:34:04.064Z",
+  "spec": {
+    "id": "com.clipforge.filter.vintage_70s",
+    "version": "1.0.0",
+    "name": "Màu phim hoài niệm (1970s Vintage Film)",
+    "kind": "filter",
+    "description": "Tông màu film ấm vàng ngả nâu hoài niệm cổ điển",
+    "author": "Cộng đồng Vintage",
+    "license": "CC0",
+    "trustLevel": "community",
+    "tags": [
+      "filter",
+      "vintage",
+      "retro",
+      "sepia",
+      "warm"
+    ],
+    "cssFilter": "sepia(35%) contrast(105%) brightness(95%)"
+  }
+}

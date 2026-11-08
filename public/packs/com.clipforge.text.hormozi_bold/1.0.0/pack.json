@@ -1,0 +1,47 @@
+{
+  "id": "com.clipforge.text.hormozi_bold",
+  "version": "1.0.0",
+  "name": "Hormozi Vàng Viền Đen (Hormozi Viral Title)",
+  "description": "Chữ hoa vàng tươi viền đen đậm phong cách triệu view",
+  "kind": "textPreset",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "648f314894eb59f9ac31faa9a54351313ac1da2e95e2ddb704e9c7f28f690453",
+  "sha256": "648f314894eb59f9ac31faa9a54351313ac1da2e95e2ddb704e9c7f28f690453",
+  "sizeBytes": 680,
+  "createdAt": "2026-11-08T07:34:04.082Z",
+  "spec": {
+    "id": "com.clipforge.text.hormozi_bold",
+    "version": "1.0.0",
+    "name": "Hormozi Vàng Viền Đen (Hormozi Viral Title)",
+    "kind": "textPreset",
+    "description": "Chữ hoa vàng tươi viền đen đậm phong cách triệu view",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "text",
+      "preset",
+      "hormozi",
+      "yellow",
+      "viral",
+      "hook"
+    ],
+    "textPreset": {
+      "fontFamily": "Inter",
+      "fontSize": 32,
+      "color": "#FDE047",
+      "stroke": {
+        "color": "#000000",
+        "width": 4
+      },
+      "shadow": {
+        "color": "rgba(0,0,0,0.8)",
+        "blur": 6,
+        "x": 2,
+        "y": 3
+      }
+    }
+  },
+  "signature": "0f6de2437c65da8844993fd637c24c0905d4ccc6e219f5fbcb375e91187203525e7c32e394cc400acc6ef00f31731ae3067dd7395ed311903853b13ae9d65300"
+}

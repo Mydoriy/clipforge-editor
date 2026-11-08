@@ -1,0 +1,44 @@
+{
+  "id": "com.clipforge.trans.fade_black",
+  "version": "1.0.0",
+  "name": "Hòa tan đen (Dip to Black)",
+  "description": "Chuyển cảnh trầm lắng sang màu đen trước khi mở phân cảnh mới",
+  "kind": "transition",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "75574de6c6096979a8ab46d01cb0bee3cd8f506c96f54789185510c8c35c5d37",
+  "sha256": "75574de6c6096979a8ab46d01cb0bee3cd8f506c96f54789185510c8c35c5d37",
+  "sizeBytes": 978,
+  "createdAt": "2026-11-08T07:34:04.058Z",
+  "spec": {
+    "id": "com.clipforge.trans.fade_black",
+    "version": "1.0.0",
+    "name": "Hòa tan đen (Dip to Black)",
+    "kind": "transition",
+    "description": "Chuyển cảnh trầm lắng sang màu đen trước khi mở phân cảnh mới",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "transition",
+      "fade",
+      "black",
+      "classic",
+      "cinema"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float p = u_progress;\n  vec4 col = p < 0.5 ? texture(u_texA, v_uv) * (1.0 - p * 2.0) : texture(u_texB, v_uv) * ((p - 0.5) * 2.0);\n  fragColor = col;\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    }
+  },
+  "signature": "91c5ed935abef98bb296cf1f765d7e5ad183d8eb9bdcdee8804d92a1bf8c222c58c895b9b1562fb45e4f8155396f8d59e6429202d240f134bd089e69f112940c"
+}

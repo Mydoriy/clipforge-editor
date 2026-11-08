@@ -1,0 +1,32 @@
+{
+  "id": "com.clipforge.filter.cyber_neon",
+  "version": "1.0.0",
+  "name": "Neon Viễn Tưởng (Cyberpunk Neon 2077)",
+  "description": "Sắc tím hồng và xanh cyan dạ quang nổi bật cho cảnh đêm",
+  "kind": "filter",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "83df3c01cf033741bbc939fc6c13aaf6ba95b2d26f37678429c4a51989d7d356",
+  "sha256": "83df3c01cf033741bbc939fc6c13aaf6ba95b2d26f37678429c4a51989d7d356",
+  "sizeBytes": 473,
+  "createdAt": "2026-11-08T07:34:04.068Z",
+  "spec": {
+    "id": "com.clipforge.filter.cyber_neon",
+    "version": "1.0.0",
+    "name": "Neon Viễn Tưởng (Cyberpunk Neon 2077)",
+    "kind": "filter",
+    "description": "Sắc tím hồng và xanh cyan dạ quang nổi bật cho cảnh đêm",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "filter",
+      "neon",
+      "cyberpunk",
+      "vibrant",
+      "night"
+    ],
+    "cssFilter": "saturate(180%) contrast(120%) hue-rotate(35deg)"
+  },
+  "signature": "3595d1b1dbbcc6411a034d1b1fecde336fd94aee10d5e171db07ee5e9a2a77c4bec41b7a4b5c86794a46723ece0aeed3904532b7fd7658d87773ce874ea1ae0f"
+}

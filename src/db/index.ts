@@ -75,6 +75,12 @@ export interface InstalledAssetEntity {
   updatedAt: number;
   sizeBytes: number;
   hash: string;
+  sha256?: string;
+  signature?: string;
+  isVerified?: boolean;
+  isRevoked?: boolean;
+  revokeReason?: string;
+  replacementId?: string;
 }
 
 class ClipForgeDatabase extends Dexie {

@@ -1,0 +1,38 @@
+{
+  "id": "com.clipforge.sfx.camera_shutter",
+  "version": "1.0.0",
+  "name": "Màn trập máy ảnh (Camera Shutter Click)",
+  "description": "Tiếng bấm máy tách dứt khoát của máy ảnh cơ",
+  "kind": "sfx",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "04fd1e0379a3e0af487d66605f0941e4d0b64c04021612372c268bade058307e",
+  "sha256": "04fd1e0379a3e0af487d66605f0941e4d0b64c04021612372c268bade058307e",
+  "sizeBytes": 533,
+  "createdAt": "2026-11-08T07:34:04.078Z",
+  "spec": {
+    "id": "com.clipforge.sfx.camera_shutter",
+    "version": "1.0.0",
+    "name": "Màn trập máy ảnh (Camera Shutter Click)",
+    "kind": "sfx",
+    "description": "Tiếng bấm máy tách dứt khoát của máy ảnh cơ",
+    "author": "ClipForge Audio Lab",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sfx",
+      "camera",
+      "shutter",
+      "photo",
+      "snap"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "triangle",
+      "startFreq": 800,
+      "endFreq": 200,
+      "duration": 0.12,
+      "noiseAmount": 0.3
+    }
+  },
+  "signature": "a92a2f9bcaa941e0ea19f0f16ab4f48787c8643f5356fca34a706298bff03b887716918f3df97c1ed5f010ae4d1ad76e72b734f13d3959e8510fd54d51619103"
+}

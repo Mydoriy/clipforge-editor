@@ -1,0 +1,44 @@
+{
+  "id": "com.clipforge.trans.whip_pan",
+  "version": "1.0.0",
+  "name": "Gạt lia máy nhanh (Whip Pan Speed)",
+  "description": "Lia máy tốc độ cao kèm vệt nhòe phương ngang nối giữa 2 cảnh",
+  "kind": "transition",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "22bd43bd1b91b52dc1ddb90b60aa5b99ac7a84c81d07f04e72a638e643d08334",
+  "sha256": "22bd43bd1b91b52dc1ddb90b60aa5b99ac7a84c81d07f04e72a638e643d08334",
+  "sizeBytes": 994,
+  "createdAt": "2026-11-08T07:34:04.057Z",
+  "spec": {
+    "id": "com.clipforge.trans.whip_pan",
+    "version": "1.0.0",
+    "name": "Gạt lia máy nhanh (Whip Pan Speed)",
+    "kind": "transition",
+    "description": "Lia máy tốc độ cao kèm vệt nhòe phương ngang nối giữa 2 cảnh",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "transition",
+      "whip",
+      "pan",
+      "motion",
+      "fast"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float p = u_progress;\n  vec2 uvA = v_uv - vec2(p, 0.0);\n  vec2 uvB = v_uv + vec2(1.0 - p, 0.0);\n  fragColor = p < 0.5 ? texture(u_texA, uvA) : texture(u_texB, uvB);\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    }
+  },
+  "signature": "73ada6df068bba99e992c54e5cb4c3c5744decffdc607ff89c50c222ff045daa2bc06ffee12df8bd675058d97d73e11cabd23999eafa0522cab1ac18d6a34203"
+}

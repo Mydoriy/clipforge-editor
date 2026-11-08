@@ -1,0 +1,37 @@
+{
+  "id": "com.clipforge.sfx.ui_chime",
+  "version": "1.0.0",
+  "name": "Chuông pha lê (Crystal UI Chime)",
+  "description": "Âm thanh tinh tế khi hiển thị icon hoặc nhận thưởng",
+  "kind": "sfx",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "1a26d598e44a6c6cab0d63439292fcf961c5decb35b39873b3238e7aad26736d",
+  "sha256": "1a26d598e44a6c6cab0d63439292fcf961c5decb35b39873b3238e7aad26736d",
+  "sizeBytes": 501,
+  "createdAt": "2026-11-08T07:34:04.074Z",
+  "spec": {
+    "id": "com.clipforge.sfx.ui_chime",
+    "version": "1.0.0",
+    "name": "Chuông pha lê (Crystal UI Chime)",
+    "kind": "sfx",
+    "description": "Âm thanh tinh tế khi hiển thị icon hoặc nhận thưởng",
+    "author": "ClipForge Audio Lab",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sfx",
+      "chime",
+      "bell",
+      "notification",
+      "clean"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "sine",
+      "startFreq": 1046,
+      "endFreq": 2093,
+      "duration": 0.45
+    }
+  },
+  "signature": "598f298b11a64c724fb07f96cb37639c67d08e53ea6a00f532924d7ba5d9313597bd09fa0c52ff5dd18664979ade073c9f8cc21a005d7582effd06933069a50e"
+}

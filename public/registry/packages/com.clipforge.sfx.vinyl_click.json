@@ -1,0 +1,37 @@
+{
+  "id": "com.clipforge.sfx.vinyl_click",
+  "version": "1.0.0",
+  "name": "Tách đĩa than (Vinyl Crackle Click)",
+  "description": "Tiếng nổ lách tách nhẹ của đĩa than analog mộc mạc",
+  "kind": "sfx",
+  "trustLevel": "community",
+  "license": "CC0",
+  "hash": "cfbd74c50d2fb76b6ebcd8d5c0d1f76cce047fa9c55fcfa02d2e5851838c5f48",
+  "sha256": "cfbd74c50d2fb76b6ebcd8d5c0d1f76cce047fa9c55fcfa02d2e5851838c5f48",
+  "sizeBytes": 532,
+  "createdAt": "2026-11-08T07:34:04.073Z",
+  "spec": {
+    "id": "com.clipforge.sfx.vinyl_click",
+    "version": "1.0.0",
+    "name": "Tách đĩa than (Vinyl Crackle Click)",
+    "kind": "sfx",
+    "description": "Tiếng nổ lách tách nhẹ của đĩa than analog mộc mạc",
+    "author": "Cộng đồng Lo-Fi",
+    "license": "CC0",
+    "trustLevel": "community",
+    "tags": [
+      "sfx",
+      "vinyl",
+      "click",
+      "lofi",
+      "analog"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "triangle",
+      "startFreq": 1200,
+      "endFreq": 400,
+      "duration": 0.05,
+      "noiseAmount": 0.8
+    }
+  }
+}

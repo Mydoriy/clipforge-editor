@@ -1,0 +1,38 @@
+{
+  "id": "com.clipforge.sfx.whoosh_sweep",
+  "version": "1.0.0",
+  "name": "Gió vụt nhanh (Fast Air Whoosh)",
+  "description": "Âm thanh chuyển động lướt qua dứt khoát dùng khi chuyển cảnh",
+  "kind": "sfx",
+  "trustLevel": "official",
+  "license": "CC0",
+  "hash": "fd29b341c9c76aab80f3b07bcbab51dcd7f5f78cf661144e734b646d75ca5c40",
+  "sha256": "fd29b341c9c76aab80f3b07bcbab51dcd7f5f78cf661144e734b646d75ca5c40",
+  "sizeBytes": 544,
+  "createdAt": "2026-11-08T07:34:04.072Z",
+  "spec": {
+    "id": "com.clipforge.sfx.whoosh_sweep",
+    "version": "1.0.0",
+    "name": "Gió vụt nhanh (Fast Air Whoosh)",
+    "kind": "sfx",
+    "description": "Âm thanh chuyển động lướt qua dứt khoát dùng khi chuyển cảnh",
+    "author": "ClipForge Audio Lab",
+    "license": "CC0",
+    "trustLevel": "official",
+    "tags": [
+      "sfx",
+      "whoosh",
+      "fast",
+      "transition",
+      "movement"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "sawtooth",
+      "startFreq": 600,
+      "endFreq": 80,
+      "duration": 0.28,
+      "noiseAmount": 0.5
+    }
+  },
+  "signature": "eb8e6ea3f22c422ab015d09aab2e883dba8d45e57c99bfe2b0431e3da37b6ab3ab5cc121bd31e7f7cac1f1881423a6ab5bcadc0f610fd906d72b4395fcac8b0f"
+}

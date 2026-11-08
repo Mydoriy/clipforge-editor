@@ -1,0 +1,43 @@
+{
+  "id": "com.clipforge.trans.spin_blur",
+  "version": "1.0.0",
+  "name": "Xoay tròn 360 độ (Spin Blur Cut)",
+  "description": "Xoay tít khung hình vào tâm tạo cảm giác chuyển động ấn tượng",
+  "kind": "transition",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "49b50b2f5d091b2400f5c6765b2014b28063c915e8294cec4b67fd92ede03bbd",
+  "sha256": "49b50b2f5d091b2400f5c6765b2014b28063c915e8294cec4b67fd92ede03bbd",
+  "sizeBytes": 1064,
+  "createdAt": "2026-11-08T07:34:04.061Z",
+  "spec": {
+    "id": "com.clipforge.trans.spin_blur",
+    "version": "1.0.0",
+    "name": "Xoay tròn 360 độ (Spin Blur Cut)",
+    "kind": "transition",
+    "description": "Xoay tít khung hình vào tâm tạo cảm giác chuyển động ấn tượng",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "transition",
+      "spin",
+      "rotate",
+      "vortex"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_texA;\nuniform sampler2D u_texB;\nuniform float u_progress;\nvoid main() {\n  float angle = u_progress * 3.14159;\n  vec2 pt = v_uv - 0.5;\n  mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));\n  vec2 rotUv = 0.5 + rot * pt;\n  fragColor = u_progress < 0.5 ? texture(u_texA, rotUv) : texture(u_texB, rotUv);\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    }
+  },
+  "signature": "59b89e92dc6127d0460f5609d89cf320d30612ae619138a76ed100af2830e7c0a394f97278678883f954d3699ce64ae8f65ad01355d314a46d618b30552a6202"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "com.clipforge.filter.warm_sunset",
+  "version": "1.0.0",
+  "name": "Hoàng hôn rực rỡ (Golden Sunset Glow)",
+  "description": "Ánh nắng chiều vàng óng ả làm bừng sáng khung hình",
+  "kind": "filter",
+  "trustLevel": "community",
+  "license": "MIT",
+  "hash": "8c863d1b786a1f388c79f9a00864a301bd47f3adad8939a85ff306989cc6a05e",
+  "sha256": "8c863d1b786a1f388c79f9a00864a301bd47f3adad8939a85ff306989cc6a05e",
+  "sizeBytes": 460,
+  "createdAt": "2026-11-08T07:34:04.070Z",
+  "spec": {
+    "id": "com.clipforge.filter.warm_sunset",
+    "version": "1.0.0",
+    "name": "Hoàng hôn rực rỡ (Golden Sunset Glow)",
+    "kind": "filter",
+    "description": "Ánh nắng chiều vàng óng ả làm bừng sáng khung hình",
+    "author": "Cộng đồng Indie",
+    "license": "MIT",
+    "trustLevel": "community",
+    "tags": [
+      "filter",
+      "sunset",
+      "warm",
+      "golden",
+      "travel"
+    ],
+    "cssFilter": "saturate(130%) sepia(20%) brightness(105%)"
+  }
+}

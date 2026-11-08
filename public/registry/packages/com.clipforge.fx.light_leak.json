@@ -1,0 +1,44 @@
+{
+  "id": "com.clipforge.fx.light_leak",
+  "version": "1.0.0",
+  "name": "Lọt sáng cổ điển (Warm Light Leak)",
+  "description": "Vệt lọt sáng màu cam vàng ấm áp như chụp bằng máy ảnh film",
+  "kind": "effect",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "c955906a05d399465b5f9b204956153ed6ab6226a2a53c996f8223fd6f9f21c5",
+  "sha256": "c955906a05d399465b5f9b204956153ed6ab6226a2a53c996f8223fd6f9f21c5",
+  "sizeBytes": 1071,
+  "createdAt": "2026-11-08T07:34:04.051Z",
+  "spec": {
+    "id": "com.clipforge.fx.light_leak",
+    "version": "1.0.0",
+    "name": "Lọt sáng cổ điển (Warm Light Leak)",
+    "kind": "effect",
+    "description": "Vệt lọt sáng màu cam vàng ấm áp như chụp bằng máy ảnh film",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "light",
+      "leak",
+      "warm",
+      "vintage",
+      "film"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_time;\nuniform float u_intensity;\nvoid main() {\n  vec4 c = texture(u_image, v_uv);\n  float leak = max(0.0, 1.0 - distance(v_uv, vec2(0.1, 0.1)) * 1.5) * (0.8 + 0.2 * sin(u_time * 2.0)) * u_intensity;\n  vec3 warm = vec3(1.0, 0.55, 0.15);\n  fragColor = vec4(c.rgb + warm * leak * 0.45, c.a);\n}",
+      "uniforms": {
+        "u_intensity": {
+          "type": "float",
+          "default": 1,
+          "min": 0,
+          "max": 2,
+          "label": "Cường độ sáng"
+        }
+      }
+    }
+  },
+  "signature": "b97b6b738211490e1921bc63143565efdafa560c019fbe536b7148b2ae96fc3c1e92cf90cf1051dc5ea68492750f7f95df8010053ba524c9e4fd0910ae296f01"
+}
