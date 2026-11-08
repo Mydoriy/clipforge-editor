@@ -1221,11 +1221,42 @@ export async function resolveAssetWithPin(
   };
 }
 
+async function getStoredProjects(): Promise<any[]> {
+  try {
+    if (typeof indexedDB === 'undefined' && typeof window === 'undefined') {
+      return [];
+    }
+    return await db.projects.toArray();
+  } catch {
+    return [];
+  }
+}
+
+async function getInstalledAssetById(id: string): Promise<InstalledAssetEntity | undefined> {
+  try {
+    if (typeof indexedDB === 'undefined' && typeof window === 'undefined') {
+      return undefined;
+    }
+    return await db.installedAssets.get(id);
+  } catch {
+    return undefined;
+  }
+}
+
+async function deleteInstalledAssetById(id: string): Promise<void> {
+  try {
+    if (typeof indexedDB === 'undefined' && typeof window === 'undefined') {
+      return;
+    }
+    await db.installedAssets.delete(id);
+  } catch {}
+}
+
 /**
  * Checks safety before uninstalling: lists projects using this asset
  */
 export async function checkUninstallSafety(assetId: string): Promise<UninstallSafetyCheck> {
-  const projects = await db.projects.toArray().catch(() => []);
+  const projects = await getStoredProjects();
   const affectedProjects: Array<{ id: string; title: string }> = [];
   let totalClipsAffected = 0;
 
@@ -1248,6 +1279,7 @@ export async function checkUninstallSafety(assetId: string): Promise<UninstallSa
 
   return {
     canUninstall: true,
+    isSafe: affectedProjects.length === 0,
     affectedProjects,
     totalClipsAffected,
   };
@@ -1260,14 +1292,42 @@ export async function checkUninstallSafety(assetId: string): Promise<UninstallSa
  * - Removes from Dexie and Cache Storage.
  */
 export async function safeUninstallPackage(
-  assetId: string
-): Promise<{ success: boolean; affectedProjects: string[]; uninstalledCount: number }> {
+  assetId: string,
+  activeClips?: any[]
+): Promise<{
+  success: boolean;
+  affectedProjects: string[];
+  uninstalledCount: number;
+  transitionedToGhostCount: number;
+  updatedClips: any[];
+}> {
   await checkUninstallSafety(assetId);
-  const installed = await db.installedAssets.get(assetId);
+  const installed = await getInstalledAssetById(assetId);
   const version = installed?.version || '1.0.0';
 
+  let transitionedToGhostCount = 0;
+  const updatedClips = (activeClips || []).map((clip: any) => {
+    if (clip.dynamicEffectId === assetId || clip.ghostRef?.originalId === assetId) {
+      transitionedToGhostCount++;
+      return {
+        ...clip,
+        dynamicSpec: undefined,
+        isGhostPlaceholder: true,
+        ghostReason: `Hiệu ứng '${assetId}' đã được gỡ bỏ`,
+        ghostRef: {
+          originalId: assetId,
+          originalVersion: clip.dynamicEffectVersion || version,
+          kind: clip.track || 'effect',
+          name: clip.name || assetId,
+          missing: true,
+        },
+      };
+    }
+    return clip;
+  });
+
   // 1. Convert active clips in all projects to Ghost References
-  const projects = await db.projects.toArray().catch(() => []);
+  const projects = await getStoredProjects();
   const affectedIds: string[] = [];
 
   for (const proj of projects) {
@@ -1275,6 +1335,7 @@ export async function safeUninstallPackage(
     const clips = (proj.tracksData?.clips || []).map((clip: any) => {
       if (clip.dynamicEffectId === assetId) {
         modified = true;
+        transitionedToGhostCount++;
         return {
           ...clip,
           dynamicSpec: undefined,
@@ -1295,20 +1356,28 @@ export async function safeUninstallPackage(
     if (modified) {
       proj.tracksData.clips = clips;
       proj.updatedAt = Date.now();
-      await db.projects.put(proj).catch(() => {});
+      try {
+        await db.projects.put(proj).catch(() => {});
+      } catch {}
       affectedIds.push(proj.id);
     }
   }
 
   // 2. Remove from Cache Storage & IndexedDB
   await removeExtensionFromCache(assetId, version).catch(() => {});
-  await db.installedAssets.delete(assetId);
+  await deleteInstalledAssetById(assetId);
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(EXTENSION_EVENT_UNINSTALLED, { detail: { id: assetId } }));
   }
 
-  return { success: true, affectedProjects: affectedIds, uninstalledCount: 1 };
+  return {
+    success: true,
+    affectedProjects: affectedIds,
+    uninstalledCount: 1,
+    transitionedToGhostCount,
+    updatedClips,
+  };
 }
 
 /**
@@ -1429,7 +1498,7 @@ export async function runSafeLruEviction(targetBytesToFree = 20 * 1024 * 1024): 
   evictedPackages: string[];
   protectedPackages: string[];
 }> {
-  const projects = await db.projects.toArray().catch(() => []);
+  const projects = await getStoredProjects();
   const pinnedSet = new Set<string>();
 
   // Collect all pinned and active asset IDs across ALL projects

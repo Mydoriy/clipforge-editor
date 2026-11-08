@@ -49,11 +49,10 @@ export const Privacy: React.FC<PrivacyProps> = ({ initialTab = 'privacy' }) => {
           <button
             type="button"
             onClick={() => setActiveTab('privacy')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'privacy'
-                ? 'bg-[#1FC8DB] text-slate-950 shadow-md'
-                : 'text-[#9CA3AF] hover:text-white'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'privacy'
+              ? 'bg-[#1FC8DB] text-slate-950 shadow-md'
+              : 'text-[#9CA3AF] hover:text-white'
+              }`}
           >
             <Shield className="w-4 h-4" />
             <span>Chính sách Quyền riêng tư (Privacy)</span>
@@ -61,11 +60,10 @@ export const Privacy: React.FC<PrivacyProps> = ({ initialTab = 'privacy' }) => {
           <button
             type="button"
             onClick={() => setActiveTab('terms')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'terms'
-                ? 'bg-[#1FC8DB] text-slate-950 shadow-md'
-                : 'text-[#9CA3AF] hover:text-white'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'terms'
+              ? 'bg-[#1FC8DB] text-slate-950 shadow-md'
+              : 'text-[#9CA3AF] hover:text-white'
+              }`}
           >
             <Scale className="w-4 h-4" />
             <span>Điều khoản Dịch vụ (Terms of Service)</span>

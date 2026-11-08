@@ -142,11 +142,11 @@ class DynamicWebGLContext {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
       const quadVertices = new Float32Array([
         -1.0, -1.0,
-         1.0, -1.0,
-        -1.0,  1.0,
-        -1.0,  1.0,
-         1.0, -1.0,
-         1.0,  1.0,
+        1.0, -1.0,
+        -1.0, 1.0,
+        -1.0, 1.0,
+        1.0, -1.0,
+        1.0, 1.0,
       ]);
       gl.bufferData(gl.ARRAY_BUFFER, quadVertices, gl.STATIC_DRAW);
     } else {

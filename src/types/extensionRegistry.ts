@@ -221,6 +221,7 @@ export interface ParamMigrationResult {
 
 export interface UninstallSafetyCheck {
   canUninstall: boolean;
+  isSafe?: boolean;
   affectedProjects: Array<{ id: string; title: string }>;
   totalClipsAffected: number;
 }
