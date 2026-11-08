@@ -1006,3 +1006,4 @@ Lệnh sử dụng:
   console.error(`Lệnh không rõ: "${cmd}". Gõ "capfx help" để xem danh sách lệnh.`);
   return 1;
 }
+

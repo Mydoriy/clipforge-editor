@@ -60,6 +60,7 @@ export interface EffectSpec {
   license: LicenseType;
   trustLevel: TrustLevel;
   redistributable?: boolean;
+  sourceUrl?: string;
   paramSchema?: any;
   tags: string[];
 

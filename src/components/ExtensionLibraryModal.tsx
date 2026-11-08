@@ -852,6 +852,15 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
                         <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
                           {pkg.license}
                         </span>
+                        {pkg.spec?.redistributable === false ? (
+                          <span className="text-[10px] text-amber-400 bg-amber-950/60 border border-amber-800/40 px-1.5 py-0.5 rounded" title="Gói có bản quyền riêng - Không nhúng redistributable vào .capproj">
+                            Không phân phối lại
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded" title="Cho phép tự do phân phối lại">
+                            Tự do phân phối
+                          </span>
+                        )}
                         <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
                           {formatBytes(pkg.sizeBytes || 0)}
                         </span>
@@ -861,7 +870,17 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
 
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
                         <span>
-                          Tác giả: <strong className="text-slate-300">{pkg.spec.author}</strong>
+                          Tác giả / Nguồn: <strong className="text-slate-300">{pkg.spec.author}</strong>
+                          {pkg.spec.sourceUrl && (
+                            <a
+                              href={pkg.spec.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="ml-1.5 text-cyan-400 hover:underline"
+                            >
+                              (Nguồn)
+                            </a>
+                          )}
                         </span>
                         {pkg.spec.tags && (
                           <div className="flex items-center gap-1">

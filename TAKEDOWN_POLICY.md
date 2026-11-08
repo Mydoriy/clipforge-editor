@@ -75,3 +75,4 @@ Tác giả của gói bị thu hồi có quyền gửi thông báo khiếu nại
 1. Tác giả gửi email tới `copyright@clipforge.app` kèm tài liệu chứng minh quyền sở hữu hoặc giấy phép sử dụng hợp pháp (ví dụ: hóa đơn bản quyền thương mại, văn bản ủy quyền, chứng minh tác phẩm thuộc phạm vi CC0 công cộng).
 2. Ban quản trị chuyển tiếp thông báo khiếu nại ngược cho bên khiếu nại ban đầu.
 3. Nếu bên khiếu nại ban đầu không nộp đơn khởi kiện trong vòng 10 ngày làm việc tiếp theo, ClipForge có thể khôi phục lại gói tài nguyên sau khi xem xét kỹ lưỡng.
+

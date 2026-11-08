@@ -10,7 +10,9 @@ export type TelemetryEventName =
   | 'export_failed'
   | 'app_error'
   | 'feature_used'
-  | 'onboarding_step';
+  | 'onboarding_step'
+  | 'extension_install_success'
+  | 'extension_install_error';
 
 export interface TelemetryEvent {
   id: string;
@@ -86,7 +88,14 @@ const FORBIDDEN_KEYS = new Set([
   'key',
   'apiKey',
   'password',
-  'secret'
+  'secret',
+  'query',
+  'search',
+  'searchTerm',
+  'searchQuery',
+  'keyword',
+  'keywords',
+  'prompt',
 ]);
 
 /**
@@ -212,6 +221,28 @@ export function trackEvent(name: TelemetryEventName, data: Record<string, any> =
 
   // 2. Dispatch to self-hosted cookieless endpoint if configured (Umami/Plausible format)
   dispatchToCookielessEndpoint(event);
+}
+
+/**
+ * M11: Track extension installation success (Strictly anonymous: packageId, durationMs only).
+ * Absolutely no queries, filenames, or content collected.
+ */
+export function trackExtensionInstallSuccess(packageId: string, durationMs?: number): void {
+  trackEvent('extension_install_success', {
+    packageId,
+    durationMs: durationMs || 0,
+  });
+}
+
+/**
+ * M11: Track extension installation failure (Strictly anonymous: packageId, errorType only).
+ * Absolutely no queries, filenames, or content collected.
+ */
+export function trackExtensionInstallError(packageId: string, errorType: string): void {
+  trackEvent('extension_install_error', {
+    packageId,
+    errorType: errorType || 'unknown_error',
+  });
 }
 
 /**

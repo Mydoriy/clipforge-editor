@@ -12,7 +12,8 @@ import {
   ShieldAlert,
   AlertTriangle,
   Scale,
-  Sparkles
+  Sparkles,
+  Globe
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Footer } from '../components/Footer';
@@ -176,6 +177,33 @@ export const Privacy: React.FC<PrivacyProps> = ({ initialTab = 'privacy' }) => {
                   <li>
                     Chặn nhúng frame từ bên ngoài với tiêu đề <code>X-Frame-Options: DENY</code> và{' '}
                     <code>frame-ancestors 'none'</code>.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-[#1FC8DB]" />
+                  Quyền riêng tư Kho Hiệu ứng Mở rộng (Extension Store Privacy)
+                </h2>
+                <p className="text-xs text-[#9CA3AF] leading-relaxed">
+                  Hệ thống Kho mở rộng ClipForge được xây dựng theo nguyên tắc bảo vệ quyền riêng tư tuyệt đối:
+                </p>
+                <ul className="list-disc list-inside text-xs text-[#9CA3AF] space-y-1.5 pl-2">
+                  <li>
+                    <strong>Tìm kiếm 100% Cục bộ (Zero-Query Leak)</strong>: Toàn bộ chỉ mục kho được tải về một lần và tìm kiếm trên bộ nhớ máy bạn. Từ khóa tìm kiếm, tags, hay truy vấn phong cách KHÔNG BAO GIỜ bị gửi ra ngoài.
+                  </li>
+                  <li>
+                    <strong>Máy chủ Kho chỉ thấy gì?</strong>: Kho lưu trữ là static hosting (Cloudflare CDN / Pages). Khi bạn bấm cài đặt một hiệu ứng, máy chủ chỉ nhận được yêu cầu HTTP tiêu chuẩn: địa chỉ IP mạng của bạn và ID của gói hiệu ứng công khai được tải (ví dụ: <code>/packs/official.glitch-pack/1.0.0/pack.capfx</code>). Không có thông tin người dùng, tài khoản hay dự án nào được đính kèm.
+                  </li>
+                  <li>
+                    <strong>Tùy chọn Chế độ Chỉ Offline (Offline-Only Mode)</strong>: Nếu bạn không muốn bất kỳ kết nối mạng nào tới kho, bạn có thể bật <strong>"Chế độ Chỉ offline"</strong> trong Cài đặt Kho. Khi bật, ClipForge sẽ chặn hoàn toàn mọi yêu cầu mạng tới kho và chỉ sử dụng các tài nguyên đã lưu trữ cục bộ.
+                  </li>
+                  <li>
+                    <strong>Tự Lưu Trữ (Self-Hosted Custom Registry)</strong>: Bạn có thể thay đổi URL kho sang máy chủ nội bộ hoặc S3 riêng của doanh nghiệp để hoàn toàn làm chủ hạ tầng phân phối tài nguyên.
+                  </li>
+                  <li>
+                    <strong>Không Telemetry mặc định</strong>: Mọi sự kiện đo lường cài đặt gói (thành công/thất bại, thời gian) đều TẮT mặc định; nếu bật (opt-in) chỉ gửi ID gói công khai và mã lỗi kỹ thuật, tuyệt đối không gửi từ khóa tìm kiếm hay tên tệp.
                   </li>
                 </ul>
               </div>

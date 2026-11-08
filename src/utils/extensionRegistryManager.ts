@@ -43,6 +43,7 @@ import {
   testCompileShaderInSandboxWatchdog,
   generateDiagnosticInfo,
 } from '../engine/securitySandbox.ts';
+import { trackExtensionInstallSuccess, trackExtensionInstallError } from './telemetry.ts';
 
 // Cached in-memory index
 let memoryIndexCache: RegistryIndex | null = null;
@@ -427,6 +428,7 @@ export async function atomicInstallPackage(
   pkg: AssetPackage,
   options?: { onProgress?: (percent: number, stage: string) => void; signal?: AbortSignal }
 ): Promise<AtomicInstallResult> {
+  const installStartTime = Date.now();
   if (options?.signal?.aborted) {
     return { success: false, stage: 'download', error: 'Đã hủy cài đặt gói.', rolledBack: false };
   }
@@ -591,6 +593,7 @@ export async function atomicInstallPackage(
     }
 
     options?.onProgress?.(100, 'Cài đặt hoàn tất');
+    trackExtensionInstallSuccess(pkg.id, Date.now() - installStartTime);
 
     return { success: true, pkg, stage: 'storage_commit', rolledBack: false };
   } catch (err: any) {
@@ -601,6 +604,7 @@ export async function atomicInstallPackage(
     if (dbStored) {
       await db.installedAssets.delete(pkg.id).catch(() => {});
     }
+    trackExtensionInstallError(pkg.id, 'storage_commit_error');
     return {
       success: false,
       stage: 'storage_commit',

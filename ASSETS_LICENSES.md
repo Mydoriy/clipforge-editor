@@ -92,3 +92,53 @@ Toàn bộ 22 mẫu template trong mục "Templates" (\`src/pages/SectionPage.ts
 
 > **Giấy phép áp dụng cho Mẫu**: **MIT / CC0**. Người dùng có toàn quyền chỉnh sửa, thay thế nội dung, xuất video và đăng tải thương mại mà không cần xin phép hay ghi nguồn.
 
+
+
+---
+
+---
+
+## 7. KHO HIỆU ỨNG MỞ RỘNG (EXTENSION REGISTRY PACKAGES & ITEMS)
+
+Toàn bộ 36 gói hiệu ứng mở rộng trong Kho tài nguyên ClipForge được kiểm duyệt chặt chẽ, xác thực chữ ký số Ed25519 và chỉ phân phối khi tuân thủ danh sách giấy phép SPDX hợp lệ:
+
+| ID Gói | Tên Hiệu Ứng | Loại | Tác Giả / Nguồn | Giấy Phép (SPDX) | Quyền Phân Phối Lại (.capproj) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `com.clipforge.fx.rgb_shake` | **Rung RGB (RGB Shake)** | `effect` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.motion_blur` | **Làm mờ chuyển động (Motion Blur)** | `effect` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.film_halide` | **Hạt phim 35mm (35mm Film Grain)** | `effect` | Cộng đồng OpenGrain | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.zoom_blur` | **Mờ hướng tâm (Zoom Radial Blur)** | `effect` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.vhs_distortion` | **Nhiễu từ băng VHS (VHS Distortion Tape)** | `effect` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.glow_pulse` | **Phát quang đập nhịp (Neon Pulse Glow)** | `effect` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.chromatic_aberration` | **Quang sai viền (Lens Edge Dispersion)** | `effect` | Cộng đồng Optics | **MIT** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.fx.light_leak` | **Lọt sáng cổ điển (Warm Light Leak)** | `effect` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.trans.cross_zoom` | **Thu phóng chéo (Cross Zoom)** | `transition` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.trans.glitch_swipe` | **Gạt nhiễu giật (Glitch Swipe)** | `transition` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.trans.whip_pan` | **Gạt lia máy nhanh (Whip Pan Speed)** | `transition` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.trans.fade_black` | **Hòa tan đen (Dip to Black)** | `transition` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.trans.dissolve` | **Hòa tan mờ chồng (Cross Dissolve)** | `transition` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.trans.spin_blur` | **Xoay tròn 360 độ (Spin Blur Cut)** | `transition` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.filter.teal_orange_3d` | **Điện ảnh Xanh Cam (Teal & Orange 3D LUT)** | `filter` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.filter.vintage_70s` | **Màu phim hoài niệm (1970s Vintage Film)** | `filter` | Cộng đồng Vintage | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.filter.noir_bw` | **Đen trắng điện ảnh (Film Noir B&W)** | `filter` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.filter.cyber_neon` | **Neon Viễn Tưởng (Cyberpunk Neon 2077)** | `filter` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.filter.warm_sunset` | **Hoàng hôn rực rỡ (Golden Sunset Glow)** | `filter` | Cộng đồng Indie | **MIT** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.filter.film_chrome` | **Dương bản Kodak (Kodak Color Chrome)** | `filter` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sfx.whoosh_sweep` | **Gió vụt nhanh (Fast Air Whoosh)** | `sfx` | ClipForge Audio Lab | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sfx.deep_hit` | **Cú đập âm trầm (Deep Bass Impact)** | `sfx` | ClipForge Audio Lab | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sfx.vinyl_click` | **Tách đĩa than (Vinyl Crackle Click)** | `sfx` | Cộng đồng Lo-Fi | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sfx.ui_chime` | **Chuông pha lê (Crystal UI Chime)** | `sfx` | ClipForge Audio Lab | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sfx.glitch_zap` | **Chớp giật điện từ (Electric Glitch Zap)** | `sfx` | ClipForge Audio Lab | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sfx.camera_shutter` | **Màn trập máy ảnh (Camera Shutter Click)** | `sfx` | ClipForge Audio Lab | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sticker.neon_sparkle` | **Ngôi sao dạ quang (Neon Sparkle Star)** | `sticker` | ClipForge Studio | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sticker.confetti_burst` | **Pháo giấy tung bay (Confetti Celebration)** | `sticker` | ClipForge Studio | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sticker.fire_flame` | **Ngọn lửa rực cháy (Blazing Fire)** | `sticker` | Cộng đồng Vector | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.sticker.heart_pulse` | **Trái tim đập (Heart Pulse Love)** | `sticker` | ClipForge Studio | **CC0** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.text.hormozi_bold` | **Hormozi Vàng Viền Đen (Hormozi Viral Title)** | `textPreset` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.text.neon_cyan_glow` | **Cyber Neon Cyan (Phát Quang Xanh)** | `textPreset` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.text.gold_luxury_3d` | **Vàng Kim Hoàng Gia (3D Gold Luxury)** | `textPreset` | Cộng đồng Typography | **OFL** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.text.minimal_white` | **Trắng Tinh Tế (Minimal Clean White)** | `textPreset` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.tmpl.viral_tiktok_hook` | **Mẫu TikTok Giật Gân (Viral Hook 3s)** | `template` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+| `com.clipforge.tmpl.ecommerce_sale` | **Mẫu Quảng Cáo Bán Hàng (Flash Sale Product)** | `template` | ClipForge Studio | **In-House** | ✅ Có (Nhúng trực tiếp) |
+
+> **Chính sách phân phối lại (Redistribution Policy)**: Các gói có `redistributable: false` tuyệt đối không được nhúng mã nguồn hoặc binary vào tệp dự án chia sẻ `.capproj`. Thay vào đó, tệp `.capproj` chỉ ghi nhận tham chiếu tải về an toàn `{ packId, itemId, version, sha256, requiresDownload: true }` để bảo vệ bản quyền của tác giả.

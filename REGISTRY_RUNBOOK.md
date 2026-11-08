@@ -170,3 +170,4 @@ Nếu việc triển khai chỉ mục mới gây lỗi hàng loạt trên môi t
      --data '{"files":["https://registry.clipforge.app/registry/index.json"]}'
    ```
 3. Xác nhận tải lại `https://registry.clipforge.app/registry/index.json` và kiểm tra chữ ký số hợp lệ.
+

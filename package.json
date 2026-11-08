@@ -20,6 +20,7 @@
     "check:i18n": "node scripts/check-i18n.mjs",
     "maintenance": "node scripts/monthly-maintenance.mjs",
     "generate:licenses": "node scripts/generate-third-party-notices.mjs",
+    "generate:assets-licenses": "node scripts/generate-assets-licenses.mjs",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "prepare": "husky"
