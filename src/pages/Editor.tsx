@@ -118,6 +118,14 @@ export const Editor: React.FC = () => {
             setClips(rehydrate(proj.tracksData.clips));
           }
 
+          // Check if project has missing asset references (M2 / M9 trigger)
+          const allClips = proj.tracksData?.clips || [];
+          if (allClips.some((c: any) => c.ghostRef || c.isGhostPlaceholder)) {
+            setTimeout(() => {
+              useEditorStore.getState().openModal('missingAssets');
+            }, 600);
+          }
+
           if (proj.settings) {
             updateProjectSettings(proj.settings);
           }

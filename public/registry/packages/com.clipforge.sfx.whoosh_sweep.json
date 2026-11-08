@@ -1,0 +1,37 @@
+{
+  "id": "com.clipforge.sfx.whoosh_sweep",
+  "version": "1.0.0",
+  "name": "Vút gió chuyển cảnh (Whoosh Sweep)",
+  "description": "Âm thanh vút gió tần số kép tổng hợp bằng Web Audio API không tốn dung lượng",
+  "kind": "sfx",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "ee688f4d5ca26cffdb4a726021f24704fe81d3e1be19cb5b415430d8f5200072",
+  "sizeBytes": 478,
+  "createdAt": "2026-11-08T06:31:52.368Z",
+  "spec": {
+    "id": "com.clipforge.sfx.whoosh_sweep",
+    "version": "1.0.0",
+    "name": "Vút gió chuyển cảnh (Whoosh Sweep)",
+    "kind": "sfx",
+    "description": "Âm thanh vút gió tần số kép tổng hợp bằng Web Audio API không tốn dung lượng",
+    "author": "ClipForge Sound",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "sfx",
+      "whoosh",
+      "sweep",
+      "transition",
+      "audio"
+    ],
+    "sfxSynthesis": {
+      "oscillatorType": "sine",
+      "startFreq": 850,
+      "endFreq": 110,
+      "duration": 0.42,
+      "noiseAmount": 0.25,
+      "reverb": true
+    }
+  }
+}

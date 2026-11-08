@@ -200,8 +200,8 @@ interface EditorState {
   editPilotOpen: boolean;
   setEditPilotOpen: (open: boolean) => void;
   toggleEditPilot: () => void;
-  chatHistory: Record<string, Array<{ id: string; role: 'user' | 'assistant'; text: string; time: string }>>;
-  addChatMessage: (projectId: string, role: 'user' | 'assistant', text: string) => void;
+  chatHistory: Record<string, Array<{ id: string; role: 'user' | 'assistant'; text: string; time: string; chips?: Array<{ label: string; action: string; query?: string; meta?: any }> }>>;
+  addChatMessage: (projectId: string, role: 'user' | 'assistant', text: string, chips?: Array<{ label: string; action: string; query?: string; meta?: any }>) => void;
 
   // History
   undoStack: TimelineClip[][];
@@ -248,7 +248,7 @@ export const useEditorStore = create<EditorState>()(
       setEditPilotOpen: (open) => set({ editPilotOpen: open }),
       toggleEditPilot: () => set((state) => ({ editPilotOpen: !state.editPilotOpen })),
       chatHistory: {},
-      addChatMessage: (projectId, role, text) => {
+      addChatMessage: (projectId, role, text, chips) => {
         const id = 'msg-' + Date.now();
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         set((state) => {
@@ -256,7 +256,7 @@ export const useEditorStore = create<EditorState>()(
           return {
             chatHistory: {
               ...state.chatHistory,
-              [projectId]: [...currentList, { id, role, text, time }]
+              [projectId]: [...currentList, { id, role, text, time, chips }]
             }
           };
         });

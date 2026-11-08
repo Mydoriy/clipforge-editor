@@ -4,6 +4,7 @@ import { translations } from '../i18n';
 import confetti from 'canvas-confetti';
 import { db, type ProjectEntity } from '../db';
 import { useNavigate } from 'react-router-dom';
+import { resolve } from '../engine/effectResolver';
 import {
   Sparkles,
   Send,
@@ -44,7 +45,8 @@ export const VALID_ACTIONS = [
   'autoCaptions',
   'setAspect',
   'export',
-  'undo'
+  'undo',
+  'ensureEffect'
 ] as const;
 
 export type EditPilotActionType = typeof VALID_ACTIONS[number];
@@ -60,6 +62,9 @@ export interface EditPilotAction {
   text?: string;
   filter?: string;
   effect?: string;
+  query?: string;
+  specId?: string;
+  kind?: string;
   adjustments?: Record<string, number>;
   aspect?: '9:16' | '16:9' | '1:1';
   transitionType?: string;
@@ -175,6 +180,9 @@ export const EditPilot: React.FC = () => {
           text: typeof item.text === 'string' ? item.text.trim() : typeof item.value === 'string' ? item.value.trim() : undefined,
           filter: typeof item.filter === 'string' ? item.filter : typeof item.value === 'string' ? item.value : undefined,
           effect: typeof item.effect === 'string' ? item.effect : undefined,
+          query: typeof item.query === 'string' && !/[<>{}]/i.test(item.query) ? item.query.trim().slice(0, 100) : undefined,
+          specId: typeof item.specId === 'string' && !/[<>{}]/i.test(item.specId) ? item.specId.trim().slice(0, 100) : undefined,
+          kind: typeof item.kind === 'string' ? item.kind : 'effect',
           adjustments: typeof item.adjustments === 'object' ? item.adjustments : undefined,
           aspect: item.aspect === '9:16' || item.aspect === '16:9' || item.aspect === '1:1' ? item.aspect : undefined,
           transitionType: typeof item.transitionType === 'string' ? item.transitionType : undefined,
@@ -189,6 +197,8 @@ export const EditPilot: React.FC = () => {
   // Action Description Generator for Preview Cards
   const generateActionDescription = (action: EditPilotAction): string => {
     switch (action.action) {
+      case 'ensureEffect':
+        return `Đảm bảo hiệu ứng: "${action.query || action.specId || 'Hiệu ứng'}"`;
       case 'trim':
         return `Cắt ${action.duration || 5} giây đầu của clip`;
       case 'split':
@@ -362,6 +372,35 @@ export const EditPilot: React.FC = () => {
         undo();
         break;
       }
+      case 'ensureEffect': {
+        const q = act.query || act.specId || 'rung màn hình';
+        const target = targetClip || clips.find((c) => c.track === 'video') || clips[0];
+        resolve({
+          specId: act.specId,
+          query: act.query,
+          context: { kind: (act.kind as any) || 'effect' },
+        }).then((res) => {
+          if (res.tier === 1 && res.item && target) {
+            updateClip(target.id, {
+              dynamicSpec: res.item as any,
+              dynamicEffectId: res.item.id,
+            });
+            showToast(`Đã áp dụng "${res.item.id}" vào clip!`, 'success');
+          } else {
+            addChatMessage(
+              currentProjectId || 'default',
+              'assistant',
+              `Tôi chưa có sẵn hiệu ứng chính xác cho "${q}". Bạn muốn giải quyết bằng cách nào?`,
+              [
+                { label: '📦 Cài từ kho', action: 'install_registry', query: q },
+                { label: '🧩 Ghép hiệu ứng', action: 'composite_local', query: q },
+                { label: '⚡ Dùng gần nhất', action: 'use_nearest', query: q },
+              ]
+            );
+          }
+        });
+        break;
+      }
       default:
         break;
     }
@@ -468,6 +507,16 @@ export const EditPilot: React.FC = () => {
     // 11. "hoàn tác" / "undo"
     if (lower.includes('hoàn tác') || lower.includes('undo') || lower.includes('quay lại')) {
       actions.push({ action: 'undo', description: 'Hoàn tác bước trước (Undo)' });
+    }
+
+    // 12. "thêm hiệu ứng rung..." / "glitch" / "shake" / "hiệu ứng"
+    if (lower.includes('hiệu ứng') || lower.includes('rung') || lower.includes('giật') || lower.includes('glitch') || lower.includes('shake')) {
+      actions.push({
+        action: 'ensureEffect',
+        query: promptText,
+        kind: 'effect',
+        description: `Đảm bảo hiệu ứng: "${promptText}"`,
+      });
     }
 
     return actions;
@@ -613,6 +662,31 @@ Return strictly JSON with no markdown formatting.`;
     setInput('');
   };
 
+  const handleChipClick = (chip: { label: string; action: string; query?: string }) => {
+    if (chip.action === 'install_registry') {
+      openModal('extensionLibrary');
+    } else if (chip.action === 'composite_local') {
+      const target = selectedClip || clips.find((c) => c.track === 'video') || clips[0];
+      if (target) {
+        updateClip(target.id, {
+          effectType: 'rgb',
+          effectIntensity: 75,
+          effectSpeed: 1.5,
+        });
+        showToast('Đã ghép hiệu ứng cơ bản (RGB Split + Shake) vào clip!', 'success');
+      }
+    } else if (chip.action === 'use_nearest') {
+      const target = selectedClip || clips.find((c) => c.track === 'video') || clips[0];
+      if (target) {
+        updateClip(target.id, {
+          effectType: 'glitch',
+          effectIntensity: 65,
+        });
+        showToast('Đã áp dụng hiệu ứng Glitch gần nhất!', 'success');
+      }
+    }
+  };
+
   const chips = [
     'Cắt 5 giây đầu',
     'Chia clip tại 00:10',
@@ -728,7 +802,7 @@ Return strictly JSON with no markdown formatting.`;
 
           {/* Messages Body */}
           <div className="flex-1 p-3.5 bg-[#141414] overflow-y-auto flex flex-col gap-2.5 text-xs scrollbar-thin">
-            {projectMessages.map((m) => (
+            {projectMessages.map((m: any) => (
               <div
                 key={m.id}
                 className={`p-3 rounded-xl max-w-[88%] leading-relaxed ${
@@ -737,7 +811,20 @@ Return strictly JSON with no markdown formatting.`;
                     : 'bg-[#1FC8DB] text-slate-950 font-medium self-end shadow-md'
                 }`}
               >
-                {m.text}
+                <div>{m.text}</div>
+                {m.chips && m.chips.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-700/60">
+                    {m.chips.map((chip: any, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleChipClick(chip)}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-[#1FC8DB] hover:text-slate-950 text-[#1FC8DB] rounded-lg text-[11px] font-semibold border border-[#1FC8DB]/30 transition-all shadow-sm"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
 

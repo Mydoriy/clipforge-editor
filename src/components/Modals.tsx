@@ -33,6 +33,9 @@ import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import { APP_VERSION, APP_NAME, APP_BUILD_DATE } from '../constants/version';
 import { SystemCheckModal } from './SystemCheckModal';
 import { BetaTasksModal } from './BetaTasksModal';
+import { ExtensionLibraryModal } from './ExtensionLibraryModal';
+import { MissingAssetsModal } from './MissingAssetsModal';
+import { StyleAnalyzerModal } from './StyleAnalyzerModal';
 import { isIosSafari, isStandaloneMode, installPwaApp, applyPwaUpdate } from '../utils/pwa';
 import { trackEvent, getTelemetryConsent, setTelemetryConsent } from '../utils/telemetry';
 import { getFeatureFlags, setFeatureFlag, type FeatureFlags } from '../utils/featureFlags';
@@ -1614,7 +1617,7 @@ export const Modals: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none animate-in fade-in">
       <div
-        className={`relative w-full ${activeModal === 'export' ? 'max-w-2xl' : activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' || activeModal === 'systemCheck' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}
+        className={`relative w-full ${activeModal === 'extensionLibrary' ? 'max-w-4xl' : activeModal === 'export' ? 'max-w-2xl' : activeModal === 'enhanceQuality' || activeModal === 'aiImage' || activeModal === 'extendVideo' || activeModal === 'videoStudio' || activeModal === 'aiAdMaker' || activeModal === 'longToShorts' || activeModal === 'pro' || activeModal === 'systemCheck' ? 'max-w-xl' : 'max-w-lg'} bg-[#141822] border border-slate-700 rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto`}
       >
         {/* Close Button */}
         <button
@@ -5350,6 +5353,15 @@ export const Modals: React.FC = () => {
         {activeModal === 'betaTasks' && (
           <BetaTasksModal onClose={closeModal} onOpenFeedback={() => openModal('feedback')} />
         )}
+
+        {/* 18. DYNAMIC EXTENSION REGISTRY LIBRARY MODAL */}
+        {activeModal === 'extensionLibrary' && <ExtensionLibraryModal />}
+
+        {/* 19. MISSING ASSETS (GHOST REFERENCE) DIALOG */}
+        {activeModal === 'missingAssets' && <MissingAssetsModal />}
+
+        {/* 20. STYLE ANALYZER (SAO CHÉP PHONG CÁCH) MODAL */}
+        {activeModal === 'styleAnalyzer' && <StyleAnalyzerModal />}
       </div>
     </div>
   );

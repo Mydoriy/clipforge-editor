@@ -10,6 +10,13 @@ import {
   type SfxMeta
 } from '../utils/audio';
 import { db, type MediaEntity } from '../db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import {
+  searchLocalRegistry,
+  installPackage,
+  importPackageFromFile,
+  type SearchResultItem,
+} from '../utils/extensionRegistryManager';
 import { safeAddMedia } from '../lib/db';
 import { createDefaultTimeline } from '../types/project';
 import confetti from 'canvas-confetti';
@@ -170,6 +177,148 @@ export const CategoryPanel: React.FC = () => {
   const [hslSat, setHslSat] = useState(0);
   const [hslLum, setHslLum] = useState(0);
 
+  // Dynamic installed assets from Extension Registry
+  const installedAssets = useLiveQuery(() => db.installedAssets.toArray()) || [];
+  const installedEffects = installedAssets.filter((a) => a.kind === 'effect');
+  const installedTransitions = installedAssets.filter((a) => a.kind === 'transition');
+  const installedFilters = installedAssets.filter((a) => a.kind === 'filter');
+  const installedSfx = installedAssets.filter((a) => a.kind === 'sfx');
+  const installedStickers = installedAssets.filter((a) => a.kind === 'sticker');
+
+  // Registry discovery state
+  const [registryPackages, setRegistryPackages] = useState<SearchResultItem[]>([]);
+  const [effectSearchQuery, setEffectSearchQuery] = useState('');
+  const [transitionSearchQuery, setTransitionSearchQuery] = useState('');
+  const [filterSearchQuery, setFilterSearchQuery] = useState('');
+
+  useEffect(() => {
+    searchLocalRegistry().then((res) => setRegistryPackages(res)).catch(() => {});
+  }, []);
+
+  const handleTryPackage = (pkg: SearchResultItem) => {
+    const videoClip = clips.find((c) => c.id === selectedClipId && (c.track === 'video' || c.type === 'video')) || clips.find((c) => c.track === 'video') || clips[0];
+    if (videoClip) {
+      updateClip(videoClip.id, {
+        dynamicSpec: pkg.spec,
+        dynamicEffectId: pkg.id,
+        dynamicEffectVersion: pkg.version,
+        isTemporaryPreview: true,
+      });
+      showToast(`Đang dùng thử "${pkg.name}" trực tiếp trên clip (chưa lưu)!`, 'info');
+    } else {
+      showToast('Vui lòng chọn 1 clip để dùng thử!', 'warning');
+    }
+  };
+
+  const handleInstallFromPanel = async (pkg: SearchResultItem) => {
+    const res = await installPackage(pkg);
+    if (res.success) {
+      showToast(`Đã cài đặt "${pkg.name}" vào máy!`, 'success');
+      searchLocalRegistry().then((r) => setRegistryPackages(r));
+    } else {
+      showToast(res.error || 'Cài đặt thất bại', 'error');
+    }
+  };
+
+  const handleDirectDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files);
+    for (const file of files) {
+      if (
+        file.name.endsWith('.capfx') ||
+        file.name.endsWith('.cube') ||
+        file.name.endsWith('.json') ||
+        file.name.endsWith('.svg') ||
+        /\.(ttf|otf|woff2)$/i.test(file.name)
+      ) {
+        const res = await importPackageFromFile(file);
+        if (res.success && res.pkg) {
+          showToast(`Đã nhập và cài đặt thành công "${res.pkg.name}"!`, 'success');
+          searchLocalRegistry().then((r) => setRegistryPackages(r));
+        } else {
+          showToast(res.error || 'Tệp không hợp lệ!', 'error');
+        }
+      }
+    }
+  };
+
+  const renderRegistryDiscoveryBlock = (kind: string, query: string) => {
+    const matching = registryPackages.filter((p) => {
+      if (p.kind !== kind) return false;
+      if (!query.trim()) return true;
+      const q = query.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.spec.tags?.some((t) => t.toLowerCase().includes(q))
+      );
+    });
+
+    if (matching.length === 0) return null;
+
+    return (
+      <div className="p-2.5 rounded-lg bg-gradient-to-r from-cyan-950/40 to-slate-900 border border-cyan-800/40 flex flex-col gap-2 my-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Tìm thêm trong Kho Mở Rộng ({matching.length})</span>
+          </div>
+          <button
+            onClick={() => openModal('extensionLibrary')}
+            className="text-[10px] text-cyan-400 hover:underline font-medium"
+          >
+            Mở kho &gt;
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          {matching.slice(0, 3).map((pkg) => (
+            <div
+              key={pkg.id}
+              className="p-2 bg-[#1A1A1A] rounded-md border border-slate-800 flex items-center justify-between gap-2 text-xs"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white text-[11px] truncate">{pkg.name}</span>
+                  <span className="text-[9px] px-1 bg-emerald-500/20 text-emerald-400 rounded">
+                    {pkg.trustLevel === 'official' ? 'Chính thức' : 'Cộng đồng'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-[#8A8A8A] flex items-center gap-2 mt-0.5">
+                  <span>{pkg.sizeBytes} B</span>
+                  <span>•</span>
+                  <span>{pkg.license}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => handleTryPackage(pkg)}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded text-[10px] font-semibold border border-cyan-500/30 transition-colors"
+                  title="Dùng thử: Chỉ nạp spec vài KB để render trực tiếp trên clip"
+                >
+                  Dùng thử
+                </button>
+                <button
+                  onClick={() => handleInstallFromPanel(pkg)}
+                  disabled={pkg.isInstalled}
+                  className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${
+                    pkg.isInstalled
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950'
+                  }`}
+                  title="Cài đặt: Giữ lại bản tải vào máy ngoại tuyến"
+                >
+                  {pkg.isInstalled ? 'Đã cài' : 'Cài đặt'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Filters Tab state
   const [filterCategory, setFilterCategory] = useState<string>('Featured');
   const [filterIntensity, setFilterIntensity] = useState(80);
@@ -195,6 +344,7 @@ export const CategoryPanel: React.FC = () => {
 
   // Templates Tab state
   const [templateCategory, setTemplateCategory] = useState<string>('all');
+  const [templateSearch, setTemplateSearch] = useState('');
 
   // Media Library state from Dexie
   const [dbMediaList, setDbMediaList] = useState<MediaEntity[]>([]);
@@ -1692,7 +1842,11 @@ export const CategoryPanel: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full bg-[#1F1F1F] border-r border-[#333333] flex flex-col select-none overflow-hidden text-xs text-[#E6E6E6]">
+    <div
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleDirectDrop}
+      className="w-full h-full bg-[#1F1F1F] border-r border-[#333333] flex flex-col select-none overflow-hidden text-xs text-[#E6E6E6]"
+    >
       {/* Category Tabs Top Bar with Scroll Arrows */}
       <div className="relative flex items-center bg-[#1F1F1F] border-b border-[#333333] shrink-0">
         {canScrollLeft && (
@@ -3213,6 +3367,21 @@ export const CategoryPanel: React.FC = () => {
             {/* 2.2 HIỆU ỨNG ÂM THANH (SFX SYNTHESIZER) */}
             {audioSubnav === 'sfx' && (
               <div className="flex flex-col gap-3">
+                {/* Search Input for SFX */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+                  <input
+                    type="text"
+                    value={sfxSearch}
+                    onChange={(e) => setSfxSearch(e.target.value)}
+                    placeholder="Tìm kiếm âm thanh SFX (whoosh, hit, risers...)..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                  />
+                </div>
+
+                {/* Inline Discovery Block for SFX */}
+                {renderRegistryDiscoveryBlock('sfx', sfxSearch)}
+
                 {/* SFX Category Filters */}
                 <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
                   {[
@@ -3239,7 +3408,7 @@ export const CategoryPanel: React.FC = () => {
                 {/* SFX Grid */}
                 <div className="flex flex-col gap-1.5">
                   {SFX_CATALOG
-                    .filter((s) => sfxCategory === 'all' || s.category === sfxCategory)
+                    .filter((s) => (sfxCategory === 'all' || s.category === sfxCategory) && (!sfxSearch.trim() || s.name.toLowerCase().includes(sfxSearch.toLowerCase())))
                     .map((sfx) => (
                       <div
                         key={sfx.type}
@@ -3643,6 +3812,9 @@ export const CategoryPanel: React.FC = () => {
                   className="w-full bg-[#262626] border border-[#333333] focus:border-[#1FC8DB] rounded-md px-3 py-1.5 text-xs text-white outline-none mb-1"
                 />
 
+                {/* Inline Discovery Block for Text Presets */}
+                {renderRegistryDiscoveryBlock('textPreset', textSearch)}
+
                 <div className="grid grid-cols-2 gap-2 max-h-[460px] overflow-y-auto">
                   {[
                     { id: 'hormozi', name: 'Alex Hormozi Title', sample: 'TIỀN VỀ ĐẦY TÚI 💸', desc: 'Vàng viền đen đậm', color: 'text-amber-300', border: 'border-amber-500/40' },
@@ -3942,6 +4114,21 @@ export const CategoryPanel: React.FC = () => {
         {/* 4. STICKERS TAB */}
         {activeTab === 'Stickers' && (
           <div className="flex flex-col gap-3">
+            {/* Search Input for Stickers */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+              <input
+                type="text"
+                value={stickerSearch}
+                onChange={(e) => setStickerSearch(e.target.value)}
+                placeholder="Tìm nhãn dán, sticker, Lottie, SVG..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+              />
+            </div>
+
+            {/* Inline Discovery Block for Stickers */}
+            {renderRegistryDiscoveryBlock('sticker', stickerSearch)}
+
             {/* Sticker Sub-navigation Pills */}
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1 border-b border-[#333333]">
               {[
@@ -4226,6 +4413,18 @@ export const CategoryPanel: React.FC = () => {
         {/* 5. EFFECTS TAB */}
         {activeTab === 'Effects' && (
           <div className="flex flex-col gap-3">
+            {/* Search Input for Effects */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+              <input
+                type="text"
+                value={effectSearchQuery}
+                onChange={(e) => setEffectSearchQuery(e.target.value)}
+                placeholder="Tìm hiệu ứng (VD: rung, glitch, mờ, hạt phim)..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+              />
+            </div>
+
             {/* Interactive Effect Parameter Controls */}
             <div className="p-2.5 rounded-md bg-[#262626] border border-[#333333] flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -4345,6 +4544,9 @@ export const CategoryPanel: React.FC = () => {
               })}
             </div>
 
+            {/* Inline Discovery Block when searching or exploring */}
+            {renderRegistryDiscoveryBlock('effect', effectSearchQuery)}
+
             {/* Procedural Particles Confetti */}
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button
@@ -4414,6 +4616,18 @@ export const CategoryPanel: React.FC = () => {
         {/* 6. TRANSITIONS TAB */}
         {activeTab === 'Transitions' && (
           <div className="flex flex-col gap-3">
+            {/* Search Input for Transitions */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+              <input
+                type="text"
+                value={transitionSearchQuery}
+                onChange={(e) => setTransitionSearchQuery(e.target.value)}
+                placeholder="Tìm chuyển cảnh (VD: zoom, glitch, swipe)..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+              />
+            </div>
+
             {/* Transition Controls Bar */}
             <div className="p-2.5 rounded-md bg-[#262626] border border-[#333333] flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -4503,6 +4717,9 @@ export const CategoryPanel: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Inline Discovery Block for Transitions */}
+            {renderRegistryDiscoveryBlock('transition', transitionSearchQuery)}
           </div>
         )}
 
@@ -4835,6 +5052,21 @@ export const CategoryPanel: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {/* Search Input for Filters */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+              <input
+                type="text"
+                value={filterSearchQuery}
+                onChange={(e) => setFilterSearchQuery(e.target.value)}
+                placeholder="Tìm bộ lọc / LUT 3D (VD: teal, vintage, noir)..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+              />
+            </div>
+
+            {/* Inline Discovery Block for Filters & LUTs */}
+            {renderRegistryDiscoveryBlock('filter', filterSearchQuery)}
 
             {/* 7 Category Filter Pills */}
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
@@ -5300,6 +5532,21 @@ export const CategoryPanel: React.FC = () => {
               </div>
             </div>
 
+            {/* Search Input for Templates */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+              <input
+                type="text"
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+                placeholder="Tìm mẫu template (TikTok, Vlog, Sales, Hook)..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+              />
+            </div>
+
+            {/* Inline Discovery Block for Templates */}
+            {renderRegistryDiscoveryBlock('template', templateSearch)}
+
             {/* Category Filter Pills */}
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
               {[
@@ -5329,7 +5576,7 @@ export const CategoryPanel: React.FC = () => {
             {/* Templates Grid (16 Rich Multi-Track Templates) */}
             <div className="grid grid-cols-2 gap-2.5 max-h-[500px] overflow-y-auto pr-0.5">
               {templatesList
-                .filter((t) => templateCategory === 'all' || t.cat === templateCategory)
+                .filter((t) => (templateCategory === 'all' || t.cat === templateCategory) && (!templateSearch.trim() || t.title.toLowerCase().includes(templateSearch.toLowerCase()) || t.name.toLowerCase().includes(templateSearch.toLowerCase()) || t.desc.toLowerCase().includes(templateSearch.toLowerCase())))
                 .map((tmpl) => (
                   <div
                     key={tmpl.id}

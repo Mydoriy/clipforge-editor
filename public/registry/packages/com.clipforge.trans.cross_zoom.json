@@ -1,0 +1,47 @@
+{
+  "id": "com.clipforge.trans.cross_zoom",
+  "version": "1.0.0",
+  "name": "Thu phóng chuyển tiếp (Cross Zoom)",
+  "description": "Chuyển cảnh phóng to mượt mà kết hợp hòa trộn khung hình hiện đại",
+  "kind": "transition",
+  "trustLevel": "official",
+  "license": "In-House",
+  "hash": "6a6fddad9af2ff8d229fa3504dc7dc02d5521c829c97c7aa1dd9e4a03f496891",
+  "sizeBytes": 915,
+  "createdAt": "2026-11-08T06:31:52.366Z",
+  "spec": {
+    "id": "com.clipforge.trans.cross_zoom",
+    "version": "1.0.0",
+    "name": "Thu phóng chuyển tiếp (Cross Zoom)",
+    "kind": "transition",
+    "description": "Chuyển cảnh phóng to mượt mà kết hợp hòa trộn khung hình hiện đại",
+    "author": "ClipForge Studio",
+    "license": "In-House",
+    "trustLevel": "official",
+    "tags": [
+      "transition",
+      "zoom",
+      "crossfade",
+      "smooth"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_progress;\n\nvoid main() {\n  vec2 center = vec2(0.5);\n  float zoom = 1.0 + u_progress * 0.4;\n  vec2 uv = (v_uv - center) / zoom + center;\n  vec4 color = texture(u_image, uv);\n  fragColor = color * (1.0 - u_progress * 0.15);\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    },
+    "canvasFallback": {
+      "fn": "cross_zoom",
+      "params": {
+        "maxZoom": 1.4
+      }
+    }
+  }
+}

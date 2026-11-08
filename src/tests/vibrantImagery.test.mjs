@@ -61,3 +61,4 @@ test('Vibrant Imagery: Homepage cards and hero banner include high-quality, cont
   assert.ok(content.includes('Viral Ads'), 'Must feature Viral Ads badge');
   assert.ok(content.includes('Auto Shorts'), 'Must feature Auto Shorts badge');
 });
+

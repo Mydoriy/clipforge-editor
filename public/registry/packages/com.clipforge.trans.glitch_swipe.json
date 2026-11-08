@@ -1,0 +1,47 @@
+{
+  "id": "com.clipforge.trans.glitch_swipe",
+  "version": "1.0.0",
+  "name": "Lướt Glitch (Glitch Swipe)",
+  "description": "Chuyển cảnh giật tín hiệu kỹ thuật số kèm vuốt ngang thời thượng",
+  "kind": "transition",
+  "trustLevel": "community",
+  "license": "MIT",
+  "hash": "13fdebfd6a0a3e4462dde6dcd6a03cc46d9646da804b975630a04e0f44ccb2e3",
+  "sizeBytes": 888,
+  "createdAt": "2026-11-08T06:31:52.366Z",
+  "spec": {
+    "id": "com.clipforge.trans.glitch_swipe",
+    "version": "1.0.0",
+    "name": "Lướt Glitch (Glitch Swipe)",
+    "kind": "transition",
+    "description": "Chuyển cảnh giật tín hiệu kỹ thuật số kèm vuốt ngang thời thượng",
+    "author": "PixelForge Labs",
+    "license": "MIT",
+    "trustLevel": "community",
+    "tags": [
+      "transition",
+      "glitch",
+      "swipe",
+      "cyber"
+    ],
+    "shader": {
+      "glslVersion": "300 es",
+      "fragmentShader": "#version 300 es\nprecision highp float;\nin vec2 v_uv;\nout vec4 fragColor;\nuniform sampler2D u_image;\nuniform float u_progress;\n\nvoid main() {\n  vec2 uv = v_uv;\n  float slice = step(0.5, fract(uv.y * 14.0));\n  float offset = (slice - 0.5) * 0.07 * sin(u_progress * 3.14159);\n  uv.x += offset;\n  fragColor = texture(u_image, uv);\n}",
+      "uniforms": {
+        "u_progress": {
+          "type": "float",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "label": "Tiến độ"
+        }
+      }
+    },
+    "canvasFallback": {
+      "fn": "glitch",
+      "params": {
+        "displacement": 12
+      }
+    }
+  }
+}

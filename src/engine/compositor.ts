@@ -1,5 +1,6 @@
 import type { TimelineClip } from '../store/useEditorStore';
 import { FILTER_PRESETS } from '../utils/lutParser.ts';
+import { renderDynamicEffect, renderGhostPlaceholder } from './dynamicEffectEngine.ts';
 
 export interface RenderOptions {
   isExport?: boolean;
@@ -411,6 +412,35 @@ export class FrameCompositor {
     const speed = clip.effectSpeed ?? 1.0;
 
     ctx.save();
+
+    // GHOST REFERENCE CHECK (Missing asset placeholder)
+    if ((clip as any).ghostRef || (clip as any).isGhostPlaceholder) {
+      const ghost = (clip as any).ghostRef || {
+        originalId: (clip as any).dynamicEffectId || clip.name || clip.id,
+        originalVersion: (clip as any).dynamicEffectVersion || '1.0.0',
+        kind: 'effect',
+        missing: true,
+      };
+      renderGhostPlaceholder(ctx, ghost, w, h, scaleFactor);
+      ctx.restore();
+      return;
+    }
+
+    // DYNAMIC EFFECT SPEC RENDERER (Declarative WebGL2 & Canvas)
+    if ((clip as any).dynamicSpec) {
+      renderDynamicEffect(
+        ctx,
+        (clip as any).dynamicSpec,
+        currentTime,
+        w,
+        h,
+        intensity,
+        speed,
+        scaleFactor
+      );
+      ctx.restore();
+      return;
+    }
 
     if (effType.includes('blur')) {
       // Soft dreamy blur overlay

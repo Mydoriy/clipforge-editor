@@ -63,12 +63,27 @@ export interface OperationLogEntity {
   snapshotData?: any;
 }
 
+export interface InstalledAssetEntity {
+  id: string; // package ID (e.g. "com.clipforge.fx.rgb_shake")
+  version: string;
+  name: string;
+  kind: string;
+  trustLevel: string;
+  license: string;
+  spec: any;
+  installedAt: number;
+  updatedAt: number;
+  sizeBytes: number;
+  hash: string;
+}
+
 class ClipForgeDatabase extends Dexie {
   projects!: EntityTable<ProjectEntity, 'id'>;
   media!: EntityTable<MediaEntity, 'id'>;
   trash!: EntityTable<TrashEntity, 'id'>;
   snapshots!: EntityTable<SnapshotEntity, 'id'>;
   operationsLog!: EntityTable<OperationLogEntity, 'id'>;
+  installedAssets!: EntityTable<InstalledAssetEntity, 'id'>;
 
   constructor() {
     super('ClipForgeDB');
@@ -99,6 +114,16 @@ class ClipForgeDatabase extends Dexie {
             if (!proj.height) proj.height = 1920;
             if (!proj.fps) proj.fps = 30;
           });
+      });
+
+    this.version(3)
+      .stores({
+        projects: 'id, title, isDeleted, updatedAt, createdAt',
+        media: 'id, projectId, type, createdAt',
+        trash: 'id, projectId, deletedAt',
+        snapshots: 'id, projectId, timestamp',
+        operationsLog: 'id, projectId, timestamp',
+        installedAssets: 'id, kind, trustLevel, name, version, updatedAt'
       });
   }
 }
