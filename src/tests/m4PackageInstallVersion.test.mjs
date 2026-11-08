@@ -256,3 +256,4 @@ test('M4.6 - .capproj Packaging: Embeds Redistributable Specs, References Non-Re
   assert.equal(depCheck.missingAssets[0].id, 'com.clipforge.fx.proprietary_lut');
   assert.equal(depCheck.missingAssets[0].requiresDownload, true);
 });
+

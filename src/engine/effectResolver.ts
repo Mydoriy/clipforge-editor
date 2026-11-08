@@ -13,6 +13,10 @@
 
 import type { EffectItemKind, EffectPack, EffectSpecItem, EffectGraph } from '../types/effectPack.ts';
 import { getNamespacedItemId, parseNamespacedItemId } from '../types/effectPack.ts';
+import {
+  synthesizeGraphFromQuery,
+  synthesizeFromReferenceFrames,
+} from './localCompositeSynthesizer.ts';
 
 export type ResolveTier = 1 | 2 | 3 | 4 | 5 | 0;
 
@@ -353,73 +357,50 @@ function matchRegistryIndex(
 /**
  * Tier 4: Local Composite synthesis from Primitive Core Effects (M5)
  */
-function synthesizeLocalComposite(req: ResolveRequest): ResolveResult | null {
-  const query = normalizeText(req.query || req.specId || '');
+async function synthesizeLocalComposite(req: ResolveRequest): Promise<ResolveResult | null> {
+  // A. If valid pixel reference frames are provided from analyzer, attempt Analysis-by-Synthesis
+  const hasPixelFrames =
+    req.referenceFrames &&
+    req.referenceFrames.length > 0 &&
+    (req.referenceFrames[0] instanceof Uint8Array ||
+      req.referenceFrames[0] instanceof Uint8ClampedArray ||
+      (Array.isArray(req.referenceFrames[0]) && req.referenceFrames[0].length >= 100));
 
-  // Example composite synthesis for Glitch/Shake/Distortion
-  if (req.context.kind === 'effect' && (query.includes('glitch') || query.includes('rung') || query.includes('shake') || query.includes('rgb'))) {
-    const compositeItem: EffectSpecItem = {
-      id: 'local.composite.glitch-shake',
-      kind: 'effect',
-      paramSchema: {
-        intensity: { type: 'number', default: 1.0, min: 0.1, max: 2.0 },
-      },
-      graph: {
-        nodes: [
-          { id: 'node_rgb_split', ref: 'core.primitive.rgb_split', params: { shift: '8.0 * uParams.x' } },
-          { id: 'node_shake', ref: 'core.primitive.camera_shake', params: { speed: '1.5' } },
-        ],
-        edges: [{ from: 'node_rgb_split', to: 'node_shake' }],
-      },
-      tags: ['composite', 'glitch', 'shake', 'fallback'],
-      aliases: { vi: ['ghép rung nhiễu'], en: ['composite glitch shake'] },
-      preview: { thumb: 'data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoIAAUAAkA4JaQAA3AA/vuUAAA=' },
-      cost: { samplesPerPixel: 2, passes: 1 },
-      since: '1.0.0',
-    };
-
-    return {
-      tier: 4,
-      status: 'local_composite',
-      action: 'apply_composite',
-      matchLevel: 'approximate',
-      trustLevel: 'local_fallback',
-      score: 0.55,
-      item: compositeItem,
-      graph: compositeItem.graph,
-      reason: 'Không tìm thấy trong kho; tự động ghép hiệu ứng cục bộ từ các khối cơ bản (RGB Split + Shake).',
-    };
+  if (hasPixelFrames) {
+    const analysisRes = await synthesizeFromReferenceFrames({
+      referenceFrames: req.referenceFrames as any,
+      maxTimeMs: 1500, // microsecond evaluation budget
+      targetKind: req.context.kind,
+    });
+    if (analysisRes.success && analysisRes.spec) {
+      return {
+        tier: 4,
+        status: 'local_composite',
+        action: 'apply_composite',
+        matchLevel: analysisRes.fidelity as any,
+        trustLevel: analysisRes.trustLevel,
+        score: analysisRes.score,
+        item: analysisRes.spec,
+        graph: analysisRes.graph,
+        reason: analysisRes.reason,
+      };
+    }
   }
 
-  // Example composite synthesis for Blur/Fade transition
-  if (req.context.kind === 'transition') {
-    const transitionComposite: EffectSpecItem = {
-      id: 'local.composite.cross-dissolve',
-      kind: 'transition',
-      paramSchema: {
-        progress: { type: 'number', default: 0.0, min: 0.0, max: 1.0 },
-      },
-      graph: {
-        nodes: [{ id: 'n_dissolve', ref: 'core.primitive.dissolve', params: {} }],
-        edges: [],
-      },
-      tags: ['composite', 'transition', 'dissolve'],
-      aliases: { vi: ['chuyển cảnh hòa trộn'], en: ['cross dissolve'] },
-      preview: { thumb: 'data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoIAAUAAkA4JaQAA3AA/vuUAAA=' },
-      cost: { samplesPerPixel: 2, passes: 1 },
-      since: '1.0.0',
-    };
-
+  // B. Deterministic rule-based synthesis from query keywords (No LLM, 100% offline)
+  const query = req.query || req.specId || '';
+  const synthesized = synthesizeGraphFromQuery(query, req.context.kind);
+  if (synthesized) {
     return {
       tier: 4,
       status: 'local_composite',
       action: 'apply_composite',
       matchLevel: 'approximate',
       trustLevel: 'local_fallback',
-      score: 0.5,
-      item: transitionComposite,
-      graph: transitionComposite.graph,
-      reason: 'Tự động tạo chuyển tiếp cục bộ từ mẫu cơ bản.',
+      score: 0.65,
+      item: synthesized,
+      graph: synthesized.graph,
+      reason: 'Không tìm thấy trong kho; tự động ghép hiệu ứng cục bộ tất định từ các khối cơ bản (Primitive Graph).',
     };
   }
 
@@ -472,7 +453,7 @@ export async function resolve(
   if (tier3) return tier3;
 
   // 4. Tier 4: Local Composite Synthesis (M5)
-  const tier4 = synthesizeLocalComposite(req);
+  const tier4 = await synthesizeLocalComposite(req);
   if (tier4) return tier4;
 
   // 5. Tier 5: AI Generation Option (M6)
