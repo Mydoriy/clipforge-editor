@@ -19,6 +19,7 @@ import {
   type LearnedTechniqueItem,
   type LearningLoopSessionResult,
   type GateThresholdConfig,
+  type FilmstripFrame,
   DEFAULT_GATE_THRESHOLDS,
   TechniqueHypothesisZod,
 } from '../types/learningLoop.ts';
@@ -112,13 +113,17 @@ export function measureVideoEvents(
 
       const filmstrip = windowFrames.map((f, idx) => {
         let maskedUrl = f.dataUrl || 'data:image/jpeg;base64,mock';
+        let maskedRgba: Uint8Array | undefined = undefined;
         if (f.rgba && maskWatermarks) {
-          applyWatermarkCornerMask(f.rgba, f.width || 320, f.height || 180);
+          maskedRgba = applyWatermarkCornerMask(f.rgba, f.width || 320, f.height || 180);
+        } else if (f.rgba) {
+          maskedRgba = new Uint8Array(f.rgba);
         }
         return {
           timestampSec: Number(f.timestampSec.toFixed(2)),
           dataUrl: maskedUrl,
           masked: maskWatermarks,
+          rgba: maskedRgba,
         };
       });
 
@@ -161,6 +166,11 @@ export function measureVideoEvents(
         timestampSec: f.timestampSec,
         dataUrl: f.dataUrl || 'data:image/jpeg;base64,mock',
         masked: maskWatermarks,
+        rgba: f.rgba
+          ? maskWatermarks
+            ? applyWatermarkCornerMask(f.rgba, f.width || 320, f.height || 180)
+            : new Uint8Array(f.rgba)
+          : undefined,
       })),
     });
   }
@@ -224,6 +234,26 @@ export function sanitizeHypothesisPrimitives(
   return { sanitized: updatedHypothesis, unmappedIds };
 }
 
+export const INTERPRET_SYSTEM_PROMPT_VERSION = 'v2.1-transition-learning';
+
+/**
+ * Builds the fixed, versioned system prompt with available primitive catalog
+ */
+export function buildInterpretSystemPrompt(evidence: TechnicalEvidencePack): string {
+  const primitiveCatalogJson = JSON.stringify(AVAILABLE_PRIMITIVES_SUMMARY, null, 2);
+  return `You are an expert video compositing analyzer operating under system prompt ${INTERPRET_SYSTEM_PROMPT_VERSION}.
+Your mission is to map the observed TechnicalEvidencePack to a TechniqueHypothesis composed EXCLUSIVELY of available primitives.
+
+CRITICAL INVARIANTS:
+1. You may ONLY select primitive IDs from this catalog:
+${primitiveCatalogJson}
+2. If the observed editing technique CANNOT be represented with available primitives, set:
+   needsNewPrimitive: { needed: true, description: "<explain in Vietnamese what missing shader/primitive is required>" }
+   NEVER INVENT OR HALLUCINATE fake primitive IDs!
+3. For transitions ('transition'), provide a graph with nodes connecting anchor clip A to clip B (e.g. translate, mask_wipe, blur.directional, flash_exposure).
+4. Output strict JSON matching TechniqueHypothesis schema.`;
+}
+
 /**
  * INTERPRET: Sends EvidencePack + Primitive Catalog to AI and returns TechniqueHypothesis
  */
@@ -243,15 +273,35 @@ export async function interpretEvidencePack(
 
   // Fallback to local heuristic interpretation if no LLM
   const isTransition = evidence.type === 'transition';
-  const defaultNodes = isTransition
-    ? [
+  let defaultNodes: Array<{ primitiveId: string; params: Record<string, any> }> = [];
+
+  if (isTransition) {
+    if (evidence.metrics.flashIntensity && evidence.metrics.flashIntensity > 0.8) {
+      defaultNodes = [
+        { primitiveId: 'core.primitive.flash_exposure', params: { intensity: 1.6 } },
+        { primitiveId: 'core.primitive.translate', params: { offsetX: 0.5, offsetY: 0.0 } },
+      ];
+    } else if (evidence.metrics.shakeFrequency && evidence.metrics.shakeFrequency > 10) {
+      defaultNodes = [
+        { primitiveId: 'core.primitive.translate', params: { offsetX: 0.5, offsetY: 0.0 } },
+        { primitiveId: 'core.primitive.blur.directional', params: { angle: 0, length: 24 } },
+      ];
+    } else if (evidence.metrics.lumaDelta > 0.35) {
+      defaultNodes = [
+        { primitiveId: 'core.primitive.mask_wipe', params: { feather: 0.1 } },
+      ];
+    } else {
+      defaultNodes = [
         { primitiveId: 'core.primitive.translate', params: { offsetX: 0.5, offsetY: 0.0 } },
         { primitiveId: 'core.primitive.blur.directional', params: { angle: 0, length: 18 } },
-      ]
-    : [
-        { primitiveId: 'core.primitive.color_matrix', params: { saturation: 1.15, contrast: 1.1 } },
-        { primitiveId: 'core.primitive.grain', params: { intensity: 0.12 } },
       ];
+    }
+  } else {
+    defaultNodes = [
+      { primitiveId: 'core.primitive.color_matrix', params: { saturation: 1.15, contrast: 1.1 } },
+      { primitiveId: 'core.primitive.grain', params: { intensity: 0.12 } },
+    ];
+  }
 
   const hypothesis: TechniqueHypothesis = {
     segmentId: evidence.eventId,
@@ -263,7 +313,7 @@ export async function interpretEvidencePack(
     description: `Trích xuất kỹ thuật dựa trên biến thiên luma ${evidence.metrics.lumaDelta}`,
     graph: {
       nodes: defaultNodes,
-      edges: [{ from: defaultNodes[0].primitiveId, to: defaultNodes[1].primitiveId }],
+      edges: defaultNodes.length > 1 ? [{ from: defaultNodes[0].primitiveId, to: defaultNodes[1].primitiveId }] : [],
     },
     curves: {
       keyframes: [
@@ -289,7 +339,113 @@ export async function interpretEvidencePack(
 // ============================================================================
 
 /**
- * Simulates rendering of a hypothesis graph on 90p luma for objective verification
+ * Extracts 90p luma buffer from a filmstrip frame (from rgba buffer or fallback)
+ */
+export function extractFrameLuma(frame?: FilmstripFrame, defaultVal: number = 128): Uint8Array {
+  const w = 160;
+  const h = 90;
+  const out = new Uint8Array(w * h);
+
+  if (frame?.rgba && frame.rgba.length >= w * h * 4) {
+    const rgba = frame.rgba;
+    for (let i = 0; i < w * h; i++) {
+      out[i] = Math.round(0.2126 * rgba[i * 4] + 0.7152 * rgba[i * 4 + 1] + 0.0722 * rgba[i * 4 + 2]);
+    }
+    return out;
+  }
+
+  return out.fill(defaultVal);
+}
+
+/**
+ * Simulates transition blending between anchor frame A and anchor frame B
+ */
+export function renderTransitionOnLuma(
+  lumaA: Uint8Array,
+  lumaB: Uint8Array,
+  hypothesis: TechniqueHypothesis,
+  progress: number
+): Uint8Array {
+  const w = 160;
+  const h = 90;
+  const out = new Uint8Array(w * h);
+
+  const wipeNode = hypothesis.graph.nodes.find((n) => n.primitiveId === 'core.primitive.mask_wipe');
+  const translateNode = hypothesis.graph.nodes.find((n) => n.primitiveId === 'core.primitive.translate');
+
+  // Base spatial / geometric blend
+  if (wipeNode) {
+    const feather = Number(wipeNode.params?.feather ?? 0.1);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const u = x / w;
+        const edge0 = progress - feather;
+        const edge1 = progress + feather;
+        const t = Math.max(0, Math.min(1, (u - edge0) / Math.max(0.001, edge1 - edge0)));
+        const edge = t * t * (3 - 2 * t);
+        const idx = y * w + x;
+        out[idx] = Math.round(lumaB[idx] * (1 - edge) + lumaA[idx] * edge);
+      }
+    }
+  } else if (translateNode) {
+    const offsetX = Number(translateNode.params?.offsetX ?? 1.0);
+    const shift = Math.round(offsetX * progress * w);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        if (x < w - shift) {
+          const srcX = x + shift;
+          out[idx] = lumaA[y * w + Math.min(w - 1, srcX)];
+        } else {
+          const srcX = x - (w - shift);
+          out[idx] = lumaB[y * w + Math.max(0, Math.min(w - 1, srcX))];
+        }
+      }
+    }
+  } else {
+    // Crossfade dissolve
+    for (let i = 0; i < out.length; i++) {
+      out[i] = Math.round(lumaA[i] * (1.0 - progress) + lumaB[i] * progress);
+    }
+  }
+
+  // Modulators: blur, flash exposure, color matrix
+  for (const node of hypothesis.graph.nodes) {
+    const id = node.primitiveId;
+    const params = node.params || {};
+
+    if (id.includes('blur')) {
+      const velocity = Math.sin(Math.PI * progress);
+      const rad = Math.round(Number(params.radius || params.length || 6) * velocity * 0.5);
+      if (rad > 0) {
+        for (let y = 0; y < h; y++) {
+          for (let x = rad; x < w - rad; x++) {
+            const idx = y * w + x;
+            out[idx] = Math.round((out[idx] + out[idx - rad] + out[idx + rad]) / 3);
+          }
+        }
+      }
+    } else if (id.includes('flash')) {
+      const peak = Math.max(0, 1.0 - 2.0 * Math.abs(progress - 0.5));
+      const intensity = Number(params.intensity ?? 1.5) * peak;
+      for (let i = 0; i < out.length; i++) {
+        out[i] = Math.min(255, Math.round(out[i] * (1.0 + intensity * 0.5)));
+      }
+    } else if (id.includes('color_matrix')) {
+      const contrast = Number(params.contrast || 1.0);
+      for (let i = 0; i < out.length; i++) {
+        let v = out[i];
+        v = Math.round((v - 128) * contrast + 128);
+        out[i] = Math.max(0, Math.min(255, v));
+      }
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Simulates rendering of a hypothesis graph on 90p luma for single-frame effects
  */
 function renderHypothesisOnLuma(
   srcLuma: Uint8Array,
@@ -342,7 +498,6 @@ export async function verifyHypothesisLocally(
   hypothesis: TechniqueHypothesis,
   evidence: TechnicalEvidencePack
 ): Promise<{ verifiedScore: number; ssimLuma: number; histDistance: number }> {
-  // Use first and last frames of the evidence filmstrip as reference anchors
   const frameCount = evidence.filmstrip.length;
   if (frameCount < 2) {
     return { verifiedScore: 0.5, ssimLuma: 0.5, histDistance: 0.5 };
@@ -350,16 +505,71 @@ export async function verifyHypothesisLocally(
 
   const w = 160;
   const h = 90;
-  const lumaA = new Uint8Array(w * h).fill(120);
-  const lumaB = new Uint8Array(w * h).fill(160);
 
-  // Measure reconstructed frame at mid-progress (0.5)
+  // 1. CHUYỂN CẢNH (Transitions): Evaluated across 5 progress checkpoints on anchor frames A & B
+  if (hypothesis.type === 'transition') {
+    const lumaA = extractFrameLuma(evidence.filmstrip[0], 110);
+    const lumaB = extractFrameLuma(evidence.filmstrip[frameCount - 1], 170);
+
+    const CHECKPOINTS = [0.0, 0.25, 0.5, 0.75, 1.0];
+    let sumScore = 0;
+    let sumSSIM = 0;
+    let sumHistDist = 0;
+
+    for (const p of CHECKPOINTS) {
+      const rendered = renderTransitionOnLuma(lumaA, lumaB, hypothesis, p);
+
+      const refIdx = Math.min(frameCount - 1, Math.round(p * (frameCount - 1)));
+      const refFrame = evidence.filmstrip[refIdx];
+      const targetLuma = extractFrameLuma(refFrame, Math.round(110 * (1 - p) + 170 * p));
+
+      const ssim = computeSSIM(rendered, targetLuma);
+
+      const rgbaRendered = new Uint8ClampedArray(w * h * 4);
+      const rgbaTarget = new Uint8ClampedArray(w * h * 4);
+      for (let i = 0; i < w * h; i++) {
+        const vR = rendered[i];
+        rgbaRendered[i * 4] = vR;
+        rgbaRendered[i * 4 + 1] = vR;
+        rgbaRendered[i * 4 + 2] = vR;
+        rgbaRendered[i * 4 + 3] = 255;
+
+        const vT = targetLuma[i];
+        rgbaTarget[i * 4] = vT;
+        rgbaTarget[i * 4 + 1] = vT;
+        rgbaTarget[i * 4 + 2] = vT;
+        rgbaTarget[i * 4 + 3] = 255;
+      }
+
+      const histA = computeRgbHistogram(rgbaRendered);
+      const histB = computeRgbHistogram(rgbaTarget);
+      const histDist = compareHistograms(histA, histB);
+
+      const checkpointScore = 0.6 * ssim + 0.4 * (1.0 - histDist);
+      sumScore += checkpointScore;
+      sumSSIM += ssim;
+      sumHistDist += histDist;
+    }
+
+    const n = CHECKPOINTS.length;
+    const verifiedScore = Number((sumScore / n).toFixed(3));
+    const ssimLuma = Number((sumSSIM / n).toFixed(3));
+    const histDistance = Number((sumHistDist / n).toFixed(3));
+
+    return {
+      verifiedScore: Math.max(0, Math.min(1.0, verifiedScore)),
+      ssimLuma: Math.max(0, Math.min(1.0, ssimLuma)),
+      histDistance: Math.max(0, Math.min(1.0, histDistance)),
+    };
+  }
+
+  // 2. Single-frame effects & looks
+  const lumaA = extractFrameLuma(evidence.filmstrip[0], 120);
+  const lumaB = extractFrameLuma(evidence.filmstrip[frameCount - 1], 160);
+
   const renderedMid = renderHypothesisOnLuma(lumaA, hypothesis, 0.5);
-
-  // Compute SSIM against target
   const ssimLuma = Number(computeSSIM(renderedMid, lumaB).toFixed(3));
 
-  // Compute histogram distance over RGBA frame
   const rgbaMid = new Uint8ClampedArray(w * h * 4);
   const rgbaTarget = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < w * h; i++) {
@@ -379,7 +589,6 @@ export async function verifyHypothesisLocally(
   const histB = computeRgbHistogram(rgbaTarget);
   const histDistance = Number(compareHistograms(histA, histB).toFixed(3));
 
-  // Objective combined score: 60% structural SSIM + 40% color fidelity
   const verifiedScore = Number((0.6 * ssimLuma + 0.4 * (1.0 - histDistance)).toFixed(3));
 
   return {

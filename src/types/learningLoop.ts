@@ -23,6 +23,7 @@ export interface FilmstripFrame {
   timestampSec: number;
   dataUrl: string; // 180p-360p downscaled, watermark masked
   masked: boolean;
+  rgba?: Uint8ClampedArray | Uint8Array | number[];
 }
 
 export interface TechnicalEvidencePack {
