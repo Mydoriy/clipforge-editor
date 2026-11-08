@@ -107,6 +107,63 @@ import {
 } from '../utils/subtitles';
 import { validateFontBuffer, sanitizeLottieJson, sanitizeSvg } from '../utils/sanitizer';
 
+/**
+ * Recursively extracts all files from a DataTransfer object, traversing dropped folders.
+ */
+async function extractFilesFromDataTransfer(dataTransfer: DataTransfer): Promise<File[]> {
+  const files: File[] = [];
+  const items = dataTransfer.items;
+
+  if (items && items.length > 0 && typeof (items[0] as any).webkitGetAsEntry === 'function') {
+    const queue: any[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const entry = (items[i] as any).webkitGetAsEntry();
+      if (entry) queue.push(entry);
+    }
+
+    const traverse = async (entry: any) => {
+      if (entry.isFile) {
+        try {
+          const file = await new Promise<File>((resolve, reject) => {
+            entry.file(resolve, reject);
+          });
+          files.push(file);
+        } catch (e) {
+          console.warn('Error reading file entry:', e);
+        }
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const readEntries = async (): Promise<any[]> => {
+          return new Promise((resolve, reject) => {
+            reader.readEntries(resolve, reject);
+          });
+        };
+        try {
+          let entries = await readEntries();
+          while (entries.length > 0) {
+            for (const child of entries) {
+              await traverse(child);
+            }
+            entries = await readEntries();
+          }
+        } catch (e) {
+          console.warn('Error reading directory entries:', e);
+        }
+      }
+    };
+
+    for (const entry of queue) {
+      await traverse(entry);
+    }
+  } else if (dataTransfer.files && dataTransfer.files.length > 0) {
+    for (let i = 0; i < dataTransfer.files.length; i++) {
+      files.push(dataTransfer.files[i]);
+    }
+  }
+
+  return files;
+}
+
 export const CategoryPanel: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -148,6 +205,7 @@ export const CategoryPanel: React.FC = () => {
     library: false
   });
   const mediaFileInputRef = useRef<HTMLInputElement>(null);
+  const folderFileInputRef = useRef<HTMLInputElement>(null);
 
   // Storage usage estimate for Spaces
   const [storageEstimate, setStorageEstimate] = useState<{ used: string; quota: string }>({ used: '0 MB', quota: '0 GB' });
@@ -1199,7 +1257,10 @@ export const CategoryPanel: React.FC = () => {
   };
 
   // File import handler (drag & drop and file input)
-  const processImportedFile = async (file: File) => {
+  const processImportedFile = async (
+    file: File,
+    options?: { silentToast?: boolean; skipTimelineAdd?: boolean }
+  ): Promise<boolean> => {
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     const validExts = ['mp4', 'mov', 'webm', 'mkv', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'mp3', 'wav', 'm4a', 'ogg'];
     const isVideo = file.type.startsWith('video') || ['mp4', 'mov', 'webm', 'mkv'].includes(ext);
@@ -1207,8 +1268,10 @@ export const CategoryPanel: React.FC = () => {
     const isImage = file.type.startsWith('image') || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
 
     if (!isVideo && !isAudio && !isImage && !validExts.includes(ext)) {
-      showToast(`Tệp "${file.name}" không được hỗ trợ. Định dạng hợp lệ: MP4, MOV, WEBM, MKV, JPG, PNG, WEBP, GIF, MP3, WAV, M4A, OGG`, 'warning');
-      return;
+      if (!options?.silentToast) {
+        showToast(`Tệp "${file.name}" không được hỗ trợ. Định dạng hợp lệ: MP4, MOV, WEBM, MKV, JPG, PNG, WEBP, GIF, MP3, WAV, M4A, OGG`, 'warning');
+      }
+      return false;
     }
 
     try {
@@ -1244,68 +1307,136 @@ export const CategoryPanel: React.FC = () => {
       if (!saveRes.success) {
         if (saveRes.error === 'QUOTA_EXCEEDED') {
           showToast(t.errStorageQuota, 'error');
-          return;
+          return false;
         }
         showToast('Lỗi lưu trữ: ' + saveRes.error, 'error');
-        return;
+        return false;
       }
 
       // Extract cached thumbnail & waveform
       const meta = await generateMediaMetadata(file, fileUrl);
 
-      // Add to timeline
-      addClip({
-        track: isAudio ? 'audio' : 'video',
-        name: file.name,
-        start: currentTime,
-        duration: isAudio ? 12 : isImage ? 5 : 8,
-        type: mediaType,
-        src: fileUrl,
-        thumbnailUrl: meta.thumbnailUrl,
-        waveformPeaks: meta.waveformPeaks
-      });
+      // Add to timeline if requested
+      if (!options?.skipTimelineAdd) {
+        addClip({
+          track: isAudio ? 'audio' : 'video',
+          name: file.name,
+          start: currentTime,
+          duration: isAudio ? 12 : isImage ? 5 : 8,
+          type: mediaType,
+          src: fileUrl,
+          thumbnailUrl: meta.thumbnailUrl,
+          waveformPeaks: meta.waveformPeaks
+        });
+      }
 
-      await loadMedia();
-      showToast(`Đã import và lưu IndexedDB: ${file.name}`, 'success');
+      if (!options?.silentToast) {
+        await loadMedia();
+        showToast(`Đã import và lưu IndexedDB: ${file.name}`, 'success');
+      }
+      return true;
     } catch (err: any) {
       if (err.name === 'QuotaExceededError' || err.code === 22) {
         showToast(t.errStorageQuota, 'error');
       } else {
         showToast('Lỗi khi lưu file: ' + err.message, 'error');
       }
+      return false;
     }
   };
 
-  // From Folder: showDirectoryPicker
-  const handleImportFolder = async () => {
-    if (!('showDirectoryPicker' in window)) {
-      showToast('Trình duyệt hiện tại chưa hỗ trợ showDirectoryPicker. Vui lòng dùng "From device" hoặc Google Chrome/Edge!', 'warning');
+  // Batch import for multiple files or dropped folders
+  const importFilesBatch = async (files: File[], isFolder: boolean = false) => {
+    const validExts = ['mp4', 'mov', 'webm', 'mkv', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'mp3', 'wav', 'm4a', 'ogg'];
+    const validFiles = files.filter((f) => {
+      const ext = f.name.split('.').pop()?.toLowerCase() || '';
+      return (
+        f.type.startsWith('video') ||
+        f.type.startsWith('audio') ||
+        f.type.startsWith('image') ||
+        validExts.includes(ext)
+      );
+    });
+
+    if (validFiles.length === 0) {
+      showToast('Không tìm thấy tệp video, ảnh hoặc âm thanh hợp lệ trong lựa chọn', 'warning');
       return;
     }
-    try {
-      const dirHandle = await (window as any).showDirectoryPicker();
-      let count = 0;
-      for await (const entry of (dirHandle as any).values()) {
-        if (entry.kind === 'file') {
-          const file = await entry.getFile();
-          const ext = file.name.split('.').pop()?.toLowerCase() || '';
-          const validExts = ['mp4', 'mov', 'webm', 'mkv', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'mp3', 'wav', 'm4a', 'ogg'];
-          if (validExts.includes(ext)) {
-            await processImportedFile(file);
-            count++;
-          }
-        }
-      }
-      if (count > 0) {
-        showToast(`Đã import thành công ${count} tệp từ thư mục!`, 'success');
+
+    const isBatch = validFiles.length > 1;
+    if (isBatch) {
+      showToast(`Đang xử lý và import ${validFiles.length} tệp${isFolder ? ' từ thư mục' : ''}...`, 'info');
+    }
+
+    let successCount = 0;
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      // Single file -> add to timeline; Batch -> save all to media library (keep timeline clean)
+      const ok = await processImportedFile(file, {
+        silentToast: isBatch,
+        skipTimelineAdd: isBatch
+      });
+      if (ok) successCount++;
+    }
+
+    await loadMedia();
+
+    if (isBatch) {
+      if (successCount > 0) {
+        showToast(`Đã import thành công ${successCount}/${validFiles.length} tệp${isFolder ? ' từ thư mục' : ''} vào Thư viện Media!`, 'success');
       } else {
-        showToast('Không tìm thấy tệp video, ảnh hoặc âm thanh hợp lệ trong thư mục này', 'info');
-      }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        showToast('Lỗi đọc thư mục: ' + err.message, 'error');
+        showToast('Không thể lưu các tệp vào IndexedDB', 'error');
       }
     }
+  };
+
+  // From Folder: showDirectoryPicker (recursive) + fallback to input webkitdirectory
+  const handleImportFolder = async () => {
+    if ('showDirectoryPicker' in window) {
+      try {
+        const dirHandle = await (window as any).showDirectoryPicker();
+        const collectedFiles: File[] = [];
+
+        const readDirRecursively = async (handle: any) => {
+          for await (const entry of handle.values()) {
+            if (entry.kind === 'file') {
+              try {
+                const file = await entry.getFile();
+                collectedFiles.push(file);
+              } catch (e) {
+                console.warn('Error reading file from folder:', e);
+              }
+            } else if (entry.kind === 'directory') {
+              await readDirRecursively(entry);
+            }
+          }
+        };
+
+        await readDirRecursively(dirHandle);
+
+        if (collectedFiles.length > 0) {
+          await importFilesBatch(collectedFiles, true);
+        } else {
+          showToast('Thư mục được chọn không chứa tệp media (video, ảnh, âm thanh) hợp lệ', 'info');
+        }
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          return; // Người dùng chủ động đóng hộp thoại
+        }
+        console.warn('showDirectoryPicker error, fallback to input:', err);
+      }
+    }
+
+    // Fallback: trigger input file with webkitdirectory
+    folderFileInputRef.current?.click();
+  };
+
+  const handleFolderFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await importFilesBatch(Array.from(files), true);
+    e.target.value = '';
   };
 
   // From URL: fetch blob
@@ -1695,9 +1826,7 @@ export const CategoryPanel: React.FC = () => {
   const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    for (let i = 0; i < files.length; i++) {
-      await processImportedFile(files[i]);
-    }
+    await importFilesBatch(Array.from(files), false);
     e.target.value = '';
   };
 
@@ -1713,11 +1842,13 @@ export const CategoryPanel: React.FC = () => {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        await processImportedFile(files[i]);
+    try {
+      const files = await extractFilesFromDataTransfer(e.dataTransfer);
+      if (files && files.length > 0) {
+        await importFilesBatch(files, true);
       }
+    } catch (err: any) {
+      showToast('Lỗi khi đọc tệp thả vào: ' + err.message, 'error');
     }
   };
 
@@ -2294,16 +2425,26 @@ export const CategoryPanel: React.FC = () => {
               onChange={handleFileInput}
               className="hidden"
             />
+            <input
+              ref={folderFileInputRef}
+              type="file"
+              // @ts-ignore
+              webkitdirectory=""
+              directory=""
+              multiple
+              onChange={handleFolderFileInput}
+              className="hidden"
+            />
 
             {/* VIEW 1: Media List & Upload Dropzone */}
             {(selectedMediaNav === 'media' || selectedMediaNav === 'yours_view' || selectedMediaNav === 'spaces_view') && (
               <div className="flex flex-col gap-3">
                 {/* Big Drag and drop zone */}
-                <label
+                <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center ${
+                  className={`border border-dashed rounded-lg p-5 flex flex-col items-center justify-center gap-2.5 transition-all text-center ${
                     isDraggingOver
                       ? 'border-[#1FC8DB] bg-[#1FC8DB]/10 shadow-lg'
                       : 'border-[#333333] hover:border-[#1FC8DB]/60 bg-[#262626]/40 hover:bg-[#262626]'
@@ -2314,13 +2455,34 @@ export const CategoryPanel: React.FC = () => {
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="font-bold text-sm text-[#E6E6E6]">
-                      Import — Drag and drop videos, photos, and audio files here
+                      Import — Kéo thả tệp hoặc Thư mục (Folder) vào đây
                     </span>
                     <span className="text-[11px] text-[#8A8A8A]">
-                      Hỗ trợ MP4, MOV, WEBM, MKV, JPG, PNG, WEBP, GIF, MP3, WAV, M4A, OGG
+                      Hỗ trợ kéo thả cả thư mục (tự động duyệt thư mục con) hoặc các tệp MP4, MOV, WEBM, MKV, JPG, PNG, MP3, WAV
                     </span>
                   </div>
-                </label>
+
+                  {/* Direct action buttons right on the dropzone */}
+                  <div className="flex items-center gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => mediaFileInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-md bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Chọn tệp (Files)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleImportFolder}
+                      className="px-3 py-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#383838] border border-[#444444] text-[#E6E6E6] hover:text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Chọn thư mục (Folder)</span>
+                    </button>
+                  </div>
+                </div>
 
                 {/* Copyright Warning Notice */}
                 <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-[11px] leading-relaxed">

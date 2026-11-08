@@ -32,7 +32,10 @@ const PRECACHE_SHELL_URLS = [
  * Critical for FFmpeg.wasm SharedArrayBuffer and WebCodecs operation offline!
  */
 function withIsolationHeaders(response) {
-  if (!response || response.type === 'opaque') {
+  if (!response) {
+    return new Response('Not Found', { status: 404 });
+  }
+  if (response.type === 'opaque') {
     return response;
   }
   const headers = new Headers(response.headers);
@@ -182,7 +185,8 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_SHELL).then((cache) => cache.put(request, networkResponse.clone()));
+            const clone = networkResponse.clone();
+            caches.open(CACHE_SHELL).then((cache) => cache.put(request, clone)).catch(() => {});
           }
           return withIsolationHeaders(networkResponse);
         })
@@ -190,7 +194,8 @@ self.addEventListener('fetch', (event) => {
           const cached = await caches.match(request);
           if (cached) return withIsolationHeaders(cached);
           const cachedIndex = await caches.match('/index.html');
-          return withIsolationHeaders(cachedIndex);
+          if (cachedIndex) return withIsolationHeaders(cachedIndex);
+          return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
         })
     );
     return;
@@ -202,11 +207,12 @@ self.addEventListener('fetch', (event) => {
       const fetchPromise = fetch(request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_SHELL).then((cache) => cache.put(request, networkResponse.clone()));
+            const clone = networkResponse.clone();
+            caches.open(CACHE_SHELL).then((cache) => cache.put(request, clone)).catch(() => {});
           }
           return withIsolationHeaders(networkResponse);
         })
-        .catch(() => cachedResponse);
+        .catch(() => cachedResponse || new Response('Offline', { status: 503 }));
 
       return cachedResponse ? withIsolationHeaders(cachedResponse) : fetchPromise;
     })
