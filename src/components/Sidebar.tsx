@@ -255,6 +255,15 @@ export const Sidebar: React.FC = () => {
             <span>{t.navLibrary}</span>
           </NavLink>
 
+          <button
+            type="button"
+            onClick={() => openModal('extensionLibrary')}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift text-left w-full cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>{language === 'VN' ? 'Kho hiệu ứng mở rộng' : 'Extension Store'}</span>
+          </button>
+
           <NavLink
             to="/cloud-storage"
             className={({ isActive }) =>

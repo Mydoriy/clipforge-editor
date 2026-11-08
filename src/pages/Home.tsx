@@ -228,15 +228,25 @@ export const Home: React.FC = () => {
         </div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent pointer-events-none" />
 
-        <button
-          onClick={() => openModal('newProject')}
-          className="relative z-10 flex items-center gap-3 px-8 py-3.5 rounded-[14px] bg-[#0B0F19]/90 hover:bg-[#0B0F19] text-[#E5E7EB] hover:text-white font-bold text-sm shadow-2xl border border-cyan-400/30 hover:border-cyan-400 hover-lift active:scale-95 transition-all"
-        >
-          <div className="w-6 h-6 rounded-lg bg-[#22D3EE] text-slate-950 flex items-center justify-center font-black">
-            <Plus className="w-4 h-4 stroke-[3]" />
-          </div>
-          <span className="tracking-wide text-base">{t.heroCreateProject}</span>
-        </button>
+        <div className="relative z-10 flex items-center gap-3 flex-wrap justify-center">
+          <button
+            onClick={() => openModal('newProject')}
+            className="flex items-center gap-3 px-8 py-3.5 rounded-[14px] bg-[#0B0F19]/90 hover:bg-[#0B0F19] text-[#E5E7EB] hover:text-white font-bold text-sm shadow-2xl border border-cyan-400/30 hover:border-cyan-400 hover-lift active:scale-95 transition-all"
+          >
+            <div className="w-6 h-6 rounded-lg bg-[#22D3EE] text-slate-950 flex items-center justify-center font-black">
+              <Plus className="w-4 h-4 stroke-[3]" />
+            </div>
+            <span className="tracking-wide text-base">{t.heroCreateProject}</span>
+          </button>
+
+          <button
+            onClick={() => openModal('extensionLibrary')}
+            className="flex items-center gap-2.5 px-5 py-3.5 rounded-[14px] bg-[#111827]/80 hover:bg-[#111827] text-cyan-300 hover:text-cyan-200 font-bold text-sm shadow-xl border border-cyan-500/30 hover:border-cyan-400/60 hover-lift active:scale-95 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>{language === 'VN' ? 'Kho hiệu ứng mở rộng' : 'Extension Store'}</span>
+          </button>
+        </div>
       </div>
 
       {/* 2. EDITPILOT & 4 QUICK CARDS */}

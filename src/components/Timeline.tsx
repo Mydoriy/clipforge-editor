@@ -2154,6 +2154,17 @@ export const Timeline: React.FC = () => {
                             </button>
                           )}
 
+                          {/* Ghost Reference Warning Badge */}
+                          {Boolean((clip as any).ghostRef || (clip as any).isGhostPlaceholder) && (
+                            <span
+                              className="bg-amber-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded mr-1 z-30 flex items-center gap-0.5 shadow-sm border border-amber-300 animate-pulse shrink-0 cursor-help"
+                              title={`Tài nguyên giữ chỗ (Ghost): ${(clip as any).ghostRef?.originalId || clip.name || 'Thiếu hiệu ứng'}`}
+                            >
+                              <AlertTriangle className="w-2.5 h-2.5 text-slate-950" />
+                              <span>GHOST</span>
+                            </span>
+                          )}
+
                           {/* Reverse Indicator */}
                           {clip.reverse && (
                             <span className="bg-amber-500/80 text-black text-[8px] font-bold px-1 rounded mr-1 z-10 flex items-center gap-0.5">

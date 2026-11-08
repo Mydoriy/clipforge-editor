@@ -22,6 +22,7 @@ import { createDefaultTimeline } from '../types/project';
 import confetti from 'canvas-confetti';
 import {
   FolderOpen,
+  Globe,
   Music,
   Type,
   Smile,
@@ -516,7 +517,8 @@ export const CategoryPanel: React.FC = () => {
     { id: 'Captions', label: t.tabCaptions, icon: Subtitles },
     { id: 'Filters', label: t.tabFilters, icon: SlidersHorizontal },
     { id: 'Adjustment', label: t.tabAdjustment || (language === 'VN' ? 'Điều chỉnh' : 'Adjustment'), icon: Sliders },
-    { id: 'Templates', label: t.tabTemplates || (language === 'VN' ? 'Mẫu' : 'Templates'), icon: LayoutTemplate }
+    { id: 'Templates', label: t.tabTemplates || (language === 'VN' ? 'Mẫu' : 'Templates'), icon: LayoutTemplate },
+    { id: 'ExtensionLibrary', label: t.tabExtensionLibrary || (language === 'VN' ? 'Kho hiệu ứng' : 'Store'), icon: Globe }
   ];
 
   // Tab scroll check
@@ -6058,6 +6060,64 @@ export const CategoryPanel: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 11. EXTENSION LIBRARY TAB (M9) */}
+      {activeTab === 'ExtensionLibrary' && (
+        <div className="flex flex-col gap-3 pb-6">
+          <div className="flex items-center justify-between pb-2 border-b border-[#333333]">
+            <div>
+              <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-[#1FC8DB]" />
+                {language === 'VN' ? 'Kho Hiệu Ứng Mở Rộng' : 'Extension Store'}
+              </span>
+              <p className="text-[10px] text-[#8A8A8A]">
+                Tự động tìm kiếm, cài đặt và mở rộng tài nguyên không cần reload
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openModal('extensionLibrary')}
+              className="px-2.5 py-1 bg-[#1FC8DB]/20 hover:bg-[#1FC8DB]/30 text-[#1FC8DB] border border-[#1FC8DB]/40 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+              title="Mở toàn màn hình"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Mở kho &gt;</span>
+            </button>
+          </div>
+
+          {/* Quick Categories Banner */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => openModal('extensionLibrary')}
+              className="p-2.5 rounded-lg bg-[#262626] hover:bg-[#2E2E2E] border border-[#333333] flex flex-col items-start gap-1 text-left transition-colors cursor-pointer"
+            >
+              <span className="text-xs font-bold text-white flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                Khám phá
+              </span>
+              <span className="text-[10px] text-[#8A8A8A]">Duyệt kho shader, LUT, SFX</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openModal('extensionLibrary')}
+              className="p-2.5 rounded-lg bg-[#262626] hover:bg-[#2E2E2E] border border-[#333333] flex flex-col items-start gap-1 text-left transition-colors cursor-pointer"
+            >
+              <span className="text-xs font-bold text-white flex items-center gap-1">
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                Đã cài đặt
+              </span>
+              <span className="text-[10px] text-[#8A8A8A]">Quản lý và gỡ tài nguyên máy</span>
+            </button>
+          </div>
+
+          {/* Full Inline Packages List */}
+          {renderRegistryDiscoveryBlock('effect', '')}
+          {renderRegistryDiscoveryBlock('transition', '')}
+          {renderRegistryDiscoveryBlock('filter', '')}
+          {renderRegistryDiscoveryBlock('sfx', '')}
         </div>
       )}
 

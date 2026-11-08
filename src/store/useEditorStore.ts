@@ -32,7 +32,7 @@ export interface AppNotification {
   desc: string;
   time: string;
   read: boolean;
-  type: 'feature' | 'tip' | 'export';
+  type: 'feature' | 'tip' | 'export' | 'update' | 'revocation' | 'install';
 }
 
 export interface AppSettings {

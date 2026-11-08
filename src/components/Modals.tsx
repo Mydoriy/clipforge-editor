@@ -1481,6 +1481,18 @@ export const Modals: React.FC = () => {
     try {
       abortSignalRef.current = { aborted: false };
 
+      // Warning and confirmation if unresolved ghost references exist
+      const ghostClips = clips.filter((c: any) => c.ghostRef || c.isGhostPlaceholder);
+      if (ghostClips.length > 0) {
+        const proceed = await confirmDialog({
+          title: 'Cảnh báo hiệu ứng giữ chỗ (Ghost Reference)',
+          message: `Dự án hiện có ${ghostClips.length} hiệu ứng giữ chỗ chưa được giải quyết. Video xuất ra sẽ hiển thị placeholder cho các hiệu ứng này. Bạn có chắc chắn muốn tiếp tục xuất video không?`,
+          confirmText: 'Vẫn tiếp tục xuất',
+          cancelText: 'Hủy để xem lại',
+        });
+        if (!proceed) return;
+      }
+
       // Automatic pre-export snapshot backup
       if (currentProjectId && clips.length > 0) {
         const snapLabel = `Trước khi xuất (${exportAudioOnlyMode ? exportAudioFormat.toUpperCase() : exportRes.toUpperCase() + ' ' + exportFormat.toUpperCase()})`;
@@ -2068,6 +2080,32 @@ export const Modals: React.FC = () => {
                     Ước tính: ~{estFileSizeMb} MB
                   </div>
                 </div>
+
+                {/* Ghost Reference Warning Banner */}
+                {(() => {
+                  const ghostClips = clips.filter((c: any) => c.ghostRef || c.isGhostPlaceholder);
+                  if (ghostClips.length === 0) return null;
+                  return (
+                    <div className="p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl text-xs text-amber-300 flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="font-bold text-amber-200">
+                          Cảnh báo: Dự án còn {ghostClips.length} hiệu ứng giữ chỗ (Ghost Reference) chưa được giải quyết
+                        </div>
+                        <div className="text-[11px] text-amber-400/90 mt-0.5">
+                          Các hiệu ứng này chưa được cài đặt và sẽ hiển thị dưới dạng placeholder trong video xuất ra.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openModal('missingAssets')}
+                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[10px] shrink-0 transition-colors shadow-sm cursor-pointer"
+                      >
+                        Giải quyết ngay
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {/* 1. Tên file & Nơi lưu */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">

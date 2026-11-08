@@ -85,6 +85,8 @@ export const translations = {
     tabParticles: 'Hiệu ứng hạt',
     tabAiVoice: 'Giọng đọc AI',
     tabTemplates: 'Mẫu',
+    tabExtensionLibrary: 'Kho hiệu ứng',
+    effectStoreTitle: 'Kho hiệu ứng mở rộng',
     
     // Inspector & Timeline
     inspectorTitle: 'Chi tiết',
@@ -224,6 +226,8 @@ export const translations = {
     tabParticles: 'Particles',
     tabAiVoice: 'AI Voice',
     tabTemplates: 'Templates',
+    tabExtensionLibrary: 'Effect Store',
+    effectStoreTitle: 'Extension Effect Store',
     
     // Inspector & Timeline
     inspectorTitle: 'Details',

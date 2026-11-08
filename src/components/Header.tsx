@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { useEditorStore } from '../store/useEditorStore';
@@ -69,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     toggleSidebar,
     isPro,
     notifications,
+    addNotification,
     markAllNotificationsAsRead,
     autosaveStatus,
     setAutosaveStatus,
@@ -130,6 +131,61 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     }
     navigate('/');
   };
+
+  // M9: Reactive Extension Events to Notification Bell
+  useEffect(() => {
+    const handleInstalled = (e: any) => {
+      const pkg = e.detail?.pkg;
+      if (pkg) {
+        addNotification({
+          id: `notif-inst-${Date.now()}`,
+          title: `Đã cài đặt: ${pkg.name}`,
+          desc: `Gói "${pkg.name}" (v${pkg.version || '1.0.0'}) đã được cài đặt và sẵn sàng dùng offline.`,
+          time: 'Vừa xong',
+          read: false,
+          type: 'install',
+        });
+      }
+    };
+
+    const handleRevoked = (e: any) => {
+      const assets = e.detail?.revokedAssets || [];
+      for (const rev of assets) {
+        addNotification({
+          id: `notif-rev-${Date.now()}-${rev.id}`,
+          title: `⚠️ Thu hồi khẩn cấp: ${rev.name}`,
+          desc: `Gói "${rev.name}" đã bị thu hồi (${rev.revokeReason || 'Lỗi an toàn GPU'}). Timeline đã chuyển sang Ghost an toàn.`,
+          time: 'Vừa xong',
+          read: false,
+          type: 'revocation',
+        });
+      }
+    };
+
+    const handleUpdated = (e: any) => {
+      const info = e.detail;
+      if (info) {
+        addNotification({
+          id: `notif-upd-${Date.now()}`,
+          title: `Có bản cập nhật: ${info.name || 'Gói mở rộng'}`,
+          desc: `Đã có bản cập nhật mới v${info.version || ''}. Mở Kho tài nguyên để cập nhật.`,
+          time: 'Vừa xong',
+          read: false,
+          type: 'update',
+        });
+      }
+    };
+
+    window.addEventListener('clipforge_extension_installed', handleInstalled);
+    window.addEventListener('clipforge_extension_revoked', handleRevoked);
+    window.addEventListener('clipforge_extension_updated', handleUpdated);
+
+    return () => {
+      window.removeEventListener('clipforge_extension_installed', handleInstalled);
+      window.removeEventListener('clipforge_extension_revoked', handleRevoked);
+      window.removeEventListener('clipforge_extension_updated', handleUpdated);
+    };
+  }, [addNotification]);
 
   // Manual Save project to IndexedDB
   const handleManualSave = async () => {

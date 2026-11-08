@@ -7,7 +7,6 @@ import {
   Check,
   ShieldCheck,
   Globe,
-  FileCode,
   Sparkles,
   Trash2,
   RefreshCw,
@@ -19,6 +18,13 @@ import {
   Settings,
   ShieldAlert,
   Cpu,
+  Eye,
+  CheckCircle2,
+  HardDrive,
+  Info,
+  Radio,
+  FileCode,
+  AlertCircle,
 } from 'lucide-react';
 import { useEditorStore } from '../store/useEditorStore';
 import {
@@ -51,28 +57,57 @@ import {
   compareEffectVersions,
   getInstalledAssets,
   DEFAULT_REGISTRY_URL,
+  getRegistryConsent,
+  setRegistryConsent,
+  getOfflineOnlyMode,
+  setOfflineOnlyMode,
+  getOnlyOfficialMode,
+  setOnlyOfficialMode,
+  getExtensionStorageQuota,
+  setExtensionStorageQuota,
+  getExtensionStorageStats,
+  runSafeLruEviction,
+  wipeAllExtensionLibrary,
   type SearchResultItem,
 } from '../utils/extensionRegistryManager';
-import type { AssetKind, TrustLevel } from '../types/extensionRegistry';
+import type { AssetKind, TrustLevel, StorageQuotaConfig } from '../types/extensionRegistry';
 import type { InstalledAssetEntity } from '../db';
 
 interface ExtensionLibraryModalProps {
   initialKind?: AssetKind;
 }
 
+export type MainStoreTab = 'explore' | 'installed' | 'updates' | 'my_assets' | 'settings';
+
 export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ initialKind }) => {
-  const { closeModal, showToast, clips, setClips } = useEditorStore();
+  const { closeModal, showToast, clips, setClips, selectedClipId } = useEditorStore();
+
+  // Navigation & Filter States
+  const [activeMainTab, setActiveMainTab] = useState<MainStoreTab>('explore');
   const [query, setQuery] = useState('');
   const [selectedKind, setSelectedKind] = useState<AssetKind | 'all'>(initialKind || 'all');
   const [selectedTrust, setSelectedTrust] = useState<TrustLevel | 'all'>('all');
+  const [selectedLicense, setSelectedLicense] = useState<string>('all');
+  const [selectedSize, setSelectedSize] = useState<'all' | 'small' | 'medium' | 'large'>('all');
+
+  // Data & Progress States
   const [packages, setPackages] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installProgress, setInstallProgress] = useState<
+    Record<string, { percent: number; stage: string; controller: AbortController }>
+  >({});
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+
+  // Settings & Storage States
   const [customRegistryInput, setCustomRegistryInput] = useState(getRegistryUrl());
   const [revokedAssets, setRevokedAssets] = useState<InstalledAssetEntity[]>([]);
   const [autoUpdatePatches, setAutoUpdatePatches] = useState(getAutoUpdateOfficialPatchesSetting());
+  const [registryConsent, setConsentState] = useState(getRegistryConsent());
+  const [offlineOnly, setOfflineOnlyState] = useState(getOfflineOnlyMode());
+  const [onlyOfficial, setOnlyOfficialState] = useState(getOnlyOfficialMode());
+  const [storageQuota, setStorageQuotaState] = useState(getExtensionStorageQuota());
+  const [storageStats, setStorageStats] = useState<StorageQuotaConfig | null>(null);
   const [diffModalInfo, setDiffModalInfo] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,96 +131,17 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
     message: string;
   } | null>(null);
 
-  const handleToggleAiEnabled = (enabled: boolean) => {
-    setAiEnabled(enabled);
-    localStorage.setItem('clipforge_ai_enabled', enabled ? 'true' : 'false');
+  const formatBytes = (bytes: number) => {
+    if (!bytes || bytes <= 0) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
-
-  const handleToggleAiConsented = (consented: boolean) => {
-    setAiConsented(consented);
-    localStorage.setItem('clipforge_ai_consented', consented ? 'true' : 'false');
-  };
-
-  const handleSaveApiKey = (key: string) => {
-    setAiApiKey(key);
-    localStorage.setItem('clipforge_ai_key', key);
-  };
-
-  const handleRunAiGeneration = async () => {
-    if (!aiEnabled) {
-      showToast('Tính năng AI viết hiệu ứng đang TẮT. Vui lòng bật tính năng bên dưới.', 'warning');
-      return;
-    }
-    if (!aiConsented) {
-      showToast('Vui lòng xác nhận đồng ý điều khoản gửi dữ liệu ra máy chủ ngoài.', 'warning');
-      return;
-    }
-    if (aiProvider !== 'mock' && !aiApiKey.trim()) {
-      showToast('Vui lòng nhập API Key hợp lệ cho nhà cung cấp AI.', 'warning');
-      return;
-    }
-    if (!aiPrompt.trim()) {
-      showToast('Vui lòng nhập mô tả hiệu ứng muốn tạo.', 'warning');
-      return;
-    }
-
-    setIsGeneratingAi(true);
-    setAiResult(null);
-    setAiSaveSuccess(false);
-    setAiStatusMsg('Đang gọi AI & tự động kiểm tra Zod -> Phân tích tĩnh -> Sandbox WebGL2 compile...');
-
-    try {
-      const res = await generateEffectWithAI({
-        prompt: aiPrompt,
-        config: {
-          enabled: aiEnabled,
-          userConsented: aiConsented,
-          apiKey: aiApiKey,
-          provider: aiProvider,
-        },
-        includeReferenceFrames: aiIncludeFrames,
-        referenceFrames: aiIncludeFrames ? ['data:image/webp;base64,sample1', 'data:image/webp;base64,sample2'] : [],
-        maxRetries: 3,
-      });
-
-      if (res.success && res.item) {
-        setAiResult(res);
-        setAiParamValues(res.preview?.testParameters || {});
-        showToast(`Tạo thành công sau ${res.iterations} lần sửa tự động!`, 'success');
-      } else {
-        showToast(res.error || 'AI không thể tạo shader hợp lệ', 'error');
-      }
-    } catch (err: any) {
-      showToast(`Lỗi: ${err.message}`, 'error');
-    } finally {
-      setIsGeneratingAi(false);
-      setAiStatusMsg('');
-    }
-  };
-
-  const handleKeepAiEffect = async () => {
-    if (!aiResult?.item) return;
-    try {
-      const res = await saveAiEffectToMyEffects(aiResult.item);
-      if (res.success) {
-        setAiSaveSuccess(true);
-        showToast('Đã lưu hiệu ứng vào "Hiệu ứng của tôi"! Timeline không bị thay đổi.', 'success');
-        loadData();
-      } else {
-        showToast(`Lưu thất bại: ${res.error}`, 'error');
-      }
-    } catch (err: any) {
-      showToast(`Lỗi lưu: ${err.message}`, 'error');
-    }
-  };
-
-  // Scan for ghost clips in active timeline
-  const ghostClips = clips.filter((c: any) => c.ghostRef || c.isGhostPlaceholder);
 
   const loadData = async (forceOnline = false) => {
     setIsLoading(true);
     try {
-      if (forceOnline) {
+      if (forceOnline && !offlineOnly) {
         await fetchOrLoadRegistryIndex(true);
       }
       const results = await searchLocalRegistry(
@@ -198,6 +154,10 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
       // Check revocations
       const revResult = await checkAndApplyRevocations();
       setRevokedAssets(revResult.revokedAssets || []);
+
+      // Storage stats
+      const stats = await getExtensionStorageStats();
+      setStorageStats(stats);
     } catch (err) {
       console.error(err);
       showToast('Không thể nạp danh sách tài nguyên cục bộ', 'error');
@@ -208,46 +168,28 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
 
   useEffect(() => {
     loadData();
-  }, [query, selectedKind, selectedTrust]);
+  }, [query, selectedKind, selectedTrust, offlineOnly]);
 
-  const handleCheckUpdatesNow = async () => {
-    setIsCheckingUpdates(true);
-    try {
-      const idx = await fetchOrLoadRegistryIndex(true);
-      const revRes = await checkAndApplyRevocations(idx, clips);
-      if (revRes.updatedClips) {
-        setClips(revRes.updatedClips);
-      }
-      setRevokedAssets(revRes.revokedAssets || []);
-      await loadData();
-      showToast(`Đã đồng bộ chỉ mục kho thành công (${idx.packages.length} gói)!`, 'success');
-    } catch (err: any) {
-      showToast(`Đang hoạt động ngoại tuyến: sử dụng chỉ mục đã lưu trong máy.`, 'info');
-    } finally {
-      setIsCheckingUpdates(false);
-    }
-  };
-
-  const handleSaveCustomRegistry = () => {
-    const val = customRegistryInput.trim();
-    setCustomRegistryUrl(val);
-    setShowSettings(false);
-    showToast(`Đã cập nhật kho: ${val || DEFAULT_REGISTRY_URL}`, 'success');
-    loadData(true);
-  };
-
-  const handleResetCustomRegistry = () => {
-    resetRegistryUrl();
-    setCustomRegistryInput(DEFAULT_REGISTRY_URL);
-    setShowSettings(false);
-    showToast('Đã đặt lại về Kho chính thức mặc định', 'info');
-    loadData(true);
-  };
-
-  const handleInstall = async (pkg: SearchResultItem) => {
+  // Install with Real Progress & Cancelable AbortSignal
+  const handleInstallWithProgress = async (pkg: SearchResultItem) => {
+    const controller = new AbortController();
+    setInstallProgress((prev) => ({
+      ...prev,
+      [pkg.id]: { percent: 10, stage: 'Bắt đầu kiểm tra gói...', controller },
+    }));
     setInstallingId(pkg.id);
+
     try {
-      const res = await installPackage(pkg);
+      const res = await installPackage(pkg, {
+        signal: controller.signal,
+        onProgress: (percent, stage) => {
+          setInstallProgress((prev) => ({
+            ...prev,
+            [pkg.id]: { percent, stage, controller },
+          }));
+        },
+      });
+
       if (!res.success) {
         setLastErrorDiagnostic({
           packId: pkg.id,
@@ -258,9 +200,8 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
         showToast(res.error || 'Cài đặt thất bại', 'error');
         return;
       }
-      setLastErrorDiagnostic(null);
 
-      // Automatically reconnect ghost clips on timeline
+      setLastErrorDiagnostic(null);
       const { reconnectedCount, updatedClips } = reconnectGhostReferences(clips, pkg.id, pkg.spec);
       if (reconnectedCount > 0) {
         setClips(updatedClips);
@@ -274,42 +215,82 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
       showToast(`Lỗi: ${err?.message || 'Không thể cài đặt'}`, 'error');
     } finally {
       setInstallingId(null);
+      setTimeout(() => {
+        setInstallProgress((prev) => {
+          const next = { ...prev };
+          delete next[pkg.id];
+          return next;
+        });
+      }, 1000);
     }
   };
 
+  const handleCancelInstall = (pkgId: string) => {
+    if (installProgress[pkgId]?.controller) {
+      installProgress[pkgId].controller.abort();
+      setInstallProgress((prev) => {
+        const next = { ...prev };
+        delete next[pkgId];
+        return next;
+      });
+      setInstallingId(null);
+      showToast('Đã hủy cài đặt gói!', 'info');
+    }
+  };
+
+  // Try / Preview Effect directly on active clip
+  const handleTryEffect = (pkg: SearchResultItem) => {
+    const targetClip = clips.find((c: any) => c.id === selectedClipId) || clips[0];
+    if (!targetClip) {
+      showToast('Vui lòng thêm hoặc chọn 1 clip trên timeline để dùng thử!', 'info');
+      return;
+    }
+    const updated = clips.map((c: any) => {
+      if (c.id === targetClip.id) {
+        return {
+          ...c,
+          dynamicSpec: pkg.spec,
+          isTrial: true,
+        };
+      }
+      return c;
+    });
+    setClips(updated);
+    showToast(`Đang dùng thử "${pkg.name}" trên clip "${targetClip.name || targetClip.id}"!`, 'success');
+  };
+
+  // Report Error / Copy Diagnostics
+  const handleReportError = (pkg: SearchResultItem) => {
+    const diag = generateDiagnosticInfo('ERR_SANDBOX_TIMEOUT', {
+      packId: pkg.id,
+      version: pkg.version,
+      sha256: pkg.hash || pkg.sha256,
+      message: `Báo lỗi thủ công cho tài nguyên "${pkg.name}"`,
+    });
+    copyDiagnosticInfoToClipboard(diag);
+    showToast(`Đã sao chép báo cáo chẩn đoán của "${pkg.name}" vào Clipboard!`, 'info');
+  };
+
+  // Safe Uninstall
   const handleUninstall = async (id: string, name: string) => {
     try {
-      // M4: Check projects currently using this asset
       const safety = await checkUninstallSafety(id);
       if (safety.affectedProjects.length > 0) {
         const projNames = safety.affectedProjects.map((p) => `"${p.title}"`).join(', ');
         const confirmed = window.confirm(
-          `Hiệu ứng "${name}" đang được sử dụng trong ${safety.affectedProjects.length} dự án (${projNames}).\n\nSau khi gỡ, các khung hình trong các dự án trên sẽ được chuyển sang Ghost Reference (giữ nguyên vị trí và tự nối lại khi cài lại sau này).\n\nBạn có chắc chắn muốn gỡ cài đặt không?`
+          `Hiệu ứng "${name}" đang được sử dụng trong ${safety.affectedProjects.length} dự án (${projNames}).\n\nSau khi gỡ, các khung hình trong các dự án trên sẽ chuyển sang Ghost Reference an toàn.\n\nBạn có chắc chắn muốn gỡ cài đặt không?`
         );
         if (!confirmed) return;
       }
       const res = await safeUninstallPackage(id);
-      showToast(
-        `Đã gỡ bỏ "${name}" khỏi thiết bị (${res.affectedProjects.length} dự án đã chuyển khung hình sang Ghost Reference)`,
-        'info'
-      );
+      showToast(`Đã gỡ bỏ "${name}" khỏi thiết bị!`, 'info');
       await loadData();
     } catch (err: any) {
       showToast(`Lỗi gỡ bỏ: ${err?.message}`, 'error');
     }
   };
 
-  const handleCompareVersions = async (pkg: SearchResultItem) => {
-    const installed = await getInstalledAssets();
-    const inst = installed.find((i) => i.id === pkg.id);
-    if (!inst) {
-      showToast('Gói chưa được cài đặt trong máy để so sánh', 'info');
-      return;
-    }
-    const diff = compareEffectVersions(inst.spec, pkg.spec);
-    setDiffModalInfo(diff);
-  };
-
+  // File Upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -337,743 +318,709 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
     await loadData();
   };
 
+  // Wipe All Extensions (Factory Reset)
+  const handleWipeAll = async () => {
+    const confirmed = window.confirm(
+      'CẢNH BÁO NGUY HIỂM: Hành động này sẽ XÓA SẠCH toàn bộ hiệu ứng, chuyển cảnh, bộ lọc đã cài đặt khỏi máy và đặt lại Cache Storage.\n\nCác project đang dùng sẽ tự chuyển sang Ghost Reference an toàn.\n\nBạn có chắc chắn muốn tiếp tục không?'
+    );
+    if (!confirmed) return;
+
+    const res = await wipeAllExtensionLibrary();
+    showToast(`Đã xóa sạch ${res.clearedCount} tài nguyên mở rộng trên thiết bị!`, 'info');
+    await loadData();
+  };
+
+  // Run LRU Eviction
+  const handleRunLru = async () => {
+    const res = await runSafeLruEviction();
+    showToast(
+      `Dọn dẹp LRU hoàn tất: Giải phóng ${formatBytes(res.freedBytes)} (${res.protectedPackages.length} gói đang dùng được bảo vệ tuyệt đối).`,
+      'success'
+    );
+    await loadData();
+  };
+
+  // Render Trust Badge
   const renderTrustBadge = (trust: TrustLevel) => {
     switch (trust) {
       case 'official':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
             <ShieldCheck className="w-3 h-3" /> Chính thức (Official)
           </span>
         );
       case 'community':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-500/15 text-sky-400 border border-sky-500/30">
-            <Globe className="w-3 h-3" /> Cộng đồng (Community)
-          </span>
-        );
-      case 'manual':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30">
-            <FileCode className="w-3 h-3" /> Nhập thủ công (Manual)
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-500/15 text-sky-400 border border-sky-500/30">
+            <Globe className="w-3 h-3" /> Cộng đồng
           </span>
         );
       case 'local_fallback':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
-            <RefreshCw className="w-3 h-3" /> Ghép cục bộ (Fallback)
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/15 text-purple-300 border border-purple-500/30">
+            <Sparkles className="w-3 h-3" /> Ghép cục bộ
           </span>
         );
       case 'ai_generated':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-pink-500/15 text-pink-400 border border-pink-500/30">
-            <Sparkles className="w-3 h-3" /> Do AI tạo – chưa kiểm duyệt
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            <Cpu className="w-3 h-3 text-amber-400" /> Do AI tạo – chưa kiểm duyệt
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
+            Nhập thủ công
+          </span>
+        );
     }
   };
 
+  // Filter packages based on activeMainTab and filter dropdowns
+  const filteredPackages = packages.filter((pkg) => {
+    if (activeMainTab === 'installed' && !pkg.isInstalled) return false;
+    if (activeMainTab === 'updates' && !pkg.hasUpdate) return false;
+    if (activeMainTab === 'my_assets') {
+      const isMine =
+        pkg.trustLevel === 'local_fallback' ||
+        pkg.trustLevel === 'ai_generated' ||
+        pkg.trustLevel === 'manual';
+      if (!isMine) return false;
+    }
+
+    if (selectedKind !== 'all' && pkg.kind !== selectedKind) return false;
+    if (selectedTrust !== 'all' && pkg.trustLevel !== selectedTrust) return false;
+
+    if (selectedLicense !== 'all') {
+      if (!pkg.license.toLowerCase().includes(selectedLicense.toLowerCase())) return false;
+    }
+
+    if (selectedSize === 'small' && (pkg.sizeBytes || 0) >= 1024 * 1024) return false;
+    if (
+      selectedSize === 'medium' &&
+      ((pkg.sizeBytes || 0) < 1024 * 1024 || (pkg.sizeBytes || 0) > 10 * 1024 * 1024)
+    )
+      return false;
+    if (selectedSize === 'large' && (pkg.sizeBytes || 0) <= 10 * 1024 * 1024) return false;
+
+    return true;
+  });
+
+  const ghostClips = clips.filter((c: any) => c.ghostRef || c.isGhostPlaceholder);
+
   return (
-    <div className="flex flex-col h-full max-h-[85vh] text-slate-100">
+    <div className="flex flex-col h-[85vh] text-slate-100 max-w-4xl">
+      {/* Hidden File Input for Manual Import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".pkg.json,.json,.cube,.capfx"
+        className="hidden"
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-700/80">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Layers className="w-4 h-4" />
-            </div>
-            <h2 className="text-lg font-bold text-slate-100">Kho Mở Rộng Tài Nguyên (Extension Registry)</h2>
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20">
+            <Globe className="w-5 h-5 stroke-[2.5]" />
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Hiệu ứng WebGL2, Chuyển cảnh, 3D LUT, SFX & Nhãn dán khai báo • Hoạt động 100% Ngoại tuyến
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-100">Kho Hiệu Ứng Mở Rộng (Extension Store)</h2>
+              <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 text-[10px] font-mono border border-cyan-500/30">
+                OFFLINE-FIRST
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Khám phá, cài đặt hiệu ứng WebGL, chuyển cảnh, bộ lọc 3D LUT mà không cần deploy lại ứng dụng
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
-          {/* Check Updates Now (Bypass 24h throttle) */}
           <button
-            onClick={handleCheckUpdatesNow}
+            onClick={async () => {
+              setIsCheckingUpdates(true);
+              try {
+                const idx = await fetchOrLoadRegistryIndex(true);
+                const revRes = await checkAndApplyRevocations(idx, clips);
+                if (revRes.updatedClips) {
+                  setClips(revRes.updatedClips);
+                }
+                setRevokedAssets(revRes.revokedAssets || []);
+                await loadData();
+                showToast(`Đã đồng bộ chỉ mục kho thành công (${idx.packages.length} gói)!`, 'success');
+              } catch (err: any) {
+                showToast(`Đang hoạt động ngoại tuyến: sử dụng chỉ mục đã lưu trong máy.`, 'info');
+              } finally {
+                setIsCheckingUpdates(false);
+              }
+            }}
             disabled={isCheckingUpdates}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-700/60 rounded-lg text-xs font-semibold text-cyan-300 transition-colors disabled:opacity-50"
-            title="Đồng bộ chỉ mục mới nhất từ máy chủ tĩnh (bỏ qua giới hạn 24h)"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition-colors focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+            title="Kiểm tra phiên bản mới và đồng bộ lại danh mục"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
-            <span>{isCheckingUpdates ? 'Đang đồng bộ...' : 'Kiểm tra ngay'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
+            <span>Kiểm tra ngay</span>
           </button>
 
-          {/* M6: AI Effect & Shader Synthesis Trigger */}
-          <button
-            onClick={() => setShowAiModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-950/60 to-purple-950/60 hover:from-pink-900/80 hover:to-purple-900/80 border border-pink-500/40 rounded-lg text-xs font-semibold text-pink-300 transition-colors"
-            title="Khởi tạo Shader & Hiệu ứng WebGL2 bằng trợ lý AI (M6)"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-            <span>Tạo bằng AI (M6)</span>
-          </button>
-
-          {/* Toggle Custom Registry Settings */}
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={`p-1.5 rounded-lg border transition-colors ${
-              showSettings
-                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-600'
-            }`}
-            title="Cài đặt đường dẫn Kho mở rộng tùy chỉnh"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".capfx,.json,.pkg.json,.cube"
-            className="hidden"
-          />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-xs font-medium text-slate-200 transition-colors"
-            title="Nhập gói .capfx (ZIP), .pkg.json hoặc tệp 3D LUT .cube từ máy tính"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition-colors focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+            title="Nhập gói mở rộng .capfx, .pkg.json hoặc 3D LUT .cube"
           >
-            <Upload className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Nhập gói (.capfx / .cube)</span>
+            <Upload className="w-3.5 h-3.5" />
+            <span>Nhập gói</span>
           </button>
+
           <button
             onClick={closeModal}
-            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+            title="Đóng cửa sổ"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Custom Registry Settings Panel */}
-      {showSettings && (
-        <div className="mt-3 p-3 bg-slate-900/90 border border-cyan-500/30 rounded-xl flex flex-col gap-2.5 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-200 flex items-center gap-1.5">
-              <Settings className="w-3.5 h-3.5 text-cyan-400" /> Cấu hình Đường dẫn Kho Tùy Chỉnh (Custom Static Registry)
-            </span>
-            <span className="text-[10px] text-slate-400">Hỗ trợ Cloudflare R2 / Pages, GitHub Pages, Localhost</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={customRegistryInput}
-              onChange={(e) => setCustomRegistryInput(e.target.value)}
-              placeholder="https://my-team-effects.internal/registry/index.json hoặc /registry/index.json"
-              className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500"
-            />
+      {/* Offline Status Banner */}
+      {offlineOnly && (
+        <div className="mt-2.5 px-3 py-1.5 bg-slate-800/80 border border-slate-700 rounded-lg text-xs text-slate-300 flex items-center gap-2">
+          <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          <span>
+            <strong>Chế độ Chỉ Offline:</strong> Không kết nối máy chủ ngoài. Bạn có thể sử dụng trọn vẹn toàn bộ tài nguyên đã cài sẵn.
+          </span>
+        </div>
+      )}
+
+      {/* 5 Main Navigation Tabs */}
+      <div className="flex items-center gap-1 mt-3 border-b border-slate-800 pb-2 text-xs font-semibold">
+        {[
+          { id: 'explore', label: 'Khám phá', icon: Globe },
+          { id: 'installed', label: `Đã cài (${packages.filter((p) => p.isInstalled).length})`, icon: Check },
+          { id: 'updates', label: `Cập nhật (${packages.filter((p) => p.hasUpdate).length})`, icon: RefreshCw },
+          { id: 'my_assets', label: 'Của tôi', icon: Sparkles },
+          { id: 'settings', label: 'Cài đặt', icon: Settings },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeMainTab === tab.id;
+          return (
             <button
-              onClick={handleSaveCustomRegistry}
-              className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs transition-colors shrink-0"
+              key={tab.id}
+              onClick={() => setActiveMainTab(tab.id as MainStoreTab)}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
+                isActive
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+              }`}
             >
-              Lưu kho
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
             </button>
-            <button
-              onClick={handleResetCustomRegistry}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-lg text-xs transition-colors shrink-0"
-            >
-              Mặc định
-            </button>
+          );
+        })}
+      </div>
+
+      {/* TAB 5: SETTINGS */}
+      {activeMainTab === 'settings' ? (
+        <div className="flex-1 overflow-y-auto mt-3 p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-4 text-xs">
+          <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
+            <Settings className="w-4 h-4 text-cyan-400" />
+            Cài Đặt Kho Tài Nguyên & Quyền Riêng Tư
+          </h3>
+
+          {/* First Use Consent & Offline Mode */}
+          <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer text-slate-200 font-semibold">
+              <input
+                type="checkbox"
+                checked={registryConsent}
+                onChange={(e) => {
+                  setConsentState(e.target.checked);
+                  setRegistryConsent(e.target.checked);
+                }}
+                className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500"
+              />
+              <span>Đồng ý kết nối Kho trực tuyến (Hỏi ở lần dùng đầu)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-200 font-semibold pl-6">
+              <input
+                type="checkbox"
+                checked={offlineOnly}
+                onChange={(e) => {
+                  setOfflineOnlyState(e.target.checked);
+                  setOfflineOnlyMode(e.target.checked);
+                  showToast(e.target.checked ? 'Đã bật chế độ Chỉ Offline' : 'Đã tắt chế độ Chỉ Offline', 'info');
+                }}
+                className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500"
+              />
+              <span>Chế độ Chỉ Offline (Không bao giờ gửi yêu cầu HTTP tải index)</span>
+            </label>
           </div>
 
-          {/* M4: Auto-update patch toggle */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-300">
+          {/* Custom Registry URL */}
+          <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col gap-2">
+            <label className="font-semibold text-slate-200">Cấu hình Đường dẫn Kho Tùy Chỉnh (Custom Registry URL)</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customRegistryInput}
+                onChange={(e) => setCustomRegistryInput(e.target.value)}
+                placeholder={DEFAULT_REGISTRY_URL}
+                className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono text-xs focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+              />
+              <button
+                onClick={() => {
+                  setCustomRegistryUrl(customRegistryInput);
+                  showToast('Đã lưu địa chỉ kho tùy chỉnh!', 'success');
+                  loadData(true);
+                }}
+                className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg transition-colors"
+              >
+                Lưu kho
+              </button>
+              <button
+                onClick={() => {
+                  resetRegistryUrl();
+                  setCustomRegistryInput(DEFAULT_REGISTRY_URL);
+                  showToast('Đã đặt lại về Kho chính thức', 'info');
+                  loadData(true);
+                }}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors"
+              >
+                Mặc định
+              </button>
+            </div>
+          </div>
+
+          {/* Trust Official & Auto Patches */}
+          <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="flex items-start gap-2 cursor-pointer text-slate-200">
+              <input
+                type="checkbox"
+                checked={onlyOfficial}
+                onChange={(e) => {
+                  setOnlyOfficialState(e.target.checked);
+                  setOnlyOfficialMode(e.target.checked);
+                  showToast(e.target.checked ? 'Đã bật: Chỉ tin cậy gói Chính thức' : 'Đã tắt hạn chế', 'info');
+                }}
+                className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500 mt-0.5"
+              />
+              <div>
+                <span className="font-semibold block">Chỉ tin cậy gói Chính thức (Ed25519)</span>
+                <span className="text-[11px] text-slate-400">Từ chối cài đặt các gói bên thứ ba chưa ký số</span>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-2 cursor-pointer text-slate-200">
               <input
                 type="checkbox"
                 checked={autoUpdatePatches}
                 onChange={(e) => {
-                  const val = e.target.checked;
-                  setAutoUpdatePatches(val);
-                  setAutoUpdateOfficialPatchesSetting(val);
-                  showToast(
-                    val
-                      ? 'Đã bật: Tự động cập nhật các bản vá (patch) an toàn của gói Chính thức'
-                      : 'Đã tắt tự động cập nhật bản vá',
-                    'info'
-                  );
+                  setAutoUpdatePatches(e.target.checked);
+                  setAutoUpdateOfficialPatchesSetting(e.target.checked);
+                  showToast(e.target.checked ? 'Đã bật tự cập nhật patch' : 'Đã tắt tự cập nhật patch', 'info');
                 }}
-                className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-950"
+                className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500 mt-0.5"
               />
-              <span className="font-semibold text-[11px]">Tự cập nhật bản vá (patch) của gói Chính thức</span>
-            </label>
-            <span className="text-[10px] text-slate-400">Bản minor/major luôn yêu cầu xác nhận thủ công</span>
-          </div>
-
-          <p className="text-[11px] text-amber-300/80 leading-relaxed">
-            * Lưu ý bảo mật: Các gói tải từ kho tự host mà không có chữ ký số Ed25519 chính thức sẽ tự động xếp mức "Cộng đồng" để bảo vệ an toàn cho thiết bị.
-          </p>
-        </div>
-      )}
-
-      {/* Revocation Kill Switch Alert Banner */}
-      {revokedAssets.length > 0 && (
-        <div className="mt-3 p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl flex flex-col gap-1.5 text-xs text-rose-300">
-          <div className="flex items-center gap-2 font-bold text-rose-200">
-            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>⚠️ Cảnh báo Kill Switch: Phát hiện {revokedAssets.length} tài nguyên đã bị thu hồi</span>
-          </div>
-          <p className="text-[11px] text-rose-300/90 pl-6">
-            Các gói này đã bị nhà phát triển vô hiệu hóa do lỗi bảo mật hoặc gây tràn bộ nhớ GPU. Toàn bộ vị trí trên timeline sử dụng gói này đã được tự động chuyển sang Ghost Reference an toàn:
-          </p>
-          <div className="flex flex-col gap-1 pl-6 pt-1">
-            {revokedAssets.map((rev) => (
-              <div key={rev.id} className="text-[11px] bg-rose-950/60 p-2 rounded border border-rose-500/30 flex items-center justify-between">
-                <span>• <strong>{rev.name}</strong> ({rev.id}): {rev.revokeReason}</span>
-                {rev.replacementId && (
-                  <span className="text-[10px] text-cyan-300 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/30">
-                    Đề xuất thay thế: {rev.replacementId}
-                  </span>
-                )}
+              <div>
+                <span className="font-semibold block">Tự động cập nhật bản vá (Patch)</span>
+                <span className="text-[11px] text-slate-400">Bản minor/major luôn yêu cầu người dùng xác nhận</span>
               </div>
+            </label>
+          </div>
+
+          {/* Storage Quota & LRU */}
+          <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                <HardDrive className="w-4 h-4 text-cyan-400" />
+                Hạn mức dung lượng bộ nhớ kho
+              </span>
+              <span className="font-mono text-cyan-300">
+                {storageStats ? `${formatBytes(storageStats.usedBytes)} / ${formatBytes(storageStats.limitBytes)}` : 'Đang tính...'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <select
+                value={storageQuota}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setStorageQuotaState(val);
+                  setExtensionStorageQuota(val);
+                  showToast(`Đã đặt hạn mức: ${val} MB`, 'info');
+                  loadData();
+                }}
+                className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 font-semibold focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+              >
+                <option value={50}>50 MB</option>
+                <option value={100}>100 MB</option>
+                <option value={200}>200 MB (Khuyến nghị)</option>
+                <option value={500}>500 MB</option>
+              </select>
+
+              <button
+                onClick={handleRunLru}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Dọn dẹp LRU an toàn</span>
+              </button>
+            </div>
+          </div>
+
+          {/* AI Effect Synthesizer Toggle */}
+          <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 flex items-center justify-between">
+            <div>
+              <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                <Cpu className="w-4 h-4 text-amber-400" />
+                Bật Trợ lý AI Viết Hiệu Ứng (M6)
+              </span>
+              <span className="text-[11px] text-slate-400 block mt-0.5">
+                Mặc định TẮT. Chỉ kích hoạt khi người dùng nhập API key và đồng ý.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={aiEnabled}
+              onChange={(e) => {
+                setAiEnabled(e.target.checked);
+                localStorage.setItem('clipforge_ai_enabled', e.target.checked ? 'true' : 'false');
+                showToast(e.target.checked ? 'Đã bật công cụ AI' : 'Đã tắt công cụ AI', 'info');
+              }}
+              className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
+            />
+          </div>
+
+          {/* Factory Reset / Wipe All Extensions */}
+          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center justify-between">
+            <div>
+              <span className="font-bold text-rose-300 block">Xóa toàn bộ thư viện mở rộng (Factory Reset)</span>
+              <span className="text-[11px] text-rose-400/80 block mt-0.5">
+                Xóa tất cả các gói đã tải trong Dexie và Cache Storage. Dự án ghim chuyển sang Ghost an toàn.
+              </span>
+            </div>
+            <button
+              onClick={handleWipeAll}
+              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition-colors shadow-md shadow-rose-900/40"
+            >
+              Xóa sạch toàn bộ
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* TAB 1, 2, 3, 4: EXPLORE, INSTALLED, UPDATES, MY ASSETS */}
+      {activeMainTab !== 'settings' && (
+        <>
+          {/* Search & Advanced Filters */}
+          <div className="mt-3 flex flex-col md:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Tìm theo tên, tag, đồng nghĩa (vd: glitch, rung lắc, flash, vhs)..."
+                className="w-full pl-9 pr-3 py-1.5 bg-slate-900/90 border border-slate-700/80 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Filter by License */}
+            <select
+              value={selectedLicense}
+              onChange={(e) => setSelectedLicense(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-300 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+              title="Lọc theo Giấy phép"
+            >
+              <option value="all">Mọi giấy phép</option>
+              <option value="MIT">MIT</option>
+              <option value="CC0">CC0-1.0</option>
+              <option value="OFL">OFL-1.1</option>
+            </select>
+
+            {/* Filter by Trust */}
+            <select
+              value={selectedTrust}
+              onChange={(e) => setSelectedTrust(e.target.value as any)}
+              className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-300 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+              title="Lọc theo Mức tin cậy"
+            >
+              <option value="all">Mọi mức tin cậy</option>
+              <option value="official">Chính thức (Official)</option>
+              <option value="community">Cộng đồng</option>
+            </select>
+
+            {/* Filter by Size */}
+            <select
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value as any)}
+              className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-300 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+              title="Lọc theo Kích thước"
+            >
+              <option value="all">Mọi kích thước</option>
+              <option value="small">&lt; 1 MB</option>
+              <option value="medium">1 MB - 10 MB</option>
+              <option value="large">&gt; 10 MB</option>
+            </select>
+          </div>
+
+          {/* Kind Filter Pills */}
+          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-1 text-xs">
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'effect', label: 'Hiệu ứng WebGL' },
+              { id: 'transition', label: 'Chuyển cảnh' },
+              { id: 'filter', label: 'Bộ lọc & LUT' },
+              { id: 'sfx', label: 'Âm thanh SFX' },
+              { id: 'sticker', label: 'Nhãn dán SVG' },
+              { id: 'template', label: 'Mẫu dự án' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedKind(tab.id as any)}
+                className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-colors focus:ring-2 focus:ring-cyan-500 focus:outline-none ${
+                  selectedKind === tab.id
+                    ? 'bg-cyan-500 text-slate-950 font-bold'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
             ))}
           </div>
-        </div>
-      )}
 
-      {/* Privacy Guarantee Pill */}
-      <div className="mt-3 flex items-center justify-between px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-300">
-        <div className="flex items-center gap-2">
-          <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span>
-            <strong>Bảo vệ Quyền Riêng Tư 100%:</strong> Chỉ mục được nạp về máy và tìm kiếm cục bộ. Không gửi từ khóa
-            hoặc dữ liệu video ra ngoài mạng.
-          </span>
-        </div>
-        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">
-          CLIENT-SIDE ONLY
-        </span>
-      </div>
-
-      {/* Ghost Reference Warning Banner if missing clips found */}
-      {ghostClips.length > 0 && (
-        <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-amber-500/15 border border-amber-500/30 rounded-lg text-xs text-amber-300">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span>
-            Timeline hiện có <strong>{ghostClips.length}</strong> clip giữ vị trí tạm thời (Ghost Reference). Khi cài đặt
-            gói tương ứng, hiệu ứng sẽ tự động kết nối lại mà không làm mất cấu trúc dự án!
-          </span>
-        </div>
-      )}
-
-      {/* M7: Security Diagnostic Info Banner on Installation/Verification Error */}
-      {lastErrorDiagnostic && (
-        <div className="mt-2.5 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span className="text-rose-200">
-              <strong>Lỗi an toàn:</strong> {lastErrorDiagnostic.message}
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              const codeMatch = lastErrorDiagnostic.message.match(/\[(ERR_[A-Z_]+)\]/);
-              const diag = generateDiagnosticInfo(
-                (codeMatch ? codeMatch[1] : 'ERR_GLSL_CODE_TOO_LONG') as any,
-                {
-                  packId: lastErrorDiagnostic.packId,
-                  version: lastErrorDiagnostic.version,
-                  sha256: lastErrorDiagnostic.sha256,
-                  message: lastErrorDiagnostic.message,
-                }
-              );
-              copyDiagnosticInfoToClipboard(diag);
-              showToast('Đã sao chép thông tin chẩn đoán lỗi (Diagnostic Info)!', 'info');
-            }}
-            className="px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 rounded-lg text-[11px] font-semibold text-rose-200 transition-colors shrink-0 flex items-center gap-1.5"
-          >
-            <span>Sao chép chẩn đoán (Copy Diagnostic)</span>
-          </button>
-        </div>
-      )}
-
-      {/* Search & Filter Controls */}
-      <div className="mt-4 flex flex-col md:flex-row gap-2.5">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo tên hiệu ứng, mô tả, thẻ hoặc ID (100% Cục bộ)..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          {/* Trust Filter */}
-          <select
-            value={selectedTrust}
-            onChange={(e) => setSelectedTrust(e.target.value as any)}
-            className="px-2.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-          >
-            <option value="all">Tất cả mức tin cậy</option>
-            <option value="official">Chính thức (Official)</option>
-            <option value="community">Cộng đồng (Community)</option>
-            <option value="manual">Nhập thủ công (Manual)</option>
-            <option value="ai_generated">Do AI tạo – chưa kiểm duyệt</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Kind Navigation Pills */}
-      <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1 border-b border-slate-800 text-xs">
-        {[
-          { id: 'all', label: 'Tất cả' },
-          { id: 'effect', label: 'Hiệu ứng WebGL' },
-          { id: 'transition', label: 'Chuyển cảnh' },
-          { id: 'filter', label: 'Bộ lọc & LUT' },
-          { id: 'sfx', label: 'Âm thanh SFX' },
-          { id: 'sticker', label: 'Nhãn dán SVG' },
-          { id: 'template', label: 'Mẫu dự án' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setSelectedKind(tab.id as any)}
-            className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
-              selectedKind === tab.id
-                ? 'bg-cyan-500 text-slate-950 font-semibold'
-                : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Packages List */}
-      <div className="flex-1 overflow-y-auto mt-3 pr-1 space-y-2.5">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-            <RefreshCw className="w-6 h-6 animate-spin text-cyan-400 mb-2" />
-            <p className="text-xs">Đang tìm kiếm kho tài nguyên cục bộ...</p>
-          </div>
-        ) : packages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-            <Layers className="w-8 h-8 text-slate-600 mb-2" />
-            <p className="text-sm font-medium text-slate-300">Không tìm thấy tài nguyên phù hợp</p>
-            <p className="text-xs text-slate-500 mt-1">
-              Bạn có thể nhập tệp .pkg.json hoặc bảng màu 3D LUT .cube trực tiếp bằng nút "Nhập gói".
-            </p>
-          </div>
-        ) : (
-          packages.map((pkg) => (
-            <div
-              key={pkg.id}
-              className="p-3.5 bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-3"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h3 className="text-sm font-bold text-slate-100 truncate">{pkg.name}</h3>
-                  <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/50">
-                    v{pkg.version}
-                  </span>
-                  {renderTrustBadge(pkg.trustLevel)}
-                  {pkg.trustLevel === 'official' && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-300 bg-cyan-950/70 border border-cyan-500/30 px-1.5 py-0.5 rounded" title="Chữ ký mật mã Ed25519 chính thức">
-                      <Lock className="w-2.5 h-2.5 text-cyan-400" /> Ed25519
-                    </span>
-                  )}
-                  <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                    {pkg.license}
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-300 line-clamp-2 mb-2">{pkg.description}</p>
-
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
-                  <span>Tác giả: <strong className="text-slate-300">{pkg.spec.author}</strong></span>
-                  <span>Dung lượng: <strong className="text-slate-300">{pkg.sizeBytes} B</strong></span>
-                  <span className="font-mono text-[10px] text-slate-500">SHA: {pkg.hash.slice(0, 10)}...</span>
-                  {pkg.spec.tags && (
-                    <div className="flex items-center gap-1">
-                      {pkg.spec.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => exportPackageToFile(pkg)}
-                  title="Xuất tệp .pkg.json ra máy để sao lưu hoặc chia sẻ"
-                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors text-xs"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-
-                {pkg.isInstalled ? (
-                  <div className="flex items-center gap-1.5">
-                    {pkg.hasUpdate ? (
-                      <>
-                        <button
-                          onClick={() => handleCompareVersions(pkg)}
-                          className="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                          title="So sánh thay đổi trước / sau giữa phiên bản trong máy và bản mới"
-                        >
-                          <Sliders className="w-3 h-3" />
-                          <span>So sánh</span>
-                        </button>
-                        <button
-                          onClick={() => handleInstall(pkg)}
-                          disabled={installingId === pkg.id}
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold transition-colors"
-                          title={`Cập nhật lên phiên bản mới v${pkg.version}`}
-                        >
-                          {installingId === pkg.id ? (
-                            <RefreshCw className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <ArrowRight className="w-3 h-3" />
-                          )}
-                          <span>Cập nhật v{pkg.version}</span>
-                        </button>
-                      </>
-                    ) : (
-                      <span className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium">
-                        <Check className="w-3.5 h-3.5" /> Đã cài đặt
-                      </span>
-                    )}
-                    <button
-                      onClick={() => handleUninstall(pkg.id, pkg.name)}
-                      className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg transition-colors"
-                      title="Gỡ bỏ tài nguyên này khỏi máy"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleInstall(pkg)}
-                    disabled={installingId === pkg.id}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-                  >
-                    {installingId === pkg.id ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Download className="w-3.5 h-3.5" />
-                    )}
-                    <span>Cài đặt</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* M4: Version Diff Comparison Modal Dialog */}
-      {diffModalInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-xs text-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-amber-400" />
-                <h3 className="font-bold text-sm text-white">So sánh Trước / Sau (Version Comparison)</h3>
+          {/* My Assets Tab: Quick Actions */}
+          {activeMainTab === 'my_assets' && (
+            <div className="mt-2.5 p-3 bg-purple-950/30 border border-purple-500/30 rounded-xl flex items-center justify-between">
+              <div>
+                <span className="font-bold text-xs text-purple-200 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  Tài nguyên do bạn sáng tạo (Ghép M5 / AI M6 / Nhập thủ công)
+                </span>
+                <span className="text-[11px] text-purple-300/80 block mt-0.5">
+                  Lưu trữ vĩnh viễn trên thiết bị của bạn. Không cần mạng để sử dụng.
+                </span>
               </div>
               <button
-                onClick={() => setDiffModalInfo(null)}
-                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white"
+                onClick={() => setShowAiModal(true)}
+                className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold rounded-lg text-xs transition-colors shadow-md flex items-center gap-1.5"
               >
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Mở AI viết hiệu ứng</span>
+              </button>
+            </div>
+          )}
+
+          {/* Packages List */}
+          <div className="flex-1 overflow-y-auto mt-3 pr-1 space-y-2.5">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <RefreshCw className="w-6 h-6 animate-spin text-cyan-400 mb-2" />
+                <p className="text-xs">Đang tìm kiếm kho tài nguyên cục bộ...</p>
+              </div>
+            ) : filteredPackages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <Layers className="w-8 h-8 text-slate-600 mb-2" />
+                <p className="text-sm font-medium text-slate-300">Không tìm thấy tài nguyên phù hợp</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Thử tìm từ khóa khác hoặc nhập tệp .capfx / LUT .cube bằng nút "Nhập gói".
+                </p>
+              </div>
+            ) : (
+              filteredPackages.map((pkg) => {
+                const prog = installProgress[pkg.id];
+                return (
+                  <div
+                    key={pkg.id}
+                    className="p-3.5 bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                  >
+                    {/* Item Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        {/* Thumbnail / Kind Icon */}
+                        <div className="w-6 h-6 rounded-md bg-cyan-950/80 border border-cyan-800/40 flex items-center justify-center text-cyan-400 font-bold text-[10px]">
+                          {pkg.kind[0].toUpperCase()}
+                        </div>
+                        <h3 className="text-sm font-bold text-slate-100 truncate">{pkg.name}</h3>
+                        <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/50">
+                          v{pkg.version}
+                        </span>
+                        {renderTrustBadge(pkg.trustLevel)}
+                        <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
+                          {pkg.license}
+                        </span>
+                        <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
+                          {formatBytes(pkg.sizeBytes || 0)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-300 line-clamp-2 mb-2">{pkg.description}</p>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
+                        <span>
+                          Tác giả: <strong className="text-slate-300">{pkg.spec.author}</strong>
+                        </span>
+                        {pkg.spec.tags && (
+                          <div className="flex items-center gap-1">
+                            {pkg.spec.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Download Progress Bar if active */}
+                      {prog && (
+                        <div className="mt-2.5 p-2 bg-slate-950/80 border border-cyan-500/30 rounded-lg flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-cyan-300 font-semibold">{prog.stage}</span>
+                            <span className="font-mono text-cyan-400">{prog.percent}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-cyan-500 to-sky-400 transition-all duration-200"
+                              style={{ width: `${prog.percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons: Dùng thử / Cài / Gỡ / Báo lỗi */}
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                      {/* Dùng thử (Try / Preview directly) */}
+                      <button
+                        onClick={() => handleTryEffect(pkg)}
+                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                        title="Dùng thử trực tiếp trên clip đang chọn trên timeline"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Dùng thử</span>
+                      </button>
+
+                      {/* Install / Cancel / Installed */}
+                      {prog ? (
+                        <button
+                          onClick={() => handleCancelInstall(pkg.id)}
+                          className="px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-lg text-xs font-bold transition-colors"
+                          title="Hủy quá trình tải xuống"
+                        >
+                          Hủy tải
+                        </button>
+                      ) : pkg.isInstalled ? (
+                        <div className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium">
+                            <Check className="w-3.5 h-3.5" /> Đã cài
+                          </span>
+                          <button
+                            onClick={() => handleUninstall(pkg.id, pkg.name)}
+                            className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg transition-colors focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                            title="Gỡ cài đặt gói khỏi thiết bị"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleInstallWithProgress(pkg)}
+                          disabled={installingId === pkg.id}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-lg text-xs font-bold transition-colors shadow-md shadow-cyan-500/20 disabled:opacity-50 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                          title="Tải và cài đặt gói vào bộ nhớ máy"
+                        >
+                          <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>Cài đặt</span>
+                        </button>
+                      )}
+
+                      {/* Báo lỗi / Diagnostic Info */}
+                      <button
+                        onClick={() => handleReportError(pkg)}
+                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-400 rounded-lg transition-colors focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        title="Sao chép thông tin chẩn đoán lỗi (Diagnostic Info)"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {/* M6: AI Generator Drawer / Modal */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#121622] border border-slate-700 rounded-2xl max-w-lg w-full p-5 flex flex-col gap-4 text-xs text-slate-200 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span className="font-bold text-sm text-white flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-purple-400" />
+                Trợ Lý AI Viết Hiệu Ứng GLSL (M6)
+              </span>
+              <button onClick={() => setShowAiModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <span className="font-mono text-cyan-300 font-bold">{diffModalInfo.id}</span>
-              <p className="text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800">
-                {diffModalInfo.summary}
-              </p>
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-[11px] leading-relaxed">
+              {AI_PRIVACY_WARNING}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
-                <span className="font-semibold text-emerald-400">Uniforms mới ({diffModalInfo.addedUniforms.length}):</span>
-                {diffModalInfo.addedUniforms.length === 0 ? (
-                  <span className="text-slate-500 italic">Không có</span>
-                ) : (
-                  diffModalInfo.addedUniforms.map((u: string) => (
-                    <span key={u} className="font-mono text-[10px] text-emerald-300">+ {u}</span>
-                  ))
-                )}
-              </div>
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
-                <span className="font-semibold text-rose-400">Uniforms bị gỡ ({diffModalInfo.removedUniforms.length}):</span>
-                {diffModalInfo.removedUniforms.length === 0 ? (
-                  <span className="text-slate-500 italic">Không có</span>
-                ) : (
-                  diffModalInfo.removedUniforms.map((u: string) => (
-                    <span key={u} className="font-mono text-[10px] text-rose-300">- {u}</span>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-              <span className="text-slate-400 text-[11px]">
-                {diffModalInfo.shaderChanged ? '⚡ Mã GLSL fragment shader có sửa đổi.' : '✓ Mã fragment shader tương đương.'}
-              </span>
-              <button
-                onClick={() => setDiffModalInfo(null)}
-                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* M6: AI Effect & Shader Synthesis Modal */}
-      {showAiModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-pink-500/30 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col gap-4 shadow-2xl">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-pink-400">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    Trợ Lý AI Viết Hiệu Ứng (M6)
-                    <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                      Tùy chọn • Tự động sửa 3 lần
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-400">Khởi tạo Shader GLSL ES 3.00 & tham số khai báo bằng AI</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAiModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Privacy Warning Banner (MANDATORY) */}
-            <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-              <div className="flex flex-col gap-1.5 text-xs">
-                <span className="font-semibold text-amber-300">Cảnh báo quyền riêng tư (Nội dung rời khỏi máy)</span>
-                <p className="text-amber-200/80 leading-relaxed">
-                  {AI_PRIVACY_WARNING}
-                </p>
-                <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={aiConsented}
-                    onChange={(e) => handleToggleAiConsented(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-0"
-                  />
-                  <span className="font-medium text-amber-300">
-                    Tôi xác nhận đồng ý gửi mô tả văn bản (và ảnh tham chiếu nếu chọn) ra máy chủ AI bên ngoài
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Config: Toggle Opt-In & API Key */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3.5 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs">
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={aiEnabled}
-                    onChange={(e) => handleToggleAiEnabled(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-950 text-pink-500 focus:ring-0"
-                  />
-                  <span>Bật tính năng AI viết hiệu ứng (Mặc định: TẮT)</span>
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-slate-400">Nhà cung cấp:</span>
-                  <select
-                    value={aiProvider}
-                    onChange={(e) => setAiProvider(e.target.value as any)}
-                    className="px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200"
-                  >
-                    <option value="mock">Môi trường thử nghiệm (Offline Mock)</option>
-                    <option value="openai">OpenAI (gpt-4o-mini)</option>
-                    <option value="gemini">Google Gemini (gemini-1.5-flash)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <span className="text-slate-400">
-                  API Key {aiProvider === 'mock' ? '(Không bắt buộc với Mock)' : '(Bắt buộc)'}:
-                </span>
-                <input
-                  type="password"
-                  value={aiApiKey}
-                  onChange={(e) => handleSaveApiKey(e.target.value)}
-                  placeholder={aiProvider === 'mock' ? 'Môi trường thử nghiệm không cần key' : 'Nhập sk-... hoặc AIza...'}
-                  disabled={aiProvider === 'mock'}
-                  className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs text-slate-100 placeholder-slate-500 disabled:opacity-50"
-                />
-                <span className="text-[10px] text-slate-500 italic">API key chỉ lưu cục bộ trên trình duyệt, không chia sẻ.</span>
-              </div>
-            </div>
-
-            {/* Prompt Input & Reference Frames */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-slate-200">
-                Mô tả hiệu ứng muốn tạo (bằng tiếng Việt hoặc tiếng Anh):
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="font-semibold text-slate-300">Mô tả hiệu ứng muốn tạo</label>
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Ví dụ: Hiệu ứng glitch nhiễu sóng kèm viền neon phát sáng giật theo beat..."
                 rows={3}
-                placeholder="Ví dụ: Hiệu ứng gợn sóng nước hologram phát sáng màu neon cyberpunk, chuyển động chậm theo thời gian..."
-                className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-pink-500"
+                className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500 focus:outline-none"
               />
-              <div className="flex items-center justify-between text-xs">
-                <label className="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={aiIncludeFrames}
-                    onChange={(e) => setAiIncludeFrames(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-950 text-pink-500 focus:ring-0"
-                  />
-                  <span>Gửi kèm tối đa 6 khung hình tham chiếu độ phân giải thấp (≤ 160x90) từ clip hiện tại</span>
-                </label>
-                <button
-                  onClick={handleRunAiGeneration}
-                  disabled={isGeneratingAi || !aiEnabled || !aiConsented}
-                  className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-pink-900/30"
-                >
-                  <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAi ? 'animate-spin' : ''}`} />
-                  <span>{isGeneratingAi ? 'Đang tạo & tự sửa...' : 'Khởi tạo Shader bằng AI'}</span>
-                </button>
-              </div>
-              {aiStatusMsg && (
-                <div className="text-[11px] text-pink-400 bg-pink-950/40 border border-pink-800/40 p-2 rounded-lg flex items-center gap-2 animate-pulse">
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>{aiStatusMsg}</span>
-                </div>
-              )}
             </div>
 
-            {/* Generated Result Preview & Benchmark */}
-            {aiResult && aiResult.success && aiResult.item && (
-              <div className="flex flex-col gap-3 p-4 bg-slate-950 rounded-xl border border-pink-500/40">
-                {/* Result Badges & Cost Benchmark */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/40 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {AI_UNVERIFIED_LABEL_VI}
-                    </span>
-                    <span className="text-slate-400 text-[11px]">
-                      Sửa tự động: <strong className="text-white">{aiResult.iterations} lượt</strong>
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-[11px]">
-                    <span className="flex items-center gap-1 text-cyan-300 font-mono">
-                      <Cpu className="w-3 h-3" />
-                      ~{aiResult.preview?.benchmark.msPerFrame1080p} ms/frame ở 1080p
-                    </span>
-                    <span className="text-slate-500">Passes: {aiResult.preview?.benchmark.passes}</span>
-                  </div>
-                </div>
-
-                {/* 5 Sample Frames Preview */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-slate-300">5 Frame mẫu xem trước (t = 0.0s đến 2.0s):</span>
-                  <div className="grid grid-cols-5 gap-2">
-                    {aiResult.preview?.sampleFrames.map((thumb, idx) => (
-                      <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-slate-800 bg-slate-900 group">
-                        <img src={thumb} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-0.5 right-1 text-[9px] font-mono bg-black/70 px-1 rounded text-slate-300">
-                          {idx * 0.5}s
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Interactive Parameter Sliders */}
-                {aiResult.item.paramSchema && Object.keys(aiResult.item.paramSchema).length > 0 && (
-                  <div className="flex flex-col gap-2 p-2.5 bg-slate-900/60 rounded-lg border border-slate-800/60">
-                    <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Sliders className="w-3 h-3 text-cyan-400" /> Kéo thử tham số tương tác:
-                    </span>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                      {Object.entries(aiResult.item.paramSchema).map(([key, schema]: [string, any]) => (
-                        <div key={key} className="flex flex-col gap-1">
-                          <div className="flex justify-between text-[11px] text-slate-400">
-                            <span>{schema.label?.vi || key}</span>
-                            <span className="font-mono text-cyan-300">{aiParamValues[key] ?? schema.default}</span>
-                          </div>
-                          {schema.type === 'number' && (
-                            <input
-                              type="range"
-                              min={schema.min ?? 0}
-                              max={schema.max ?? 2}
-                              step={schema.step ?? 0.05}
-                              value={aiParamValues[key] ?? schema.default}
-                              onChange={(e) =>
-                                setAiParamValues({ ...aiParamValues, [key]: parseFloat(e.target.value) })
-                              }
-                              className="accent-pink-500 h-1 bg-slate-800 rounded cursor-pointer"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons: Keep vs Discard */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
-                  <span className="text-slate-400 text-[11px] italic">
-                    * Không bao giờ tự động thêm vào timeline. Bấm "Giữ" để lưu vào Thư viện.
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setAiResult(null)}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors"
-                    >
-                      Bỏ qua / Thử lại
-                    </button>
-                    <button
-                      onClick={handleKeepAiEffect}
-                      disabled={aiSaveSuccess}
-                      className={`px-4 py-1.5 font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                        aiSaveSuccess
-                          ? 'bg-emerald-600 text-white cursor-default'
-                          : 'bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-900/30'
-                      }`}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{aiSaveSuccess ? 'Đã lưu vào Thư viện' : 'Giữ (Lưu vào Hiệu ứng của tôi)'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors font-medium"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={async () => {
+                  setIsGeneratingAi(true);
+                  try {
+                    const res = await generateEffectWithAI({
+                      prompt: aiPrompt,
+                      config: { enabled: true, userConsented: true, apiKey: aiApiKey, provider: 'mock' },
+                      maxRetries: 3,
+                    });
+                    if (res.success && res.item) {
+                      await saveAiEffectToMyEffects(res.item);
+                      showToast('Đã tạo thành công và lưu vào "Của tôi"!', 'success');
+                      setShowAiModal(false);
+                      loadData();
+                    } else {
+                      showToast(res.error || 'AI không thể tạo shader', 'error');
+                    }
+                  } finally {
+                    setIsGeneratingAi(false);
+                  }
+                }}
+                disabled={isGeneratingAi || !aiPrompt.trim()}
+                className="px-4 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold rounded-lg transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isGeneratingAi ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                <span>{isGeneratingAi ? 'Đang tạo...' : 'Tạo hiệu ứng'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Footer Info */}
-      <div className="pt-3 border-t border-slate-800 mt-2 flex flex-col md:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
-        <div>
-          Nguyên tắc: Chỉ dữ liệu khai báo (JSON + GLSL ES 3.00) • Tuyệt đối không chạy JS/WASM • Ghim phiên bản dự án.
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-mono">Dexie IndexedDB v4 (installedAssets, LRU lastUsedAt)</span>
-        </div>
-      </div>
     </div>
   );
 };
