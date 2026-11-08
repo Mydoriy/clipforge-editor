@@ -429,6 +429,35 @@ export const Lab: React.FC = () => {
     }
   };
 
+  const handleSkipToRemix = () => {
+    if (abortController) {
+      abortController.abort();
+    }
+    if (referenceVideo) {
+      if (!timeline) {
+        const aspect =
+          referenceVideo.width && referenceVideo.height
+            ? referenceVideo.width < referenceVideo.height
+              ? '9:16'
+              : referenceVideo.width === referenceVideo.height
+              ? '1:1'
+              : '16:9'
+            : '9:16';
+        const refInput: ReferenceVideoMetadataInput = {
+          videoId: referenceVideo.id,
+          name: referenceVideo.name,
+          durationSec: referenceVideo.durationSec,
+          aspectRatio: aspect as any,
+          thumbnailUrl: '',
+        };
+        const initialTimeline = buildReferenceTimeline([], refInput);
+        setTimeline(initialTimeline);
+        setSelectedSlotId(initialTimeline.slots[0]?.id || null);
+      }
+      setActiveStep(4);
+    }
+  };
+
   // ============================================================================
   // STEP 3: KỸ THUẬT PHÁT HIỆN (Detected Techniques List)
   // ============================================================================
@@ -834,18 +863,28 @@ export const Lab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Cancel Button */}
+              {/* Action Buttons */}
               <div className="flex items-center justify-between pt-2">
                 <span className="text-xs text-gray-400 italic">
                   Đang phân tích các khung hình chuyển cảnh...
                 </span>
-                <button
-                  onClick={handleCancelAnalysis}
-                  className="px-4 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Ban className="w-3.5 h-3.5" />
-                  Hủy phân tích
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSkipToRemix}
+                    className="px-3.5 py-2 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Bỏ qua phân tích AI và vào thẳng Phòng Remix với các phân cảnh gốc"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    Vào ngay Phòng Remix
+                  </button>
+                  <button
+                    onClick={handleCancelAnalysis}
+                    className="px-3.5 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    Hủy phân tích
+                  </button>
+                </div>
               </div>
             </div>
           </div>
