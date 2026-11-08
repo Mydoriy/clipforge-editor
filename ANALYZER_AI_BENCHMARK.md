@@ -91,3 +91,4 @@ Theo nguyên tắc đánh giá của dự án:
 3. **Che mờ cục bộ trước khi truyền**:
    - Tự động làm mờ 4 góc khung hình (nơi đặt watermark/logo TikTok, CapCut, Instagram).
    - Tự động làm mờ khuôn mặt bằng MediaPipe Face Mesh cục bộ.
+

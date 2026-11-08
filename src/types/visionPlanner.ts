@@ -60,6 +60,8 @@ export const RemixAnalysisOutputZod = z.object({
 
 export type RemixAnalysisOutput = z.infer<typeof RemixAnalysisOutputZod>;
 
+export type VisionHarnessMode = 'replay' | 'record' | 'passthrough';
+
 // 3. Cấu hình Settings (không hard-code trong code)
 export interface VisionSettingsConfig {
   provider: VisionProviderType;
@@ -72,6 +74,7 @@ export interface VisionSettingsConfig {
   timeoutMs: number;                  // Timeout request (vd: 15000ms)
   maxRetries: number;                 // Số lần tự sửa lỗi schema (mặc định: 2)
   promptVersion: string;              // Version của system prompt dùng cho hash cache (vd: "v1.0")
+  harnessMode?: VisionHarnessMode;    // Chế độ ghi/phát lại cho CI & testing
 }
 
 export const DEFAULT_VISION_SETTINGS: VisionSettingsConfig = {
@@ -83,6 +86,7 @@ export const DEFAULT_VISION_SETTINGS: VisionSettingsConfig = {
   timeoutMs: 15000,
   maxRetries: 2,
   promptVersion: 'v1.0',
+  harnessMode: 'passthrough',
 };
 
 // 4. Evidence Pack & Request
@@ -112,6 +116,8 @@ export interface VisionAnalysisResponse {
   plannerId: VisionProviderType;
   modelId: string;
   cached: boolean;
+  replayed?: boolean;
+  fixtureId?: string;
   data?: RemixAnalysisOutput;
   error?: string;
   unverifiedClaims: string[];
@@ -121,14 +127,30 @@ export interface VisionAnalysisResponse {
   tokensEstimated?: number;
 }
 
-// 6. Interface VisionPlanner chuẩn hóa
+// 6. Cấu trúc Fixture ghi/phát lại cho CI & Testing
+export interface RecordedVisionFixture {
+  fixtureId: string;
+  requestHash: string;
+  provider: VisionProviderType;
+  model: string;
+  promptVersion: string;
+  recordedAt: number;
+  response: VisionAnalysisResponse;
+  metadata?: {
+    tags?: string[];
+    description?: string;
+    sanitized: boolean;
+  };
+}
+
+// 7. Interface VisionPlanner chuẩn hóa
 export interface VisionPlanner {
   readonly id: VisionProviderType;
   readonly capabilities: VisionCapabilities;
   analyze(req: VisionAnalysisRequest): Promise<VisionAnalysisResponse>;
 }
 
-// 7. Kết quả kiểm tra kết nối (Probe)
+// 8. Kết quả kiểm tra kết nối (Probe)
 export interface VisionProbeResult {
   connected: boolean;
   latencyMs: number;

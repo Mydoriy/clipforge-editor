@@ -167,3 +167,4 @@ test('T6.7: AI Consent Payload and session memory handle approval lifecycle', ()
   clearSessionAiConsent();
   assert.equal(isSessionAiConsentGranted(), false);
 });
+

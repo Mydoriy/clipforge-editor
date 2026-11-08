@@ -39,6 +39,12 @@ import {
   buildInjectionProofSystemPrompt,
   validatePrimitiveInCatalog,
 } from './privacyCostSafetyManager.ts';
+import {
+  shouldReplayVision,
+  shouldRecordVision,
+  replayFixtureForRequest,
+  recordFixtureForRequest,
+} from './providerRecordReplayHarness.ts';
 
 export const VISION_SETTINGS_STORAGE_KEY = 'clipforge_vision_settings';
 
@@ -579,6 +585,14 @@ export async function executeVisionAnalysis(
     }
   }
 
+  // 0. Check Replay Harness for CI & Offline testing (Zero network, $0 cost, deterministic)
+  if (shouldReplayVision() && settings.provider !== 'none') {
+    const replayed = await replayFixtureForRequest(sanitizedReq, settings);
+    if (replayed) {
+      return replayed;
+    }
+  }
+
   // 1. Check Cache first: hash(evidencePack, promptVersion, modelId)
   const cacheKey = await computeVisionCacheKey(
     sanitizedReq.evidencePack,
@@ -612,6 +626,11 @@ export async function executeVisionAnalysis(
           settings.estimatedPricePer1kTokens
         );
         recordDailyUsage(tokens, costUsd);
+      }
+
+      // Record fixture if harness recording is active
+      if (shouldRecordVision()) {
+        await recordFixtureForRequest(sanitizedReq, settings, result);
       }
     }
 
