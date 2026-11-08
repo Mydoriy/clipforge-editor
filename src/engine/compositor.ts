@@ -436,7 +436,8 @@ export class FrameCompositor {
         h,
         intensity,
         speed,
-        scaleFactor
+        scaleFactor,
+        { uSeed: (clip as any).seed ?? 42.0 }
       );
       ctx.restore();
       return;

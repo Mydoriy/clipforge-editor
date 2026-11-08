@@ -290,7 +290,8 @@ void main() {
     if (uRes) gl.uniform2f(uRes, w, h);
 
     const uSeed = gl.getUniformLocation(program, 'uSeed');
-    if (uSeed) gl.uniform1f(uSeed, 42.0); // Deterministic PRNG seed: Preview = Export guarantee
+    const clipSeed = typeof extraUniforms?.uSeed === 'number' ? extraUniforms.uSeed : 42.0;
+    if (uSeed) gl.uniform1f(uSeed, clipSeed); // Deterministic PRNG seed: Preview = Export guarantee
 
     const uParams = gl.getUniformLocation(program, 'uParams');
     if (uParams) gl.uniform4f(uParams, intensity, speed, 0.0, 0.0);
@@ -405,7 +406,8 @@ export function renderDynamicEffect(
   h: number,
   intensity = 1.0,
   speed = 1.0,
-  scaleFactor = 1.0
+  scaleFactor = 1.0,
+  extraUniforms?: Record<string, number | number[]>
 ): void {
   // Validate safety first
   const validation = validateDeclarativeSpec(spec);
@@ -425,7 +427,8 @@ export function renderDynamicEffect(
         h,
         currentTime,
         intensity,
-        speed
+        speed,
+        extraUniforms
       );
       if (glCanvas) {
         ctx.save();
