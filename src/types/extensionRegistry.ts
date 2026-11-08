@@ -59,6 +59,8 @@ export interface EffectSpec {
   author: string;
   license: LicenseType;
   trustLevel: TrustLevel;
+  redistributable?: boolean;
+  paramSchema?: any;
   tags: string[];
 
   // 1. Video Effect / Transition: Pure GLSL ES 3.00 Declarative Shader
@@ -158,11 +160,68 @@ export interface GhostReference {
 }
 
 export interface AssetResolutionResult {
-  status: 'resolved_exact' | 'resolved_fallback' | 'ghost_placeholder';
+  status: 'resolved_exact' | 'resolved_fallback' | 'ghost_placeholder' | 'compatible_available';
   spec?: EffectSpec;
   matchLevel: MatchLevel;
   trustLevel: TrustLevel;
   ghostReference?: GhostReference;
+  compatibleCandidate?: {
+    candidateId: string;
+    candidateVersion: string;
+    sameMajor: boolean;
+    requiresConfirm: boolean;
+  };
   message: string;
 }
+
+// ==========================================
+// M4: INSTALLATION, UPDATE & VERSIONING TYPES
+// ==========================================
+
+export interface ProjectPinnedAsset {
+  packId: string;
+  itemId: string;
+  version: string;
+  sha256?: string;
+  redistributable?: boolean;
+  requiresDownload?: boolean;
+}
+
+export interface AtomicInstallResult {
+  success: boolean;
+  stage?: 'download' | 'hash_sig' | 'static_analysis' | 'sandbox_compile' | 'storage_commit';
+  error?: string;
+  pkg?: AssetPackage;
+  rolledBack?: boolean;
+}
+
+export interface PackageUpdateInfo {
+  id: string;
+  name: string;
+  currentVersion: string;
+  latestVersion: string;
+  updateType: 'patch' | 'minor' | 'major';
+  trustLevel: TrustLevel;
+  hasParamMigration: boolean;
+}
+
+export interface StorageQuotaConfig {
+  limitBytes: number;
+  usedBytes: number;
+  warningThresholdRatio: number; // default: 0.85 (85%)
+  isNearLimit: boolean;
+}
+
+export interface ParamMigrationResult {
+  success: boolean;
+  migratedParams: Record<string, any>;
+  warnings?: string[];
+}
+
+export interface UninstallSafetyCheck {
+  canUninstall: boolean;
+  affectedProjects: Array<{ id: string; title: string }>;
+  totalClipsAffected: number;
+}
+
 

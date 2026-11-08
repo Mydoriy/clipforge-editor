@@ -7,6 +7,12 @@ import { isSupabaseConfigured } from '../utils/supabase';
 import { syncProjectsWithCloud, type SyncStatus } from '../utils/projectSync';
 import { Footer } from '../components/Footer';
 import {
+  getExtensionStorageStats,
+  getExtensionStorageQuota,
+  setExtensionStorageQuota,
+  runSafeLruEviction,
+} from '../utils/extensionRegistryManager';
+import {
   LayoutTemplate,
   Video,
   Sparkles,
@@ -460,6 +466,29 @@ export const SectionPage: React.FC = () => {
         .catch(() => {});
     }
   }, [mediaList, projectList]);
+
+  // Extension Library Storage & Quota State
+  const [extStorage, setExtStorage] = useState<{ usedBytes: number; limitBytes: number; isNearLimit: boolean }>({
+    usedBytes: 0,
+    limitBytes: 200 * 1024 * 1024,
+    isNearLimit: false,
+  });
+  const [extQuotaMb, setExtQuotaMb] = useState<number>(200);
+
+  const refreshExtStorage = () => {
+    setExtQuotaMb(getExtensionStorageQuota());
+    getExtensionStorageStats().then((stats) => {
+      setExtStorage({
+        usedBytes: stats.usedBytes,
+        limitBytes: stats.limitBytes,
+        isNearLimit: stats.isNearLimit,
+      });
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshExtStorage();
+  }, []);
 
   // 4. MARKETING TOOLS TABS & LOCAL TOOLS STATE
   const [mktTab, setMktTab] = useState<'ad' | 'qr' | 'caption' | 'hashtag' | 'thumbnail'>('ad');
@@ -1016,6 +1045,88 @@ export const SectionPage: React.FC = () => {
               >
                 Đăng nhập tài khoản & Kiểm tra đồng bộ
               </button>
+            </div>
+
+            {/* Box 3: Thư viện mở rộng (Extension Library Storage & Safe LRU Eviction) */}
+            <div className="p-6 rounded-[20px] bg-[#111827] border border-[#1F2937] md:col-span-2 flex flex-col gap-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
+                  <Sparkles className="w-5 h-5" />
+                  <span>Dung lượng Thư viện mở rộng (Extension Library Storage)</span>
+                </div>
+                {extStorage.isNearLimit && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1 animate-pulse">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Bộ nhớ gần đầy (&gt;=85%)</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Đã sử dụng: {(extStorage.usedBytes / 1024 / 1024).toFixed(2)} MB</span>
+                  <span>Hạn mức tối đa: {extQuotaMb} MB</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-slate-900 overflow-hidden border border-slate-700">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      extStorage.isNearLimit ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-purple-400 to-indigo-500'
+                    }`}
+                    style={{
+                      width: `${Math.max(2, Math.min(100, (extStorage.usedBytes / extStorage.limitBytes) * 100))}%`
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#1F2937]">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span>Hạn mức do bạn đặt:</span>
+                  <select
+                    value={extQuotaMb}
+                    onChange={(e) => {
+                      const newQuota = parseInt(e.target.value, 10);
+                      setExtensionStorageQuota(newQuota);
+                      refreshExtStorage();
+                      showToast(`Đã đổi hạn mức thư viện mở rộng sang ${newQuota} MB`, 'info');
+                    }}
+                    className="bg-[#0B0F19] text-white font-semibold text-xs py-1 px-2.5 rounded-lg border border-[#374151] focus:outline-none focus:border-purple-400"
+                  >
+                    <option value={100}>100 MB</option>
+                    <option value={200}>200 MB (Mặc định)</option>
+                    <option value={500}>500 MB</option>
+                    <option value={1000}>1000 MB (1 GB)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={async () => {
+                      const res = await runSafeLruEviction();
+                      refreshExtStorage();
+                      if (res.evictedPackages.length > 0) {
+                        showToast(
+                          `Đã dọn dẹp ${(res.freedBytes / 1024 / 1024).toFixed(2)} MB (${res.evictedPackages.length} gói không ghim). Bảo vệ an toàn ${res.protectedPackages.length} gói đang dùng.`,
+                          'success'
+                        );
+                      } else {
+                        showToast(`Bộ nhớ sạch! Mọi gói đang được các dự án bảo vệ an toàn (${res.protectedPackages.length} gói).`, 'info');
+                      }
+                    }}
+                    className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-purple-300" />
+                    <span>Dọn dẹp bộ nhớ đệm (LRU)</span>
+                  </button>
+                  <button
+                    onClick={() => openModal('extensionLibrary')}
+                    className="flex-1 sm:flex-initial py-2 px-3.5 rounded-xl bg-[#1F2937] hover:bg-[#2A374A] border border-[#374151] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Quản lý Kho tài nguyên</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

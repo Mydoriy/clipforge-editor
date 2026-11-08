@@ -32,6 +32,12 @@ import {
   getRegistryUrl,
   setCustomRegistryUrl,
   resetRegistryUrl,
+  checkUninstallSafety,
+  safeUninstallPackage,
+  getAutoUpdateOfficialPatchesSetting,
+  setAutoUpdateOfficialPatchesSetting,
+  compareEffectVersions,
+  getInstalledAssets,
   DEFAULT_REGISTRY_URL,
   type SearchResultItem,
 } from '../utils/extensionRegistryManager';
@@ -54,6 +60,8 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
   const [showSettings, setShowSettings] = useState(false);
   const [customRegistryInput, setCustomRegistryInput] = useState(getRegistryUrl());
   const [revokedAssets, setRevokedAssets] = useState<InstalledAssetEntity[]>([]);
+  const [autoUpdatePatches, setAutoUpdatePatches] = useState(getAutoUpdateOfficialPatchesSetting());
+  const [diffModalInfo, setDiffModalInfo] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scan for ghost clips in active timeline
@@ -149,12 +157,35 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
 
   const handleUninstall = async (id: string, name: string) => {
     try {
-      await uninstallPackage(id);
-      showToast(`Đã gỡ bỏ "${name}" khỏi thiết bị`, 'info');
+      // M4: Check projects currently using this asset
+      const safety = await checkUninstallSafety(id);
+      if (safety.affectedProjects.length > 0) {
+        const projNames = safety.affectedProjects.map((p) => `"${p.title}"`).join(', ');
+        const confirmed = window.confirm(
+          `Hiệu ứng "${name}" đang được sử dụng trong ${safety.affectedProjects.length} dự án (${projNames}).\n\nSau khi gỡ, các khung hình trong các dự án trên sẽ được chuyển sang Ghost Reference (giữ nguyên vị trí và tự nối lại khi cài lại sau này).\n\nBạn có chắc chắn muốn gỡ cài đặt không?`
+        );
+        if (!confirmed) return;
+      }
+      const res = await safeUninstallPackage(id);
+      showToast(
+        `Đã gỡ bỏ "${name}" khỏi thiết bị (${res.affectedProjects.length} dự án đã chuyển khung hình sang Ghost Reference)`,
+        'info'
+      );
       await loadData();
     } catch (err: any) {
       showToast(`Lỗi gỡ bỏ: ${err?.message}`, 'error');
     }
+  };
+
+  const handleCompareVersions = async (pkg: SearchResultItem) => {
+    const installed = await getInstalledAssets();
+    const inst = installed.find((i) => i.id === pkg.id);
+    if (!inst) {
+      showToast('Gói chưa được cài đặt trong máy để so sánh', 'info');
+      return;
+    }
+    const diff = compareEffectVersions(inst.spec, pkg.spec);
+    setDiffModalInfo(diff);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,6 +341,31 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
               Mặc định
             </button>
           </div>
+
+          {/* M4: Auto-update patch toggle */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-300">
+              <input
+                type="checkbox"
+                checked={autoUpdatePatches}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setAutoUpdatePatches(val);
+                  setAutoUpdateOfficialPatchesSetting(val);
+                  showToast(
+                    val
+                      ? 'Đã bật: Tự động cập nhật các bản vá (patch) an toàn của gói Chính thức'
+                      : 'Đã tắt tự động cập nhật bản vá',
+                    'info'
+                  );
+                }}
+                className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-950"
+              />
+              <span className="font-semibold text-[11px]">Tự cập nhật bản vá (patch) của gói Chính thức</span>
+            </label>
+            <span className="text-[10px] text-slate-400">Bản minor/major luôn yêu cầu xác nhận thủ công</span>
+          </div>
+
           <p className="text-[11px] text-amber-300/80 leading-relaxed">
             * Lưu ý bảo mật: Các gói tải từ kho tự host mà không có chữ ký số Ed25519 chính thức sẽ tự động xếp mức "Cộng đồng" để bảo vệ an toàn cho thiết bị.
           </p>
@@ -488,9 +544,35 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
 
                 {pkg.isInstalled ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium">
-                      <Check className="w-3.5 h-3.5" /> Đã cài đặt
-                    </span>
+                    {pkg.hasUpdate ? (
+                      <>
+                        <button
+                          onClick={() => handleCompareVersions(pkg)}
+                          className="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                          title="So sánh thay đổi trước / sau giữa phiên bản trong máy và bản mới"
+                        >
+                          <Sliders className="w-3 h-3" />
+                          <span>So sánh</span>
+                        </button>
+                        <button
+                          onClick={() => handleInstall(pkg)}
+                          disabled={installingId === pkg.id}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold transition-colors"
+                          title={`Cập nhật lên phiên bản mới v${pkg.version}`}
+                        >
+                          {installingId === pkg.id ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <ArrowRight className="w-3 h-3" />
+                          )}
+                          <span>Cập nhật v{pkg.version}</span>
+                        </button>
+                      </>
+                    ) : (
+                      <span className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium">
+                        <Check className="w-3.5 h-3.5" /> Đã cài đặt
+                      </span>
+                    )}
                     <button
                       onClick={() => handleUninstall(pkg.id, pkg.name)}
                       className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg transition-colors"
@@ -519,13 +601,75 @@ export const ExtensionLibraryModal: React.FC<ExtensionLibraryModalProps> = ({ in
         )}
       </div>
 
+      {/* M4: Version Diff Comparison Modal Dialog */}
+      {diffModalInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 text-xs text-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-sm text-white">So sánh Trước / Sau (Version Comparison)</h3>
+              </div>
+              <button
+                onClick={() => setDiffModalInfo(null)}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="font-mono text-cyan-300 font-bold">{diffModalInfo.id}</span>
+              <p className="text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800">
+                {diffModalInfo.summary}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
+                <span className="font-semibold text-emerald-400">Uniforms mới ({diffModalInfo.addedUniforms.length}):</span>
+                {diffModalInfo.addedUniforms.length === 0 ? (
+                  <span className="text-slate-500 italic">Không có</span>
+                ) : (
+                  diffModalInfo.addedUniforms.map((u: string) => (
+                    <span key={u} className="font-mono text-[10px] text-emerald-300">+ {u}</span>
+                  ))
+                )}
+              </div>
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1">
+                <span className="font-semibold text-rose-400">Uniforms bị gỡ ({diffModalInfo.removedUniforms.length}):</span>
+                {diffModalInfo.removedUniforms.length === 0 ? (
+                  <span className="text-slate-500 italic">Không có</span>
+                ) : (
+                  diffModalInfo.removedUniforms.map((u: string) => (
+                    <span key={u} className="font-mono text-[10px] text-rose-300">- {u}</span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+              <span className="text-slate-400 text-[11px]">
+                {diffModalInfo.shaderChanged ? '⚡ Mã GLSL fragment shader có sửa đổi.' : '✓ Mã fragment shader tương đương.'}
+              </span>
+              <button
+                onClick={() => setDiffModalInfo(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer Info */}
       <div className="pt-3 border-t border-slate-800 mt-2 flex flex-col md:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
         <div>
           Nguyên tắc: Chỉ dữ liệu khai báo (JSON + GLSL ES 3.00) • Tuyệt đối không chạy JS/WASM • Ghim phiên bản dự án.
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-mono">Dexie IndexedDB v3 (installedAssets)</span>
+          <span className="text-slate-500 font-mono">Dexie IndexedDB v4 (installedAssets, LRU lastUsedAt)</span>
         </div>
       </div>
     </div>

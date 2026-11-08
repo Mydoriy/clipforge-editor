@@ -20,6 +20,8 @@ export interface ProjectEntity {
   activeTimelineId?: string;
   media?: MediaItem[];
   tracksData?: any; // JSON serialized tracks state
+  pinnedAssets?: Record<string, any>; // M4 Project Pinning: { packId, itemId, version, sha256 }
+  embeddedSpecs?: Record<string, any>; // M4 Embedded Specs for offline portable packaging
 }
 
 export interface MediaEntity {
@@ -73,6 +75,7 @@ export interface InstalledAssetEntity {
   spec: any;
   installedAt: number;
   updatedAt: number;
+  lastUsedAt?: number; // LRU eviction timestamp
   sizeBytes: number;
   hash: string;
   sha256?: string;
@@ -130,6 +133,16 @@ class ClipForgeDatabase extends Dexie {
         snapshots: 'id, projectId, timestamp',
         operationsLog: 'id, projectId, timestamp',
         installedAssets: 'id, kind, trustLevel, name, version, updatedAt'
+      });
+
+    this.version(4)
+      .stores({
+        projects: 'id, title, isDeleted, updatedAt, createdAt',
+        media: 'id, projectId, type, createdAt',
+        trash: 'id, projectId, deletedAt',
+        snapshots: 'id, projectId, timestamp',
+        operationsLog: 'id, projectId, timestamp',
+        installedAssets: 'id, kind, trustLevel, name, version, updatedAt, lastUsedAt'
       });
   }
 }

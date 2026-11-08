@@ -6,6 +6,7 @@ import { translations } from '../i18n';
 import { db } from '../db';
 import { APP_VERSION, APP_NAME } from '../constants/version';
 import { markCleanExit } from '../utils/crashRecovery';
+import { packageProjectForExport, verifyProjectDependencies } from '../utils/extensionRegistryManager';
 import {
   Menu as MenuIcon,
   Crown,
@@ -197,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     }
   };
 
-  // Export current project as .capproj JSON file
+  // Export current project as .capproj JSON file (embeds redistributable specs per M4)
   const handleExportCapproj = async () => {
     setMenuOpen(false);
     try {
@@ -205,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
       if (currentProjectId) {
         projData = await db.projects.get(currentProjectId);
       }
-      const exportData = projData || {
+      const rawData = projData || {
         id: currentProjectId || 'proj-' + Date.now(),
         title: projectTitle,
         duration,
@@ -213,6 +214,8 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         updatedAt: Date.now(),
         tracksData: { clips }
       };
+      // Package project with embedded declarative specs for redistributable items
+      const exportData = await packageProjectForExport(rawData);
       const jsonStr = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -221,13 +224,13 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
       a.download = `${(projectTitle || 'Project').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_')}.capproj`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Đã xuất tệp dự án .capproj!', 'success');
+      showToast('Đã xuất tệp dự án .capproj kèm tài nguyên mở rộng!', 'success');
     } catch (err: any) {
       showToast(`Lỗi xuất file: ${err.message}`, 'error');
     }
   };
 
-  // Import .capproj JSON file
+  // Import .capproj JSON file (verifies extension dependencies per M4)
   const handleImportCapproj = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setMenuOpen(false);
     const file = e.target.files?.[0];
@@ -237,6 +240,16 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
       const data = JSON.parse(text);
       const newId = 'proj-' + Date.now();
       const title = data.title || data.name || 'Imported Project';
+
+      // Verify dependencies for any missing external packages
+      const depCheck = await verifyProjectDependencies(data);
+      if (!depCheck.complete) {
+        showToast(
+          `Dự án chứa ${depCheck.missingAssets.length} hiệu ứng chưa được cài đặt trong kho. Đang giữ khung hình placeholder (Ghost Reference).`,
+          'info'
+        );
+      }
+
       await db.projects.add({
         ...data,
         id: newId,
