@@ -31,7 +31,8 @@ import {
   Calendar,
   Cloud,
   Check,
-  WifiOff
+  WifiOff,
+  FlaskConical
 } from 'lucide-react';
 
 export const Home: React.FC = () => {
@@ -457,7 +458,44 @@ export const Home: React.FC = () => {
       {/* 3. AI-POWERED CREATIVE SUITE (4 Card lớn) */}
       <div className="flex flex-col gap-3">
         <h3 className="font-bold text-base text-[#E5E7EB]">{t.aiCreativeSuite}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {/* Card 0: Learn From Video (Phòng Học & Remix - T5) */}
+          <div
+            onClick={() => navigate('/lab')}
+            className="relative h-44 rounded-[16px] bg-[#111827] border border-cyan-500/40 hover:border-cyan-400 p-5 flex flex-col justify-between cursor-pointer hover-lift group overflow-hidden shadow-lg transition-all"
+          >
+            {/* Background Thumbnail Image with Gradient */}
+            <div className="absolute inset-0 z-0">
+              <img
+                src="https://images.unsplash.com/photo-1536240478700-b869070f9279?w=600&auto=format&fit=crop&q=80"
+                alt="Học từ video"
+                className="w-full h-full object-cover object-center opacity-30 group-hover:opacity-50 group-hover:scale-105 transition-all duration-300"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1320] via-[#0E1320]/80 to-[#0E1320]/30" />
+            </div>
+
+            {/* Top Bar with Icon & Badge */}
+            <div className="relative z-10 flex items-center justify-between w-full">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/40 backdrop-blur-md shadow-sm">
+                <FlaskConical className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 backdrop-blur-md uppercase tracking-wider">
+                Phòng Lab
+              </span>
+            </div>
+
+            {/* Bottom Content */}
+            <div className="relative z-10">
+              <span className="font-bold text-[#E5E7EB] text-sm block group-hover:text-cyan-300 transition-colors">
+                {language === 'VN' ? 'Học từ video' : 'Learn from Video'}
+              </span>
+              <span className="text-[11px] text-[#9CA3AF] block mt-0.5">
+                {language === 'VN' ? 'Phân tích kỹ thuật & remix từ video tham chiếu' : 'Analyze technique & remix from reference'}
+              </span>
+            </div>
+          </div>
+
           {/* Card 1: Video Studio */}
           <div
             onClick={() => openModal('videoStudio')}

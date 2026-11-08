@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '../store/useEditorStore';
 import { translations } from '../i18n';
 import {
@@ -107,6 +108,7 @@ import {
 import { validateFontBuffer, sanitizeLottieJson, sanitizeSvg } from '../utils/sanitizer';
 
 export const CategoryPanel: React.FC = () => {
+  const navigate = useNavigate();
   const {
     language,
     activeTab,
@@ -5546,6 +5548,30 @@ export const CategoryPanel: React.FC = () => {
               />
             </div>
 
+            {/* Mục "Từ link/video" (T5 Entry Point: Mở Phòng Lab & Remix) */}
+            <div
+              onClick={() => navigate('/lab')}
+              className="p-2.5 rounded-xl bg-gradient-to-r from-[#1FC8DB]/20 via-purple-500/15 to-pink-500/20 border border-[#1FC8DB]/40 hover:border-[#1FC8DB] cursor-pointer transition-all flex items-center justify-between group shadow-sm hover-lift"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#1FC8DB]/20 text-[#1FC8DB] flex items-center justify-center font-bold">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white group-hover:text-[#1FC8DB] transition-colors flex items-center gap-1.5">
+                    <span>✨ Từ link / video</span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-[#1FC8DB]/20 text-[#1FC8DB] rounded-full border border-[#1FC8DB]/40 font-mono font-bold">
+                      Phòng Lab
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-[#8A8A8A]">
+                    Tạo mẫu & học kỹ thuật chuyển cảnh từ video tham chiếu
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#8A8A8A] group-hover:text-[#1FC8DB] group-hover:translate-x-0.5 transition-all" />
+            </div>
+
             {/* Inline Discovery Block for Templates */}
             {renderRegistryDiscoveryBlock('template', templateSearch)}
 
@@ -5553,6 +5579,7 @@ export const CategoryPanel: React.FC = () => {
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1">
               {[
                 { id: 'all', label: 'Tất cả' },
+                { id: 'from_link', label: '🔗 Từ link/video' },
                 { id: 'trending', label: 'Trending' },
                 { id: 'intro', label: 'Intro Hook' },
                 { id: 'vlog', label: 'Vlog' },
@@ -5563,7 +5590,13 @@ export const CategoryPanel: React.FC = () => {
               ].map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => setTemplateCategory(c.id)}
+                  onClick={() => {
+                    if (c.id === 'from_link') {
+                      navigate('/lab');
+                    } else {
+                      setTemplateCategory(c.id);
+                    }
+                  }}
                   className={`px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors ${
                     templateCategory === c.id
                       ? 'bg-[#1FC8DB] text-slate-950 font-bold'

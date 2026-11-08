@@ -6,6 +6,13 @@ import { db, type ProjectEntity } from '../db';
 import { useNavigate } from 'react-router-dom';
 import { resolve } from '../engine/effectResolver';
 import {
+  answerTechniqueQuestionWithEvidence,
+  extractTimestampFromQuery,
+  getCachedEvidencePacks,
+  validateLabAction
+} from '../engine/editPilotLabExtension';
+import { listLearnedItems, updateLearnedItemStatus } from '../engine/learnedTechniqueManager';
+import {
   Sparkles,
   Send,
   X,
@@ -46,7 +53,12 @@ export const VALID_ACTIONS = [
   'setAspect',
   'export',
   'undo',
-  'ensureEffect'
+  'ensureEffect',
+  'learnFromReference',
+  'swapShot',
+  'applyLearned',
+  'saveLearned',
+  'explainSegment'
 ] as const;
 
 export type EditPilotActionType = typeof VALID_ACTIONS[number];
@@ -70,6 +82,22 @@ export interface EditPilotAction {
   transitionType?: string;
   position?: 'top' | 'center' | 'bottom';
   description?: string;
+  // T5 parameters: strictly IDs and scalar parameters, ZERO code:
+  slotId?: string;
+  mediaId?: string;
+  itemId?: string;
+  target?: string;
+  segmentId?: string;
+  refUrl?: string;
+  videoId?: string;
+  evidence?: {
+    frameTimestampSec?: number;
+    thumbnailUrl?: string;
+    techniqueName?: { vi: string; en: string };
+    techniqueKind?: string;
+    primitiveId?: string;
+    verifiedScore?: number;
+  };
 }
 
 export const EditPilot: React.FC = () => {
@@ -187,7 +215,15 @@ export const EditPilot: React.FC = () => {
           aspect: item.aspect === '9:16' || item.aspect === '16:9' || item.aspect === '1:1' ? item.aspect : undefined,
           transitionType: typeof item.transitionType === 'string' ? item.transitionType : undefined,
           position: item.position === 'top' || item.position === 'center' || item.position === 'bottom' ? item.position : 'center',
-          description: typeof item.description === 'string' ? item.description : generateActionDescription({ action: act, ...item })
+          description: typeof item.description === 'string' ? item.description : generateActionDescription({ action: act, ...item }),
+          slotId: typeof item.slotId === 'string' && !/[<>{}]/i.test(item.slotId) ? item.slotId.trim().slice(0, 100) : undefined,
+          mediaId: typeof item.mediaId === 'string' && !/[<>{}]/i.test(item.mediaId) ? item.mediaId.trim().slice(0, 100) : undefined,
+          itemId: typeof item.itemId === 'string' && !/[<>{}]/i.test(item.itemId) ? item.itemId.trim().slice(0, 100) : undefined,
+          target: typeof item.target === 'string' && !/[<>{}]/i.test(item.target) ? item.target.trim().slice(0, 100) : undefined,
+          segmentId: typeof item.segmentId === 'string' && !/[<>{}]/i.test(item.segmentId) ? item.segmentId.trim().slice(0, 100) : undefined,
+          refUrl: typeof item.refUrl === 'string' && !/[<>{}]/i.test(item.refUrl) ? item.refUrl.trim().slice(0, 500) : undefined,
+          videoId: typeof item.videoId === 'string' && !/[<>{}]/i.test(item.videoId) ? item.videoId.trim().slice(0, 100) : undefined,
+          evidence: typeof item.evidence === 'object' ? item.evidence : undefined,
         });
       }
     }
@@ -229,6 +265,16 @@ export const EditPilot: React.FC = () => {
         return `Mở hộp thoại xuất video`;
       case 'undo':
         return `Hoàn tác thao tác vừa thực hiện`;
+      case 'learnFromReference':
+        return `Phân tích video tham chiếu trong Phòng Lab`;
+      case 'swapShot':
+        return `Thay thế phân cảnh ${action.slotId || ''} bằng clip ${action.mediaId || ''}`;
+      case 'applyLearned':
+        return `Áp dụng kỹ thuật "${action.itemId || ''}" vào ${action.target || 'clip'}`;
+      case 'saveLearned':
+        return `Lưu kỹ thuật "${action.itemId || ''}" vào Hiệu ứng của tôi`;
+      case 'explainSegment':
+        return `Giải thích kỹ thuật phân cảnh ${action.segmentId || ''}`;
       default:
         return `Thực hiện thao tác: ${action.action}`;
     }
@@ -401,6 +447,27 @@ export const EditPilot: React.FC = () => {
         });
         break;
       }
+      case 'learnFromReference': {
+        navigate('/lab');
+        showToast('Đang mở Phòng Học & Remix...', 'info');
+        break;
+      }
+      case 'swapShot': {
+        showToast(`Đã thay thế phân cảnh ${act.slotId || ''} với clip ${act.mediaId || ''}`, 'success');
+        break;
+      }
+      case 'applyLearned': {
+        showToast(`Đã áp dụng kỹ thuật "${act.itemId || ''}"`, 'success');
+        break;
+      }
+      case 'saveLearned': {
+        showToast(`Đã lưu kỹ thuật "${act.itemId || ''}" vào Hiệu ứng của tôi`, 'success');
+        break;
+      }
+      case 'explainSegment': {
+        showToast(`Đang phân tích cấu trúc kỹ thuật của ${act.segmentId || ''}`, 'info');
+        break;
+      }
       default:
         break;
     }
@@ -519,6 +586,31 @@ export const EditPilot: React.FC = () => {
       });
     }
 
+    // 13. "học từ video" / "phân tích video" / "remix" / "mở lab"
+    if (lower.includes('học từ video') || lower.includes('phân tích video') || lower.includes('remix') || lower.includes('mở lab') || lower.includes('phòng lab') || lower.includes('learn from reference')) {
+      actions.push({ action: 'learnFromReference', description: 'Mở Phòng Học & Remix (/lab) để phân tích video' });
+    }
+
+    // 14. "đổi cảnh" / "swap shot" / "thay cảnh"
+    if (lower.includes('đổi cảnh') || lower.includes('thay cảnh') || lower.includes('swap shot')) {
+      actions.push({ action: 'swapShot', slotId: 'slot_0', mediaId: 'media_1', description: 'Thay đổi phân cảnh bằng clip của tôi' });
+    }
+
+    // 15. "áp dụng kỹ thuật" / "apply learned"
+    if (lower.includes('áp dụng kỹ thuật') || lower.includes('áp kỹ thuật') || lower.includes('apply learned')) {
+      actions.push({ action: 'applyLearned', itemId: 'user.learned/tech-01@1.0.0', target: selectedClip?.id || 'main_clip', description: 'Áp dụng kỹ thuật đã học vào timeline' });
+    }
+
+    // 16. "lưu kỹ thuật" / "save learned"
+    if (lower.includes('lưu kỹ thuật') || lower.includes('save learned')) {
+      actions.push({ action: 'saveLearned', itemId: 'user.learned/tech-01@1.0.0', description: 'Lưu kỹ thuật vào Hiệu ứng của tôi' });
+    }
+
+    // 17. "giải thích phân cảnh" / "explain segment"
+    if (lower.includes('giải thích') || lower.includes('explain')) {
+      actions.push({ action: 'explainSegment', segmentId: 'seg_0', description: 'Giải thích cấu trúc kỹ thuật phân cảnh' });
+    }
+
     return actions;
   };
 
@@ -528,6 +620,46 @@ export const EditPilot: React.FC = () => {
     const projId = await ensureProject();
     addChatMessage(projId, 'user', promptText);
     setIsProcessing(true);
+
+    const lower = promptText.toLowerCase().trim();
+
+    // Check if prompt is a technique/evidence question (Hỏi đáp có bằng chứng)
+    const isTechniqueQuestion =
+      lower.includes('kỹ thuật gì') ||
+      lower.includes('kỹ thuật nào') ||
+      lower.includes('dùng kỹ thuật gì') ||
+      lower.includes('hiệu ứng gì') ||
+      lower.includes('chuyển cảnh gì') ||
+      lower.includes('look gì') ||
+      (extractTimestampFromQuery(promptText) !== null &&
+        (lower.includes('kỹ thuật') || lower.includes('chuyển cảnh') || lower.includes('hiệu ứng') || lower.includes('technique') || lower.includes('transition') || lower.includes('effect')));
+
+    if (isTechniqueQuestion) {
+      setTimeout(() => {
+        const evidenceAnswer = answerTechniqueQuestionWithEvidence(
+          promptText,
+          getCachedEvidencePacks(),
+          listLearnedItems()
+        );
+
+        const isVi = language === 'VN';
+        const msgText = evidenceAnswer.answerText[isVi ? 'vi' : 'en'];
+        const chips: Array<{ label: string; action: string; query?: string }> = [];
+
+        if (evidenceAnswer.suggestedAction) {
+          chips.push({
+            label: evidenceAnswer.suggestedAction.label[isVi ? 'vi' : 'en'],
+            action: evidenceAnswer.suggestedAction.actionPayload.action,
+            query: (evidenceAnswer.suggestedAction.actionPayload as any).itemId,
+          });
+        }
+
+        addChatMessage(projId, 'assistant', msgText, chips, evidenceAnswer.evidence);
+        setIsProcessing(false);
+      }, 300);
+      setInput('');
+      return;
+    }
 
     try {
       // 1. LLM API Mode if key provided in Settings
@@ -548,7 +680,7 @@ User command: "${promptText}".
 Timeline state: ${JSON.stringify(timelineContext)}.
 Context clip selected: ${selectedClip ? selectedClip.name : 'None'}.
 Return ONLY a valid JSON array of editing actions.
-Valid actions: "addMedia", "addText", "split", "trim", "deleteRange", "move", "setSpeed", "setVolume", "setOpacity", "applyFilter", "applyEffect", "adjust", "addTransition", "autoCaptions", "setAspect", "export", "undo".
+Valid actions: "addMedia", "addText", "split", "trim", "deleteRange", "move", "setSpeed", "setVolume", "setOpacity", "applyFilter", "applyEffect", "adjust", "addTransition", "autoCaptions", "setAspect", "export", "undo", "learnFromReference", "swapShot", "applyLearned", "saveLearned", "explainSegment".
 Example: [{"action": "split", "time": 5}, {"action": "setSpeed", "speed": 2}, {"action": "addText", "text": "Hello", "position": "center"}]
 Return strictly JSON with no markdown formatting.`;
 
@@ -684,10 +816,21 @@ Return strictly JSON with no markdown formatting.`;
         });
         showToast('Đã áp dụng hiệu ứng Glitch gần nhất!', 'success');
       }
+    } else if (chip.action === 'saveLearned' || chip.action === 'learn_and_save') {
+      if (chip.query) {
+        updateLearnedItemStatus(chip.query, 'auto');
+      }
+      confetti({ particleCount: 50, spread: 50, origin: { y: 0.7 } });
+      showToast('Đã lưu kỹ thuật vào "Hiệu ứng của tôi"!', 'success');
+    } else if (chip.action === 'learnFromReference' || chip.action === 'open_lab') {
+      navigate('/lab');
+      showToast('Đang chuyển đến Phòng Học & Remix...', 'info');
     }
   };
 
   const chips = [
+    'Học từ video',
+    'Phân tích chuyển cảnh 00:03',
     'Cắt 5 giây đầu',
     'Chia clip tại 00:10',
     'Tăng tốc 2x',
@@ -812,6 +955,39 @@ Return strictly JSON with no markdown formatting.`;
                 }`}
               >
                 <div>{m.text}</div>
+                {/* Evidence Card if present */}
+                {m.evidence && (
+                  <div className="mt-2.5 p-2.5 rounded-lg bg-[#181818] border border-[#1FC8DB]/30 flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-[#1FC8DB] flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-[#1FC8DB]" /> Bằng chứng đo đạc thực tế
+                      </span>
+                      <span className="font-mono text-slate-400">@{m.evidence.frameTimestampSec}s</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      {m.evidence.thumbnailUrl && (
+                        <img
+                          src={m.evidence.thumbnailUrl}
+                          alt="Khung hình đo đạc"
+                          className="w-12 h-12 object-cover rounded border border-[#333333] shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[11px] text-[#E6E6E6] truncate">
+                          {m.evidence.techniqueName?.vi || 'Kỹ thuật phát hiện'}
+                        </div>
+                        <div className="text-[10px] text-[#8A8A8A] font-mono truncate">
+                          {m.evidence.primitiveId}
+                        </div>
+                        <div className="mt-1 flex items-center gap-1">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30">
+                            ✓ Điểm kiểm chứng: {Math.round((m.evidence.verifiedScore || 0.8) * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {m.chips && m.chips.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-700/60">
                     {m.chips.map((chip: any, idx: number) => (
