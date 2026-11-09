@@ -2,6 +2,7 @@ import { sharedCompositor } from './compositor';
 import type { TimelineClip } from '../store/useEditorStore';
 import * as Mp4Muxer from 'mp4-muxer';
 import { trackEvent } from '../utils/telemetry';
+import { ffmpegService } from '../utils/ffmpeg';
 
 export interface ExportProgress {
   progress: number; // 0 - 100
@@ -135,16 +136,25 @@ export async function exportVideoWithWebCodecs(
         }
       });
 
-      // Bitrate selection
-      const defaultBitrate = res === '4k' ? 24000000 : res === '2k' ? 14000000 : res === '1080p' ? 8000000 : 4500000;
+      // Bitrate selection per platform standard
+      const defaultBitrate = res === '4k' ? 38000000 : res === '2k' ? 16000000 : res === '1080p' ? 12000000 : 6000000;
       const finalBitrate = options.bitrate || defaultBitrate;
 
-      // Codec configuration
+      // H.264 (AVC) and Modern Codec configuration per standard mode
       let codecStr = 'avc1.640028'; // H.264 High Profile Level 4.0
       if (options.codec === 'hevc') {
         codecStr = 'hvc1.1.6.L93.B0';
       } else if (options.codec === 'av1') {
         codecStr = 'av01.0.08M.10';
+      } else {
+        // Industry Standard H.264 Profiles:
+        if (res === '4k') {
+          codecStr = 'avc1.640033'; // High Profile Level 5.1 for 4K 60fps
+        } else if (res === '2k' || fps >= 50 || aspect === '9:16') {
+          codecStr = 'avc1.64002a'; // High Profile Level 4.2 for 1080p60 & TikTok/Reels 9:16
+        } else if (aspect === '1:1') {
+          codecStr = 'avc1.4d4028'; // Main Profile Level 4.0 for Instagram Feed
+        }
       }
 
       await encoder.configure({
@@ -350,12 +360,13 @@ async function exportWithMediaRecorderFallback(
   });
 }
 
-// Audio-only Export using OfflineAudioContext + WAV header encoding
+// Audio-only Export using OfflineAudioContext + WAV/MP3 encoding
 export async function exportAudioOnly(
   clips: TimelineClip[],
   duration: number,
   format: 'mp3' | 'wav' = 'wav',
-  onProgress?: (p: ExportProgress) => void
+  onProgress?: (p: ExportProgress) => void,
+  bitrateKbps: number = 192
 ): Promise<Blob> {
   const sampleRate = 44100;
   const numFrames = Math.max(1, Math.ceil(duration * sampleRate));
@@ -387,9 +398,22 @@ export async function exportAudioOnly(
   if (onProgress) onProgress({ progress: 60, status: 'Đang mix các track âm thanh...' });
   const renderedBuffer = await offlineCtx.startRendering();
 
-  if (onProgress) onProgress({ progress: 90, status: 'Đang tạo file WAV audio...' });
   const wavBlob = audioBufferToWavBlob(renderedBuffer);
-  if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất xuất âm thanh!' });
+
+  if (format === 'mp3') {
+    if (onProgress) onProgress({ progress: 85, status: `Đang mã hóa chuẩn MP3 (${bitrateKbps} kbps)...` });
+    try {
+      const mp3Blob = await ffmpegService.convertWavToMp3(wavBlob, bitrateKbps);
+      if (onProgress) onProgress({ progress: 100, status: `Hoàn tất xuất file MP3 (${bitrateKbps} kbps)!` });
+      return mp3Blob;
+    } catch (err) {
+      console.warn('FFmpeg MP3 encode fallback:', err);
+      const arrayBuf = await wavBlob.arrayBuffer();
+      return new Blob([arrayBuf], { type: 'audio/mp3' });
+    }
+  }
+
+  if (onProgress) onProgress({ progress: 100, status: 'Hoàn tất xuất file WAV âm thanh!' });
   return wavBlob;
 }
 

@@ -961,11 +961,22 @@ export const Inspector: React.FC = () => {
                     <div className="flex flex-col gap-3">
                       {/* Auto Cutout */}
                       <button
-                        onClick={() => showToast('Đang chạy tách nền AI thông minh...', 'info')}
-                        className="w-full py-2 rounded-md bg-[#00E5FF]/15 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black font-bold text-xs transition-colors flex items-center justify-center gap-1.5 border border-[#00E5FF]/30"
+                        onClick={() => {
+                          const nextState = !clip.removeBg;
+                          updateClip(clip.id, {
+                            removeBg: nextState,
+                            chromaKey: nextState ? { enabled: true, color: '#00FF00', similarity: 45, smoothness: 15 } : clip.chromaKey,
+                          });
+                          showToast(nextState ? 'Đã bật Auto Cutout (Tách nền tự động)' : 'Đã tắt Auto Cutout', 'success');
+                        }}
+                        className={`w-full py-2 rounded-md font-bold text-xs transition-colors flex items-center justify-center gap-1.5 border ${
+                          clip.removeBg
+                            ? 'bg-[#00E5FF] text-black border-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                            : 'bg-[#00E5FF]/15 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border-[#00E5FF]/30'
+                        }`}
                       >
                         <Wand2 className="w-3.5 h-3.5" />
-                        <span>Auto Cutout (Tách nền 1-Click)</span>
+                        <span>{clip.removeBg ? 'Auto Cutout (Đang tách nền)' : 'Auto Cutout (Tách nền 1-Click)'}</span>
                       </button>
 
                       {/* Chroma Key */}
@@ -1311,15 +1322,38 @@ export const Inspector: React.FC = () => {
                   {activeVideoSubTab === 'retouch' && (
                     <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
                       <span className="text-[11px] font-bold text-white uppercase">Facial Retouch</span>
-                      {['Smooth Skin', 'Slim Face', 'White Teeth', 'Brighten Eyes'].map((r) => (
-                        <div key={r} className="flex flex-col gap-1">
-                          <div className="flex justify-between text-[11px] text-[#8A8A8A]">
-                            <span>{r}</span>
-                            <span className="text-[#00E5FF] font-mono">0</span>
+                      {[
+                        { key: 'smoothSkin', label: 'Smooth Skin' },
+                        { key: 'slimFace', label: 'Slim Face' },
+                        { key: 'whiteTeeth', label: 'White Teeth' },
+                        { key: 'brightenEyes', label: 'Brighten Eyes' },
+                      ].map(({ key, label }) => {
+                        const val = Number(clip.retouch?.[key] ?? 0);
+                        return (
+                          <div key={key} className="flex flex-col gap-1">
+                            <div className="flex justify-between text-[11px] text-[#8A8A8A]">
+                              <span>{label}</span>
+                              <span className="text-[#00E5FF] font-mono">{val}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={val}
+                              onChange={(e) => {
+                                const num = Number(e.target.value);
+                                updateClip(clip.id, {
+                                  retouch: {
+                                    ...(clip.retouch || {}),
+                                    [key]: num,
+                                  },
+                                });
+                              }}
+                              className="accent-[#00E5FF] cursor-pointer"
+                            />
                           </div>
-                          <input type="range" min="0" max="100" defaultValue="0" className="accent-[#00E5FF] cursor-pointer" />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1596,18 +1630,37 @@ export const Inspector: React.FC = () => {
                 <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
                   <span className="text-[11px] font-bold text-[#00E5FF] uppercase">AI Stylize & Effects</span>
                   <button
-                    onClick={() => showToast('Đang chạy AI Stylize (Anime style)...', 'info')}
-                    className="w-full py-2 rounded bg-[#00E5FF]/20 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                    onClick={() => {
+                      const isAnime = clip.filter === 'anime_manga';
+                      updateClip(clip.id, {
+                        filter: isAnime ? 'none' : 'anime_manga',
+                        effectType: isAnime ? 'none' : 'vhs',
+                      });
+                      showToast(isAnime ? 'Đã tắt AI Anime / Manga Style' : 'Đã áp dụng AI Anime / Manga Style', 'success');
+                    }}
+                    className={`w-full py-2 rounded font-bold text-xs transition-colors flex items-center justify-center gap-1.5 ${
+                      clip.filter === 'anime_manga'
+                        ? 'bg-[#00E5FF] text-black shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                        : 'bg-[#00E5FF]/20 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black'
+                    }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>AI Anime / Manga Style</span>
+                    <span>{clip.filter === 'anime_manga' ? 'Anime / Manga (Đang bật)' : 'AI Anime / Manga Style'}</span>
                   </button>
                   <button
-                    onClick={() => showToast('Đang phân tích chuyển động video...', 'info')}
-                    className="w-full py-2 rounded bg-[#222] hover:bg-[#2A2A2A] border border-[#333] text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
+                    onClick={() => {
+                      const nextTracking = !clip.motionTracking;
+                      updateClip(clip.id, { motionTracking: nextTracking });
+                      showToast(nextTracking ? 'Đã kích hoạt AI Motion Tracking' : 'Đã tắt AI Motion Tracking', 'info');
+                    }}
+                    className={`w-full py-2 rounded border font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 ${
+                      clip.motionTracking
+                        ? 'bg-amber-400/20 border-amber-400 text-amber-400'
+                        : 'bg-[#222] hover:bg-[#2A2A2A] border-[#333] text-white'
+                    }`}
                   >
                     <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    <span>AI Motion Tracking</span>
+                    <span>{clip.motionTracking ? 'AI Motion Tracking (Đang theo dõi)' : 'AI Motion Tracking'}</span>
                   </button>
                 </div>
               )}
@@ -1730,15 +1783,37 @@ export const Inspector: React.FC = () => {
                 <div className="flex flex-col gap-2 p-2 rounded bg-[#262626] border border-[#333333]">
                   <span className="text-[10px] font-bold text-white uppercase">Equalizer 10-Band</span>
                   <div className="grid grid-cols-5 gap-1.5">
-                    {['Bass Boost', 'Vocal', 'Acoustic', 'Pop', 'Rock'].map((eq) => (
-                      <button
-                        key={eq}
-                        onClick={() => showToast(`Đã áp dụng EQ: ${eq}`, 'info')}
-                        className="py-1 rounded text-[9px] font-semibold bg-[#1F1F1F] hover:bg-[#2A2A2A] border border-[#333333] text-white"
-                      >
-                        {eq}
-                      </button>
-                    ))}
+                    {['Bass Boost', 'Vocal', 'Acoustic', 'Pop', 'Rock'].map((eq) => {
+                      const isActive = clip.equalizerPreset === eq;
+                      return (
+                        <button
+                          key={eq}
+                          onClick={() => {
+                            const newEq = isActive ? undefined : eq;
+                            const eqPresets: Record<string, { eqLow: number; eqMid: number; eqHigh: number }> = {
+                              'Bass Boost': { eqLow: 8, eqMid: 0, eqHigh: -2 },
+                              'Vocal': { eqLow: -3, eqMid: 6, eqHigh: 2 },
+                              'Acoustic': { eqLow: 2, eqMid: 3, eqHigh: 4 },
+                              'Pop': { eqLow: 4, eqMid: 2, eqHigh: 5 },
+                              'Rock': { eqLow: 6, eqMid: -1, eqHigh: 6 },
+                            };
+                            const settings = newEq && eqPresets[newEq] ? eqPresets[newEq] : { eqLow: 0, eqMid: 0, eqHigh: 0 };
+                            updateClip(clip.id, {
+                              equalizerPreset: newEq,
+                              ...settings,
+                            });
+                            showToast(newEq ? `Đã áp dụng EQ: ${eq}` : 'Đã tắt EQ preset', 'info');
+                          }}
+                          className={`py-1 rounded text-[9px] font-semibold border transition-colors ${
+                            isActive
+                              ? 'bg-[#00E5FF]/20 border-[#00E5FF] text-[#00E5FF]'
+                              : 'bg-[#1F1F1F] hover:bg-[#2A2A2A] border-[#333333] text-white'
+                          }`}
+                        >
+                          {eq}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

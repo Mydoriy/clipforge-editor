@@ -86,6 +86,178 @@ export interface InstalledAssetEntity {
   replacementId?: string;
 }
 
+export interface ExportPresetEntity {
+  id: string; // e.g. 'preset-tiktok-916'
+  name: string; // 'TikTok / Reels / Shorts (9:16)'
+  mode: 'tiktok_shorts' | 'youtube_landscape' | 'instagram_feed' | 'cinematic' | 'audio_mp3' | 'custom';
+  aspect: '9:16' | '16:9' | '1:1' | '4:3' | '21:9';
+  resolution: '720p' | '1080p' | '2k' | '4k';
+  width: number;
+  height: number;
+  fps: 24 | 25 | 30 | 50 | 60;
+  videoCodec: 'h264' | 'hevc' | 'av1';
+  h264Profile: 'baseline' | 'main' | 'high';
+  h264Level: string; // '4.0', '4.2', '5.1'
+  videoBitrate: number; // in bps (e.g. 12_000_000)
+  container: 'mp4' | 'webm' | 'mp3';
+  audioCodec: 'mp3' | 'aac' | 'wav';
+  audioBitrate: number; // in bps (e.g. 192_000, 320_000)
+  audioSampleRate: number; // 44100 or 48000 Hz
+  audioChannels: 2;
+  isDefault?: boolean;
+  description: string;
+}
+
+export const STANDARD_EXPORT_PRESETS: ExportPresetEntity[] = [
+  {
+    id: 'preset-tiktok-916',
+    name: 'TikTok / Reels / Shorts (9:16)',
+    mode: 'tiktok_shorts',
+    aspect: '9:16',
+    resolution: '1080p',
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    videoCodec: 'h264',
+    h264Profile: 'high',
+    h264Level: '4.2',
+    videoBitrate: 12000000,
+    container: 'mp4',
+    audioCodec: 'mp3',
+    audioBitrate: 192000,
+    audioSampleRate: 48000,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Chuẩn tối ưu thuật toán TikTok/Reels: H.264 High Profile, 1080x1920 30fps, MP3/AAC 192kbps'
+  },
+  {
+    id: 'preset-youtube-1080p',
+    name: 'YouTube Standard (16:9 FHD)',
+    mode: 'youtube_landscape',
+    aspect: '16:9',
+    resolution: '1080p',
+    width: 1920,
+    height: 1080,
+    fps: 60,
+    videoCodec: 'h264',
+    h264Profile: 'high',
+    h264Level: '4.2',
+    videoBitrate: 12000000,
+    container: 'mp4',
+    audioCodec: 'mp3',
+    audioBitrate: 320000,
+    audioSampleRate: 48000,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Chuẩn YouTube khuyến nghị: H.264 High Profile 1080p 60fps, âm thanh MP3/AAC 320kbps'
+  },
+  {
+    id: 'preset-youtube-4k',
+    name: 'YouTube Ultra HD (16:9 4K)',
+    mode: 'youtube_landscape',
+    aspect: '16:9',
+    resolution: '4k',
+    width: 3840,
+    height: 2160,
+    fps: 60,
+    videoCodec: 'h264',
+    h264Profile: 'high',
+    h264Level: '5.1',
+    videoBitrate: 40000000,
+    container: 'mp4',
+    audioCodec: 'mp3',
+    audioBitrate: 320000,
+    audioSampleRate: 48000,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Chất lượng cao nhất: H.264 High Profile Level 5.1 4K 60fps, 40 Mbps, MP3/AAC 320kbps'
+  },
+  {
+    id: 'preset-instagram-11',
+    name: 'Instagram Feed Square (1:1)',
+    mode: 'instagram_feed',
+    aspect: '1:1',
+    resolution: '1080p',
+    width: 1080,
+    height: 1080,
+    fps: 30,
+    videoCodec: 'h264',
+    h264Profile: 'main',
+    h264Level: '4.0',
+    videoBitrate: 8000000,
+    container: 'mp4',
+    audioCodec: 'mp3',
+    audioBitrate: 192000,
+    audioSampleRate: 44100,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Chuẩn bài đăng vuông Instagram Feed: H.264 Main Profile 1080x1080, MP3 192kbps'
+  },
+  {
+    id: 'preset-cinematic-219',
+    name: 'Cinematic Widescreen (21:9)',
+    mode: 'cinematic',
+    aspect: '21:9',
+    resolution: '2k',
+    width: 2560,
+    height: 1080,
+    fps: 24,
+    videoCodec: 'h264',
+    h264Profile: 'high',
+    h264Level: '4.2',
+    videoBitrate: 16000000,
+    container: 'mp4',
+    audioCodec: 'mp3',
+    audioBitrate: 320000,
+    audioSampleRate: 48000,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Tỉ lệ điện ảnh Ultrawide 21:9 24fps: H.264 High Profile, âm thanh vòm Stereo 320kbps'
+  },
+  {
+    id: 'preset-audio-mp3-studio',
+    name: 'File MP3 Âm Thanh Studio (320 kbps)',
+    mode: 'audio_mp3',
+    aspect: '16:9',
+    resolution: '1080p',
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    videoCodec: 'h264',
+    h264Profile: 'main',
+    h264Level: '4.0',
+    videoBitrate: 0,
+    container: 'mp3',
+    audioCodec: 'mp3',
+    audioBitrate: 320000,
+    audioSampleRate: 48000,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Xuất chỉ file âm thanh MP3 chất lượng phòng thu Studio Master (320 kbps CBR, 48kHz Stereo)'
+  },
+  {
+    id: 'preset-audio-mp3-standard',
+    name: 'File MP3 Âm Thanh Chuẩn (192 kbps)',
+    mode: 'audio_mp3',
+    aspect: '16:9',
+    resolution: '1080p',
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    videoCodec: 'h264',
+    h264Profile: 'main',
+    h264Level: '4.0',
+    videoBitrate: 0,
+    container: 'mp3',
+    audioCodec: 'mp3',
+    audioBitrate: 192000,
+    audioSampleRate: 44100,
+    audioChannels: 2,
+    isDefault: true,
+    description: 'Xuất chỉ file âm thanh MP3 tiêu chuẩn Podcast / Voice (192 kbps CBR, 44.1kHz Stereo)'
+  }
+];
+
 class ClipForgeDatabase extends Dexie {
   projects!: EntityTable<ProjectEntity, 'id'>;
   media!: EntityTable<MediaEntity, 'id'>;
@@ -93,6 +265,7 @@ class ClipForgeDatabase extends Dexie {
   snapshots!: EntityTable<SnapshotEntity, 'id'>;
   operationsLog!: EntityTable<OperationLogEntity, 'id'>;
   installedAssets!: EntityTable<InstalledAssetEntity, 'id'>;
+  exportPresets!: EntityTable<ExportPresetEntity, 'id'>;
 
   constructor() {
     super('ClipForgeDB');
@@ -144,10 +317,56 @@ class ClipForgeDatabase extends Dexie {
         operationsLog: 'id, projectId, timestamp',
         installedAssets: 'id, kind, trustLevel, name, version, updatedAt, lastUsedAt'
       });
+
+    this.version(5)
+      .stores({
+        projects: 'id, title, isDeleted, updatedAt, createdAt',
+        media: 'id, projectId, type, createdAt',
+        trash: 'id, projectId, deletedAt',
+        snapshots: 'id, projectId, timestamp',
+        operationsLog: 'id, projectId, timestamp',
+        installedAssets: 'id, kind, trustLevel, name, version, updatedAt, lastUsedAt',
+        exportPresets: 'id, mode, aspect, resolution, container, videoCodec, isDefault'
+      })
+      .upgrade(async (tx) => {
+        try {
+          const presetsTable = tx.table('exportPresets');
+          for (const p of STANDARD_EXPORT_PRESETS) {
+            await presetsTable.put(p);
+          }
+        } catch (e) {
+          console.warn('Dexie v5 presets upgrade warning:', e);
+        }
+      });
   }
 }
 
 export const db = new ClipForgeDatabase();
+
+// Ensure standard H.264 Video and MP3 Audio presets exist in IndexedDB
+export async function ensureStandardExportPresets(): Promise<ExportPresetEntity[]> {
+  try {
+    const count = await db.exportPresets.count();
+    if (count === 0) {
+      await db.exportPresets.bulkPut(STANDARD_EXPORT_PRESETS);
+    }
+    return await db.exportPresets.toArray();
+  } catch (err) {
+    console.warn('ensureStandardExportPresets fallback to static:', err);
+    return STANDARD_EXPORT_PRESETS;
+  }
+}
+
+// Get export preset by mode or id
+export async function getExportPresetByMode(mode: string): Promise<ExportPresetEntity | undefined> {
+  try {
+    const preset = await db.exportPresets.where('mode').equals(mode).first();
+    if (preset) return preset;
+  } catch (e) {
+    console.warn('getExportPresetByMode error:', e);
+  }
+  return STANDARD_EXPORT_PRESETS.find((p) => p.mode === mode || p.id === mode);
+}
 
 // Auto clean trash items older than 30 days
 export async function autoCleanTrash(): Promise<number> {

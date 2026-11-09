@@ -17,7 +17,9 @@ import {
   createProjectSnapshot,
   type ProjectEntity,
   type SnapshotEntity,
-  type MediaEntity
+  type MediaEntity,
+  STANDARD_EXPORT_PRESETS,
+  type ExportPresetEntity
 } from '../db';
 import { checkStorageQuota, type StorageEstimateResult } from '../lib/db';
 import { validateCapprojFile } from '../utils/capprojValidator';
@@ -144,6 +146,8 @@ export const Modals: React.FC = () => {
   const [exportRangeEnd, setExportRangeEnd] = useState<number>(10);
   const [exportAudioOnlyMode, setExportAudioOnlyMode] = useState<boolean>(false);
   const [exportAudioFormat, setExportAudioFormat] = useState<'wav' | 'mp3' | 'aac'>('wav');
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('preset-tiktok-916');
+  const [exportAudioBitrate, setExportAudioBitrate] = useState<number>(192); // kbps
   const [supportedCodecs, setSupportedCodecs] = useState<{ hevc: boolean; av1: boolean }>({ hevc: false, av1: false });
   const abortSignalRef = useRef<{ aborted: boolean }>({ aborted: false });
   const [promptInput, setPromptInput] = useState('');
@@ -1476,6 +1480,24 @@ export const Modals: React.FC = () => {
     }
   };
 
+  const handleApplyExportPreset = (preset: ExportPresetEntity) => {
+    setSelectedPresetId(preset.id);
+    if (preset.mode === 'audio_mp3') {
+      setExportAudioOnlyMode(true);
+      setExportAudioFormat('mp3');
+      setExportAudioBitrate(Math.round(preset.audioBitrate / 1000));
+    } else {
+      setExportAudioOnlyMode(false);
+      setExportRes(preset.resolution);
+      setExportFps(preset.fps);
+      setExportCodec(preset.videoCodec);
+      setExportFormat(preset.container === 'webm' ? 'webm' : 'mp4');
+      setExportBitrateMode('custom');
+      setExportCustomBitrate(Math.round(preset.videoBitrate / 1000000));
+      setExportAudioBitrate(Math.round(preset.audioBitrate / 1000));
+    }
+  };
+
   // Handle Video / Audio Export
   const handleStartExport = async () => {
     try {
@@ -1503,7 +1525,7 @@ export const Modals: React.FC = () => {
       setExportEta(0);
       setExportStatus(
         exportAudioOnlyMode
-          ? `Đang xuất tệp âm thanh ${exportAudioFormat.toUpperCase()}...`
+          ? `Đang xuất tệp âm thanh ${exportAudioFormat.toUpperCase()} (${exportAudioBitrate}kbps)...`
           : `Đang khởi tạo WebCodecs (${exportRes.toUpperCase()}, ${exportFps}fps, ${exportFormat.toUpperCase()})...`
       );
 
@@ -1551,7 +1573,8 @@ export const Modals: React.FC = () => {
           ({ progress, status }) => {
             setExportProgress(progress);
             setExportStatus(status);
-          }
+          },
+          exportAudioBitrate
         );
       } else {
         blob = await exportTimelineVideo(
@@ -2140,6 +2163,55 @@ export const Modals: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 2. Cấu hình xuất chuẩn theo chế độ (Platform Presets) */}
+                <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#22D3EE]" />
+                      Chế độ cấu hình xuất chuẩn (Platform Presets)
+                    </span>
+                    <span className="text-[10px] text-[#22D3EE] font-mono">H.264 / MP3 AVC Standard</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+                    {STANDARD_EXPORT_PRESETS.map((preset) => {
+                      const isSel = selectedPresetId === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleApplyExportPreset(preset)}
+                          className={`px-2.5 py-1.5 rounded-lg border text-left flex flex-col gap-0.5 transition-all ${
+                            isSel
+                              ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
+                              : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="truncate">{preset.name.split(' (')[0]}</span>
+                            <span className="text-[10px] text-[#22D3EE] font-mono">{preset.aspect}</span>
+                          </div>
+                          <div className="text-[10px] text-[#9CA3AF] truncate">
+                            {preset.mode === 'audio_mp3'
+                              ? `MP3 ${Math.round(preset.audioBitrate / 1000)}k CBR`
+                              : `${preset.resolution.toUpperCase()} • ${preset.fps}fps • H.264`}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Preset description & codec spec */}
+                  {(() => {
+                    const activePreset = STANDARD_EXPORT_PRESETS.find((p) => p.id === selectedPresetId);
+                    if (!activePreset) return null;
+                    return (
+                      <div className="text-[11px] text-[#22D3EE] bg-cyan-950/30 border border-cyan-800/40 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                        <span className="truncate">{activePreset.description}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 {/* Toggle Audio Only vs Video */}
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#111827] border border-[#1F2937]">
                   <div className="flex items-center gap-2">
@@ -2163,29 +2235,61 @@ export const Modals: React.FC = () => {
 
                 {exportAudioOnlyMode ? (
                   /* Audio Only Options */
-                  <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
-                    <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Định dạng âm thanh</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: 'wav', label: 'WAV', desc: 'Lossless PCM 16-bit 44.1kHz' },
-                        { id: 'mp3', label: 'MP3', desc: 'Stereo 192 kbps' },
-                        { id: 'aac', label: 'AAC', desc: 'Định dạng chuẩn Apple' }
-                      ].map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setExportAudioFormat(item.id as any)}
-                          className={`p-2 rounded-lg border text-left transition-all ${
-                            exportAudioFormat === item.id
-                              ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
-                              : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
-                          }`}
-                        >
-                          <div className="font-bold text-xs">{item.label}</div>
-                          <div className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</div>
-                        </button>
-                      ))}
+                  <div className="flex flex-col gap-3 p-3 rounded-xl bg-[#0F131D] border border-[#1F2937]">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">Định dạng âm thanh</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'wav', label: 'WAV', desc: 'Lossless PCM 16-bit 44.1kHz' },
+                          { id: 'mp3', label: 'MP3', desc: `MPEG Layer-3 ${exportAudioBitrate}kbps CBR` },
+                          { id: 'aac', label: 'AAC', desc: 'Định dạng chuẩn Apple' }
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setExportAudioFormat(item.id as any)}
+                            className={`p-2 rounded-lg border text-left transition-all ${
+                              exportAudioFormat === item.id
+                                ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
+                                : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
+                            }`}
+                          >
+                            <div className="font-bold text-xs">{item.label}</div>
+                            <div className="text-[10px] text-[#22D3EE] mt-0.5">{item.desc}</div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
+                    {/* MP3 Bitrate selector */}
+                    {exportAudioFormat === 'mp3' && (
+                      <div className="flex flex-col gap-1.5 pt-1 border-t border-[#1F2937]">
+                        <span className="text-[11px] font-bold text-[#9CA3AF] uppercase">
+                          Tốc độ bit MP3 (Bitrate)
+                        </span>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { kbps: 128, label: '128 kbps', desc: 'Tiêu chuẩn (Voice)' },
+                            { kbps: 192, label: '192 kbps', desc: 'Podcast / Nhạc nhẹ' },
+                            { kbps: 320, label: '320 kbps', desc: 'Studio Master CBR' },
+                          ].map((b) => (
+                            <button
+                              key={b.kbps}
+                              type="button"
+                              onClick={() => setExportAudioBitrate(b.kbps)}
+                              className={`p-2 rounded-lg border text-left transition-all ${
+                                exportAudioBitrate === b.kbps
+                                  ? 'bg-[#22D3EE]/20 border-[#22D3EE] text-white shadow-sm shadow-cyan-500/20'
+                                  : 'bg-[#181E2C] border-[#2A3447] text-[#9CA3AF] hover:text-white'
+                              }`}
+                            >
+                              <div className="font-bold text-xs">{b.label}</div>
+                              <div className="text-[10px] text-[#22D3EE] mt-0.5">{b.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   /* Video Options */

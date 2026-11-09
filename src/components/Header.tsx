@@ -1104,9 +1104,12 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {isEditor && (
           <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-[#333333]">
             <button
-              onClick={() => showToast('Cửa sổ đã ở kích thước tối ưu', 'info')}
+              onClick={() => {
+                toggleShowTimeline();
+                showToast(showTimeline ? 'Đã thu gọn Timeline để mở rộng không gian xem' : 'Đã hiển thị lại Timeline', 'info');
+              }}
               className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors"
-              title="Thu nhỏ (–)"
+              title={showTimeline ? 'Thu gọn Timeline (–)' : 'Mở rộng Timeline (–)'}
             >
               <Minus className="w-3 h-3" />
             </button>

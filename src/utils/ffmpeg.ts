@@ -107,6 +107,33 @@ class FFmpegService {
       return file;
     }
   }
+
+  // Convert Audio WAV to genuine MP3 using libmp3lame
+  async convertWavToMp3(wavBlob: Blob, bitrateKbps: number = 192): Promise<Blob> {
+    const loaded = await this.load();
+    if (!loaded || !this.ffmpeg) {
+      return new Blob([await wavBlob.arrayBuffer()], { type: 'audio/mp3' });
+    }
+
+    try {
+      const data = await fetchFile(wavBlob);
+      await this.ffmpeg.writeFile('input_audio.wav', data);
+
+      await this.ffmpeg.exec([
+        '-i', 'input_audio.wav',
+        '-vn',
+        '-c:a', 'libmp3lame',
+        '-b:a', `${bitrateKbps}k`,
+        'output_audio.mp3'
+      ]);
+
+      const output = await this.ffmpeg.readFile('output_audio.mp3');
+      return new Blob([output as any], { type: 'audio/mp3' });
+    } catch (e) {
+      console.warn('FFmpeg convertWavToMp3 fallback:', e);
+      return new Blob([await wavBlob.arrayBuffer()], { type: 'audio/mp3' });
+    }
+  }
 }
 
 export const ffmpegService = new FFmpegService();

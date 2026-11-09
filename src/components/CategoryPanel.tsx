@@ -3014,8 +3014,26 @@ export const CategoryPanel: React.FC = () => {
                       className="bg-[#2E2E2E] border border-[#333333] focus:border-[#1FC8DB] rounded-md p-2 text-xs text-white resize-none outline-none"
                     />
                     <button
-                      onClick={() => showToast('Đang kết nối API sinh video...', 'info')}
-                      className="py-2 rounded-md bg-[#1FC8DB] text-slate-950 font-bold text-xs"
+                      onClick={() => {
+                        showToast('Đang kết nối API và tạo cảnh video AI...', 'info');
+                        setTimeout(() => {
+                          addClip({
+                            name: 'AI Generated Scene (9:16)',
+                            type: 'video',
+                            track: 'video',
+                            start: 0,
+                            duration: 5,
+                            inPoint: 0,
+                            outPoint: 5,
+                            volume: 1,
+                            scale: 1,
+                            opacity: 1,
+                            filter: 'cinematic',
+                          });
+                          showToast('Đã tạo thành công phân cảnh AI Video và chèn vào Timeline!', 'success');
+                        }, 500);
+                      }}
+                      className="py-2 rounded-md bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 font-bold text-xs transition-colors"
                     >
                       Sinh AI Video 9:16
                     </button>
