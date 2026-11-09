@@ -246,18 +246,68 @@ export class FrameCompositor {
   ): void {
     ctx.save();
 
-    // Opacity
+    // Keyframe Animation Interpolation (CapCut Keyframing)
+    let kX = (clip.x || clip.transform?.x || 0);
+    let kY = (clip.y || clip.transform?.y || 0);
+    let kScale = (clip.scale || clip.transform?.scale || 1.0);
+    let kScaleX = (clip.scaleX || clip.transform?.scaleX || 1.0);
+    let kScaleY = (clip.scaleY || clip.transform?.scaleY || 1.0);
+    let kRotation = (clip.rotation || clip.transform?.rotation || 0) + ((clip as any).mediaRotation || 0);
     let clipAlpha = clip.opacity ?? 1;
+
+    if (clip.keyframes && clip.keyframes.length > 0) {
+      const timeInClip = Math.max(0, currentTime - clip.start);
+      const sorted = [...clip.keyframes].sort((a, b) => a.time - b.time);
+      if (timeInClip <= sorted[0].time) {
+        const k = sorted[0];
+        if (k.x !== undefined) kX = k.x;
+        if (k.y !== undefined) kY = k.y;
+        if (k.scale !== undefined) kScale = k.scale;
+        if (k.scaleX !== undefined) kScaleX = k.scaleX;
+        if (k.scaleY !== undefined) kScaleY = k.scaleY;
+        if (k.rotation !== undefined) kRotation = k.rotation;
+        if (k.opacity !== undefined) clipAlpha = k.opacity;
+      } else if (timeInClip >= sorted[sorted.length - 1].time) {
+        const k = sorted[sorted.length - 1];
+        if (k.x !== undefined) kX = k.x;
+        if (k.y !== undefined) kY = k.y;
+        if (k.scale !== undefined) kScale = k.scale;
+        if (k.scaleX !== undefined) kScaleX = k.scaleX;
+        if (k.scaleY !== undefined) kScaleY = k.scaleY;
+        if (k.rotation !== undefined) kRotation = k.rotation;
+        if (k.opacity !== undefined) clipAlpha = k.opacity;
+      } else {
+        for (let i = 0; i < sorted.length - 1; i++) {
+          const k1 = sorted[i];
+          const k2 = sorted[i + 1];
+          if (timeInClip >= k1.time && timeInClip <= k2.time) {
+            const span = k2.time - k1.time;
+            const t = span > 0 ? (timeInClip - k1.time) / span : 0;
+            const ease = t * t * (3 - 2 * t);
+            if (k1.x !== undefined && k2.x !== undefined) kX = k1.x + (k2.x - k1.x) * ease;
+            if (k1.y !== undefined && k2.y !== undefined) kY = k1.y + (k2.y - k1.y) * ease;
+            if (k1.scale !== undefined && k2.scale !== undefined) kScale = k1.scale + (k2.scale - k1.scale) * ease;
+            if (k1.scaleX !== undefined && k2.scaleX !== undefined) kScaleX = k1.scaleX + (k2.scaleX - k1.scaleX) * ease;
+            if (k1.scaleY !== undefined && k2.scaleY !== undefined) kScaleY = k1.scaleY + (k2.scaleY - k1.scaleY) * ease;
+            if (k1.rotation !== undefined && k2.rotation !== undefined) kRotation = k1.rotation + (k2.rotation - k1.rotation) * ease;
+            if (k1.opacity !== undefined && k2.opacity !== undefined) clipAlpha = k1.opacity + (k2.opacity - k1.opacity) * ease;
+            break;
+          }
+        }
+      }
+    }
+
     if (clip.refOnly || clip.isReferenceOnly) {
       clipAlpha = Math.min(clipAlpha, 0.35); // Lớp tham chiếu hiển thị mờ
     }
 
     // Position, Scale & Rotation (including smartphone EXIF / orientation metadata)
-    let posX = canvasW / 2 + (clip.x || 0) * scaleFactor;
-    let posY = canvasH / 2 + (clip.y || 0) * scaleFactor;
-    let clipScale = (clip.scale || 1);
-    let clipRotation = (clip.rotation || 0) + ((clip as any).mediaRotation || 0);
-    let clipScaleX = 1;
+    let posX = canvasW / 2 + kX * scaleFactor;
+    let posY = canvasH / 2 + kY * scaleFactor;
+    let clipScale = kScale;
+    let clipRotation = kRotation;
+    let clipScaleX = kScaleX * (clip.flipX ? -1 : 1);
+    let clipScaleY = kScaleY * (clip.flipY ? -1 : 1);
 
     // 3.6 NESTED COMPOUND CLIPS RENDERER
     if (clip.compoundClips && clip.compoundClips.length > 0) {
@@ -277,43 +327,67 @@ export class FrameCompositor {
       return;
     }
 
-    // 3.6 TRANSITION IN ENGINE
-    const transType = clip.transitionType || clip.transitionIn?.type;
-    const transDur = clip.transitionDuration || clip.transitionIn?.duration || 1.0;
+    // 3.6 TRANSITION IN & OUT ENGINE
+    const transInType = clip.transitionType || clip.transitionIn?.type;
+    const transInDur = clip.transitionDuration || clip.transitionIn?.duration || 1.0;
     const timeInClip = currentTime - clip.start;
+    const timeToEnd = (clip.start + clip.duration) - currentTime;
 
-    if (transType && transType !== 'none' && timeInClip >= 0 && timeInClip < transDur) {
-      const p = Math.min(1, Math.max(0, timeInClip / transDur));
-      if (transType === 'fade' || transType === 'dissolve') {
+    // Transition In
+    if (transInType && transInType !== 'none' && timeInClip >= 0 && timeInClip < transInDur) {
+      const p = Math.min(1, Math.max(0, timeInClip / transInDur));
+      if (transInType === 'fade' || transInType === 'dissolve') {
         clipAlpha *= p;
-      } else if (transType === 'slideLeft') {
+      } else if (transInType === 'white' || transInType === 'whiteFlash') {
+        clipAlpha *= p;
+        ctx.fillStyle = `rgba(255, 255, 255, ${(1 - p) * 0.9})`;
+        ctx.fillRect(0, 0, canvasW, canvasH);
+      } else if (transInType === 'slideLeft') {
         posX += canvasW * (1 - p);
-      } else if (transType === 'slideRight') {
+      } else if (transInType === 'slideRight') {
         posX -= canvasW * (1 - p);
-      } else if (transType === 'slideUp') {
+      } else if (transInType === 'slideUp') {
         posY += canvasH * (1 - p);
-      } else if (transType === 'slideDown') {
+      } else if (transInType === 'slideDown') {
         posY -= canvasH * (1 - p);
-      } else if (transType === 'zoom') {
+      } else if (transInType === 'zoom' || transInType === 'zoomIn') {
         clipScale *= (0.2 + 0.8 * p);
-      } else if (transType === 'spin') {
+      } else if (transInType === 'zoomOut') {
+        clipScale *= (1.8 - 0.8 * p);
+      } else if (transInType === 'spin') {
         clipRotation += (1 - p) * 360;
         clipScale *= Math.max(0.1, p);
-      } else if (transType === 'flip') {
-        clipScaleX = Math.max(0.01, Math.cos((1 - p) * Math.PI / 2));
-      } else if (transType === 'glitch') {
+      } else if (transInType === 'flip') {
+        clipScaleX *= Math.max(0.01, Math.cos((1 - p) * Math.PI / 2));
+      } else if (transInType === 'glitch') {
         if (Math.random() > 0.35) {
           posX += (Math.random() - 0.5) * 50 * (1 - p) * scaleFactor;
         }
-      } else if (transType === 'blur') {
+      } else if (transInType === 'blur') {
         ctx.filter = `blur(${Math.round((1 - p) * 20)}px)`;
-      } else if (transType === 'push') {
+      } else if (transInType === 'push') {
         const ease = 1 - Math.pow(1 - p, 3);
         posX += canvasW * (1 - ease);
-      } else if (transType === 'wipe') {
+      } else if (transInType === 'wipe') {
         ctx.beginPath();
         ctx.rect(-canvasW / 2, -canvasH / 2, canvasW * p, canvasH);
         ctx.clip();
+      }
+    }
+
+    // Transition Out
+    const transOutType = clip.transitionOut?.type;
+    const transOutDur = clip.transitionOut?.duration || 1.0;
+    if (transOutType && transOutType !== 'none' && timeToEnd >= 0 && timeToEnd < transOutDur) {
+      const p = Math.min(1, Math.max(0, timeToEnd / transOutDur));
+      if (transOutType === 'fade' || transOutType === 'dissolve') {
+        clipAlpha *= p;
+      } else if (transOutType === 'zoom' || transOutType === 'zoomOut') {
+        clipScale *= (0.2 + 0.8 * p);
+      } else if (transOutType === 'slideLeft') {
+        posX -= canvasW * (1 - p);
+      } else if (transOutType === 'slideRight') {
+        posX += canvasW * (1 - p);
       }
     }
 
@@ -323,7 +397,19 @@ export class FrameCompositor {
     if (clipRotation) {
       ctx.rotate((clipRotation * Math.PI) / 180);
     }
-    ctx.scale(clipScale * clipScaleX, clipScale);
+    ctx.scale(clipScale * clipScaleX, clipScale * clipScaleY);
+
+    // Blend mode (CapCut Blending)
+    if (clip.blendMode && clip.blendMode !== 'normal') {
+      ctx.globalCompositeOperation = clip.blendMode as GlobalCompositeOperation;
+    }
+
+    // 3.7 CAPCUT ADVANCED MASK ENGINE
+    const mask = clip.mask;
+    const hasMask = mask && mask !== 'none';
+    if (hasMask) {
+      this.applyClipMask(ctx, mask, canvasW, canvasH, scaleFactor);
+    }
 
     // Color Grading & Filters
     const b = 100 + (clip.brightness || 0);
@@ -698,6 +784,80 @@ export class FrameCompositor {
       const fh = sh * fitScale;
       ctx.drawImage(source, -fw / 2, -fh / 2, fw, fh);
     }
+  }
+
+  // 3.7 CapCut Advanced Mask Engine: Circle, Rect, Split, Filmstrip, Heart, Star, Invert & Feather
+  private applyClipMask(
+    ctx: CanvasRenderingContext2D,
+    mask: any,
+    canvasW: number,
+    canvasH: number,
+    scaleFactor: number
+  ): void {
+    const maskObj = typeof mask === 'string' ? { type: mask } : (mask || {});
+    const maskType = maskObj.type || 'none';
+    if (maskType === 'none') return;
+
+    const invert = Boolean(maskObj.invert);
+    const mx = (maskObj.x || 0) * scaleFactor;
+    const my = (maskObj.y || 0) * scaleFactor;
+    const mw = (maskObj.width || canvasW * 0.6) * scaleFactor;
+    const mh = (maskObj.height || canvasH * 0.5) * scaleFactor;
+    const mrot = ((maskObj.rotation || 0) * Math.PI) / 180;
+    const roundness = (maskObj.roundness || 0) * scaleFactor;
+
+    ctx.save();
+    ctx.translate(mx, my);
+    if (mrot) ctx.rotate(mrot);
+
+    ctx.beginPath();
+    if (invert) {
+      // Outer boundary encompassing entire viewing canvas for evenodd clipping
+      ctx.rect(-canvasW * 3, -canvasH * 3, canvasW * 6, canvasH * 6);
+    }
+
+    if (maskType === 'circle') {
+      ctx.ellipse(0, 0, Math.max(1, mw / 2), Math.max(1, mh / 2), 0, 0, Math.PI * 2);
+    } else if (maskType === 'rect') {
+      if (typeof (ctx as any).roundRect === 'function') {
+        (ctx as any).roundRect(-mw / 2, -mh / 2, mw, mh, Math.min(mw / 2, mh / 2, roundness));
+      } else {
+        ctx.rect(-mw / 2, -mh / 2, mw, mh);
+      }
+    } else if (maskType === 'split') {
+      if (invert) {
+        ctx.rect(-canvasW * 2, -canvasH * 2, canvasW * 4, canvasH * 2);
+      } else {
+        ctx.rect(-canvasW * 2, 0, canvasW * 4, canvasH * 2);
+      }
+    } else if (maskType === 'filmstrip') {
+      ctx.rect(-canvasW * 2, -mh / 2, canvasW * 4, mh);
+    } else if (maskType === 'heart') {
+      const s = Math.min(mw, mh) / 100;
+      ctx.moveTo(0, 20 * s);
+      ctx.bezierCurveTo(-50 * s, -40 * s, -50 * s, -80 * s, 0, -40 * s);
+      ctx.bezierCurveTo(50 * s, -80 * s, 50 * s, -40 * s, 0, 20 * s);
+    } else if (maskType === 'star') {
+      const rOuter = Math.min(mw, mh) / 2;
+      const rInner = rOuter * 0.45;
+      for (let i = 0; i < 10; i++) {
+        const angle = (i * Math.PI) / 5 - Math.PI / 2;
+        const r = i % 2 === 0 ? rOuter : rInner;
+        const x = Math.cos(angle) * r;
+        const y = Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    }
+
+    if (invert) {
+      ctx.clip('evenodd');
+    } else {
+      ctx.clip();
+    }
+
+    ctx.restore();
   }
 
   // Procedural 9:16 Video Canvas Card fallback

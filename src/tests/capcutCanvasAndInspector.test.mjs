@@ -110,3 +110,4 @@ test('CapCut Timeline: SMPTE timecode matches CapCut standard format (00:00:05:0
   assert.equal(formatSmpteTimecode(0, 30), '00:00:00:00');
   assert.equal(formatSmpteTimecode(65.2, 30), '00:01:05:06');
 });
+

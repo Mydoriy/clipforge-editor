@@ -24,10 +24,23 @@ export interface ClipTransform {
   x: number;
   y: number;
   scale: number;
+  scaleX?: number;
+  scaleY?: number;
   rotation: number;
   flipX?: boolean;
   flipY?: boolean;
   anchor?: { x: number; y: number };
+}
+
+export interface ClipKeyframe {
+  time: number; // in seconds relative to clip start
+  x?: number;
+  y?: number;
+  scale?: number;
+  scaleX?: number;
+  scaleY?: number;
+  rotation?: number;
+  opacity?: number;
 }
 
 export interface ClipFilter {
@@ -61,7 +74,7 @@ export interface Clip {
   inPoint: number;     // trim head offset in seconds
   outPoint: number;    // trim tail offset in seconds
   speed: number;       // 0.25 to 4.0
-  speedCurve?: number[] | { points: Array<{ x: number; y: number }> };
+  speedCurve?: string | number[] | { points: Array<{ x: number; y: number }> };
   reverse?: boolean;
   transform: ClipTransform;
   opacity: number;     // 0 to 1
@@ -72,7 +85,19 @@ export interface Clip {
   filter?: ClipFilter | string;
   adjustments: ClipAdjustments;
   effects: any[];
-  mask?: 'none' | 'rect' | 'circle' | { type: string; feather?: number; invert?: boolean };
+  mask?: 'none' | 'rect' | 'circle' | 'split' | 'filmstrip' | 'heart' | 'star' | {
+    type: string;
+    feather?: number;
+    invert?: boolean;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    radius?: number;
+    rotation?: number;
+    roundness?: number;
+  } | string;
+  keyframes?: ClipKeyframe[];
   chromaKey?: { enabled: boolean; color?: string; similarity?: number; smoothness?: number };
   animation: ClipAnimation;
   linkedGroupId?: string;
@@ -81,6 +106,7 @@ export interface Clip {
   compoundClips?: any[];
   locked?: boolean;
   transitionIn?: { type: string; duration: number };
+  transitionOut?: { type: string; duration: number };
   text?: string;
   sticker?: string;
 

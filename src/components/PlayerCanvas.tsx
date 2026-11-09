@@ -1074,6 +1074,86 @@ export const PlayerCanvas: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* VISUAL MASK OVERLAY (CapCut Advanced Mask Visualizer)   */}
+          {/* ======================================================== */}
+          {isSelectedClipActive && selectedClip.mask && selectedClip.mask !== 'none' && (() => {
+            const m = typeof selectedClip.mask === 'string' ? { type: selectedClip.mask } : (selectedClip.mask as any);
+            const maskType = m.type || 'none';
+            if (maskType === 'none') return null;
+
+            const mx = (m.x || 0) * 0.5;
+            const my = (m.y || 0) * 0.5;
+            const mw = (m.width || 500) * 0.5;
+            const mh = (m.height || 350) * 0.5;
+            const mrot = m.rotation || 0;
+            const roundness = (m.roundness || 0) * 0.5;
+            const invert = Boolean(m.invert);
+
+            return (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `calc(50% + ${mx}px)`,
+                  top: `calc(50% + ${my}px)`,
+                  transform: `translate(-50%, -50%) rotate(${mrot}deg)`,
+                  width: `${mw}px`,
+                  height: `${mh}px`,
+                  pointerEvents: 'none',
+                  zIndex: 25
+                }}
+                className="flex items-center justify-center transition-all"
+              >
+                {/* Mask Shape Outline */}
+                {maskType === 'circle' && (
+                  <div className="w-full h-full rounded-full border-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                )}
+                {maskType === 'rect' && (
+                  <div
+                    style={{ borderRadius: `${roundness}px` }}
+                    className="w-full h-full border-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]"
+                  />
+                )}
+                {maskType === 'split' && (
+                  <div className="w-[200vw] h-0 border-t-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                )}
+                {maskType === 'filmstrip' && (
+                  <div className="w-[200vw] h-full border-y-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                )}
+                {maskType === 'heart' && (
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_8px_#00E5FF]">
+                    <path
+                      d="M 50,80 C 10,50 10,20 50,35 C 90,20 90,50 50,80 Z"
+                      fill="none"
+                      stroke="#00E5FF"
+                      strokeWidth="2"
+                      strokeDasharray="4 4"
+                    />
+                  </svg>
+                )}
+                {maskType === 'star' && (
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_8px_#00E5FF]">
+                    <polygon
+                      points="50,5 64,36 98,36 70,57 81,91 50,70 19,91 30,57 2,36 36,36"
+                      fill="none"
+                      stroke="#00E5FF"
+                      strokeWidth="2"
+                      strokeDasharray="4 4"
+                    />
+                  </svg>
+                )}
+
+                {/* Center Anchor Point */}
+                <div className="w-2 h-2 rounded-full bg-[#00E5FF] shadow-[0_0_6px_#00E5FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+
+                {/* Badge */}
+                <div className="absolute -top-6 px-1.5 py-0.5 rounded bg-black/80 border border-[#00E5FF]/40 text-[#00E5FF] font-mono text-[9px] uppercase whitespace-nowrap">
+                  Mask: {maskType} {invert ? '(Invert)' : ''}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

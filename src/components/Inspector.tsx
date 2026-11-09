@@ -70,6 +70,7 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
 
 export const Inspector: React.FC = () => {
   const {
+    currentTime,
     language,
     clips,
     selectedClipId,
@@ -173,9 +174,57 @@ export const Inspector: React.FC = () => {
   const [activeVideoSubTab, setActiveVideoSubTab] = useState<'basic' | 'removeBg' | 'mask' | 'retouch'>('basic');
   const [isTransformOpen, setIsTransformOpen] = useState(true);
   const [isBlendOpen, setIsBlendOpen] = useState(true);
+  const [isSpeedOpen, setIsSpeedOpen] = useState(true);
   const [isBlendEnabled, setIsBlendEnabled] = useState(true);
   const [uniformScale, setUniformScale] = useState(true);
   const [activeClipTab, setActiveClipTab] = useState<string>('basic');
+
+  // Keyframe calculations at current playhead (CapCut Keyframe Diamond)
+  const timeInClip = clip ? Math.max(0, currentTime - clip.start) : 0;
+  const hasKeyframeAtPlayhead = Boolean(
+    clip?.keyframes?.some((k) => Math.abs(k.time - timeInClip) < 0.15)
+  );
+
+  const toggleKeyframeAtPlayhead = () => {
+    if (!clip) return;
+    const currentKeyframes = clip.keyframes ? [...clip.keyframes] : [];
+    const existingIdx = currentKeyframes.findIndex((k) => Math.abs(k.time - timeInClip) < 0.15);
+    if (existingIdx >= 0) {
+      currentKeyframes.splice(existingIdx, 1);
+      showToast('Đã xóa keyframe tại vị trí con trỏ', 'info');
+    } else {
+      currentKeyframes.push({
+        time: parseFloat(timeInClip.toFixed(2)),
+        x: clip.x || clip.transform?.x || 0,
+        y: clip.y || clip.transform?.y || 0,
+        scale: clip.scale || clip.transform?.scale || 1.0,
+        scaleX: clip.scaleX || clip.transform?.scaleX || 1.0,
+        scaleY: clip.scaleY || clip.transform?.scaleY || 1.0,
+        rotation: clip.rotation || clip.transform?.rotation || 0,
+        opacity: clip.opacity ?? 1.0
+      });
+      currentKeyframes.sort((a, b) => a.time - b.time);
+      showToast(`Đã thêm keyframe tại ${(timeInClip).toFixed(2)}s`, 'success');
+    }
+    updateClip(clip.id, { keyframes: currentKeyframes });
+  };
+
+  const renderKeyframeDiamond = (title = 'Keyframe') => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleKeyframeAtPlayhead();
+      }}
+      title={`${title} ${hasKeyframeAtPlayhead ? '(Đang ở keyframe - Bấm để xóa)' : '(Bấm để thêm keyframe)'}`}
+      className={`p-0.5 leading-none transition-all ${
+        hasKeyframeAtPlayhead
+          ? 'text-[#00E5FF] font-bold drop-shadow-[0_0_6px_#00E5FF] scale-110'
+          : 'text-[#666] hover:text-[#00E5FF]'
+      }`}
+    >
+      {hasKeyframeAtPlayhead ? '◆' : '◇'}
+    </button>
+  );
 
   // Reset tabs when selected clip changes
   useEffect(() => {
@@ -322,8 +371,12 @@ export const Inspector: React.FC = () => {
                                   x: 0,
                                   y: 0,
                                   scale: 1.0,
+                                  scaleX: 1.0,
+                                  scaleY: 1.0,
                                   rotation: 0,
-                                  transform: { x: 0, y: 0, scale: 1.0, rotation: 0 }
+                                  flipX: false,
+                                  flipY: false,
+                                  transform: { x: 0, y: 0, scale: 1.0, scaleX: 1.0, scaleY: 1.0, rotation: 0, flipX: false, flipY: false }
                                 })
                               }
                               title="Reset transform (0, 0, 100%, 0°)"
@@ -331,58 +384,144 @@ export const Inspector: React.FC = () => {
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
-                            <button title="Keyframe diamond" className="text-[#777] hover:text-[#00E5FF] text-[13px] leading-none">
-                              ◇
-                            </button>
+                            {renderKeyframeDiamond('Transform keyframe')}
                           </div>
                         </div>
 
                         {isTransformOpen && (
                           <div className="flex flex-col gap-2.5 pt-1">
-                            {/* Scale */}
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-[#8A8A8A]">Scale</span>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
-                                    <input
-                                      type="number"
-                                      step="1"
-                                      min="10"
-                                      max="400"
-                                      value={Math.round((clip.scale || clip.transform?.scale || 1.0) * 100)}
-                                      onChange={(e) => {
-                                        const val = Math.max(0.1, Math.min(4.0, (parseFloat(e.target.value) || 100) / 100));
-                                        updateClip(clip.id, {
-                                          scale: val,
-                                          transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scale: val }
-                                        });
-                                      }}
-                                      className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
-                                    />
-                                    <span className="text-[#888] ml-0.5">%</span>
+                            {/* Scale (Uniform vs Separate X/Y) */}
+                            {uniformScale ? (
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-[#8A8A8A]">Scale</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                      <input
+                                        type="number"
+                                        step="1"
+                                        min="10"
+                                        max="400"
+                                        value={Math.round((clip.scale || clip.transform?.scale || 1.0) * 100)}
+                                        onChange={(e) => {
+                                          const val = Math.max(0.1, Math.min(4.0, (parseFloat(e.target.value) || 100) / 100));
+                                          updateClip(clip.id, {
+                                            scale: val,
+                                            transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scale: val }
+                                          });
+                                        }}
+                                        className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
+                                      />
+                                      <span className="text-[#888] ml-0.5">%</span>
+                                    </div>
+                                    {renderKeyframeDiamond('Scale keyframe')}
                                   </div>
-                                  <button title="Keyframe" className="text-[#777] hover:text-[#00E5FF] text-[13px] leading-none">
-                                    ◇
-                                  </button>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0.1"
+                                  max="4.0"
+                                  step="0.01"
+                                  value={clip.scale || clip.transform?.scale || 1.0}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    updateClip(clip.id, {
+                                      scale: val,
+                                      transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scale: val }
+                                    });
+                                  }}
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-2">
+                                {/* Scale X */}
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-[#8A8A8A]">Scale X</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                        <input
+                                          type="number"
+                                          step="1"
+                                          min="10"
+                                          max="400"
+                                          value={Math.round((clip.scaleX ?? clip.transform?.scaleX ?? 1.0) * 100)}
+                                          onChange={(e) => {
+                                            const val = Math.max(0.1, Math.min(4.0, (parseFloat(e.target.value) || 100) / 100));
+                                            updateClip(clip.id, {
+                                              scaleX: val,
+                                              transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleX: val }
+                                            });
+                                          }}
+                                          className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
+                                        />
+                                        <span className="text-[#888] ml-0.5">%</span>
+                                      </div>
+                                      {renderKeyframeDiamond('Scale X keyframe')}
+                                    </div>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0.1"
+                                    max="4.0"
+                                    step="0.01"
+                                    value={clip.scaleX ?? clip.transform?.scaleX ?? 1.0}
+                                    onChange={(e) => {
+                                      const val = parseFloat(e.target.value);
+                                      updateClip(clip.id, {
+                                        scaleX: val,
+                                        transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleX: val }
+                                      });
+                                    }}
+                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                  />
+                                </div>
+
+                                {/* Scale Y */}
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-[#8A8A8A]">Scale Y</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                        <input
+                                          type="number"
+                                          step="1"
+                                          min="10"
+                                          max="400"
+                                          value={Math.round((clip.scaleY ?? clip.transform?.scaleY ?? 1.0) * 100)}
+                                          onChange={(e) => {
+                                            const val = Math.max(0.1, Math.min(4.0, (parseFloat(e.target.value) || 100) / 100));
+                                            updateClip(clip.id, {
+                                              scaleY: val,
+                                              transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleY: val }
+                                            });
+                                          }}
+                                          className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
+                                        />
+                                        <span className="text-[#888] ml-0.5">%</span>
+                                      </div>
+                                      {renderKeyframeDiamond('Scale Y keyframe')}
+                                    </div>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0.1"
+                                    max="4.0"
+                                    step="0.01"
+                                    value={clip.scaleY ?? clip.transform?.scaleY ?? 1.0}
+                                    onChange={(e) => {
+                                      const val = parseFloat(e.target.value);
+                                      updateClip(clip.id, {
+                                        scaleY: val,
+                                        transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleY: val }
+                                      });
+                                    }}
+                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                  />
                                 </div>
                               </div>
-                              <input
-                                type="range"
-                                min="0.1"
-                                max="4.0"
-                                step="0.01"
-                                value={clip.scale || clip.transform?.scale || 1.0}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  updateClip(clip.id, {
-                                    scale: val,
-                                    transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scale: val }
-                                  });
-                                }}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
-                              />
-                            </div>
+                            )}
 
                             {/* Uniform scale toggle */}
                             <div className="flex items-center justify-between text-[11px]">
@@ -435,13 +574,11 @@ export const Inspector: React.FC = () => {
                                     className="w-12 bg-transparent text-right outline-none text-white text-[11px]"
                                   />
                                 </div>
-                                <button title="Keyframe" className="text-[#777] hover:text-[#00E5FF] text-[13px] leading-none">
-                                  ◇
-                                </button>
+                                {renderKeyframeDiamond('Position keyframe')}
                               </div>
                             </div>
 
-                            {/* Rotate */}
+                            {/* Rotate & Flip */}
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="text-[#8A8A8A]">Rotate</span>
                               <div className="flex items-center gap-1.5">
@@ -477,8 +614,35 @@ export const Inspector: React.FC = () => {
                                     style={{ transform: `rotate(${clip.rotation || clip.transform?.rotation || 0}deg)` }}
                                   />
                                 </div>
-                                <button title="Keyframe" className="text-[#777] hover:text-[#00E5FF] text-[13px] leading-none">
-                                  ◇
+                                {renderKeyframeDiamond('Rotate keyframe')}
+                              </div>
+                            </div>
+
+                            {/* Flip Controls (CapCut Mirror/Flip) */}
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-[#8A8A8A]">Flip / Mirror</span>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => updateClip(clip.id, { flipX: !clip.flipX })}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-colors ${
+                                    clip.flipX
+                                      ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
+                                      : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                  }`}
+                                  title="Lật ngang (Horizontal Flip)"
+                                >
+                                  ↔ Flip X
+                                </button>
+                                <button
+                                  onClick={() => updateClip(clip.id, { flipY: !clip.flipY })}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-colors ${
+                                    clip.flipY
+                                      ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
+                                      : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                  }`}
+                                  title="Lật dọc (Vertical Flip)"
+                                >
+                                  ↕ Flip Y
                                 </button>
                               </div>
                             </div>
@@ -594,9 +758,7 @@ export const Inspector: React.FC = () => {
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
-                            <button title="Keyframe" className="text-[#777] hover:text-[#00E5FF] text-[13px] leading-none">
-                              ◇
-                            </button>
+                            {renderKeyframeDiamond('Blend keyframe')}
                           </div>
                         </div>
 
@@ -644,9 +806,7 @@ export const Inspector: React.FC = () => {
                                     />
                                     <span className="text-[#888] ml-0.5">%</span>
                                   </div>
-                                  <button title="Keyframe" className="text-[#777] hover:text-[#00E5FF] text-[13px] leading-none">
-                                    ◇
-                                  </button>
+                                  {renderKeyframeDiamond('Opacity keyframe')}
                                 </div>
                               </div>
                               <input
@@ -658,6 +818,126 @@ export const Inspector: React.FC = () => {
                                 onChange={(e) => updateClip(clip.id, { opacity: parseFloat(e.target.value) })}
                                 className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
                               />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* SPEED & SPEED CURVES ACCORDION (CapCut Layout) */}
+                      <div className="flex flex-col gap-2 pb-3 border-b border-[#2B2B2B]">
+                        <div
+                          className="flex items-center justify-between text-xs font-bold text-white cursor-pointer py-1 select-none"
+                          onClick={() => setIsSpeedOpen(!isSpeedOpen)}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 text-[#888] transition-transform ${
+                                isSpeedOpen ? '' : '-rotate-90'
+                              }`}
+                            />
+                            <span>Speed & Curve (Tốc độ & Đồ thị)</span>
+                          </div>
+                          <span className="font-mono text-[#00E5FF] text-[11px]">
+                            {clip.speed || 1.0}x
+                          </span>
+                        </div>
+
+                        {isSpeedOpen && (
+                          <div className="flex flex-col gap-2.5 pt-1">
+                            {/* Speed Slider */}
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-[#8A8A8A]">Tốc độ:</span>
+                                <div className="flex items-center gap-1 bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    max="10"
+                                    value={clip.speed || 1.0}
+                                    onChange={(e) => {
+                                      const sp = Math.max(0.1, Math.min(10, parseFloat(e.target.value) || 1.0));
+                                      updateClip(clip.id, { speed: sp });
+                                    }}
+                                    className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
+                                  />
+                                  <span className="text-[#888]">x</span>
+                                </div>
+                              </div>
+                              <input
+                                type="range"
+                                min="0.1"
+                                max="5.0"
+                                step="0.1"
+                                value={clip.speed || 1.0}
+                                onChange={(e) => updateClip(clip.id, { speed: parseFloat(e.target.value) })}
+                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                              />
+                            </div>
+
+                            {/* Speed Presets */}
+                            <div className="grid grid-cols-5 gap-1">
+                              {[0.5, 1.0, 2.0, 3.0, 5.0].map((preset) => (
+                                <button
+                                  key={preset}
+                                  onClick={() => updateClip(clip.id, { speed: preset })}
+                                  className={`py-0.5 rounded text-[10px] font-mono border transition-colors ${
+                                    (clip.speed || 1.0) === preset
+                                      ? 'bg-[#00E5FF] text-black font-bold border-[#00E5FF]'
+                                      : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                  }`}
+                                >
+                                  {preset}x
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Speed Curve Presets */}
+                            <div className="flex items-center justify-between text-[11px] pt-1">
+                              <span className="text-[#8A8A8A]">Speed Curve:</span>
+                              <select
+                                value={typeof clip.speedCurve === 'string' ? clip.speedCurve : 'standard'}
+                                onChange={(e) => updateClip(clip.id, { speedCurve: e.target.value })}
+                                className="bg-[#181818] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                              >
+                                <option value="standard">Tiêu chuẩn (Standard)</option>
+                                <option value="montage">Montage (Đoạn phim)</option>
+                                <option value="hero">Hero (Anh hùng)</option>
+                                <option value="bullet">Bullet (Viên đạn)</option>
+                                <option value="jumpCut">Jump Cut</option>
+                                <option value="flashIn">Flash In</option>
+                                <option value="flashOut">Flash Out</option>
+                              </select>
+                            </div>
+
+                            {/* Reverse & Freeze Frame Actions */}
+                            <div className="grid grid-cols-2 gap-1.5 pt-1">
+                              <button
+                                onClick={() => {
+                                  updateClip(clip.id, { isReversed: !clip.isReversed });
+                                  showToast(clip.isReversed ? 'Đã tắt tua ngược' : 'Đã bật tua ngược (Reverse)', 'info');
+                                }}
+                                className={`py-1 rounded text-[10px] font-semibold border transition-colors ${
+                                  clip.isReversed
+                                    ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
+                                    : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                }`}
+                              >
+                                ◀ Tua ngược
+                              </button>
+                              <button
+                                onClick={() => {
+                                  updateClip(clip.id, { isFreeze: !clip.isFreeze });
+                                  showToast(clip.isFreeze ? 'Đã hủy đóng băng' : 'Đã đóng băng khung hình (Freeze)', 'success');
+                                }}
+                                className={`py-1 rounded text-[10px] font-semibold border transition-colors ${
+                                  clip.isFreeze
+                                    ? 'bg-amber-400/20 text-amber-300 border-amber-400'
+                                    : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                }`}
+                              >
+                                ❄ Đóng băng
+                              </button>
                             </div>
                           </div>
                         )}
@@ -776,52 +1056,256 @@ export const Inspector: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 1.3 SUB-TAB: MASK */}
-                  {activeVideoSubTab === 'mask' && (
-                    <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
-                      <span className="text-[11px] font-bold text-white uppercase">Mask presets</span>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {[
-                          { id: 'none', label: 'None' },
-                          { id: 'linear', label: 'Linear' },
-                          { id: 'mirror', label: 'Mirror' },
-                          { id: 'circle', label: 'Circle' },
-                          { id: 'rect', label: 'Rectangle' },
-                          { id: 'heart', label: 'Heart' },
-                          { id: 'star', label: 'Star' }
-                        ].map((m) => (
-                          <button
-                            key={m.id}
-                            onClick={() => updateClip(clip.id, { mask: m.id as any })}
-                            className={`py-1 rounded text-[10px] font-semibold border ${
-                              (typeof clip.mask === 'string' ? clip.mask : clip.mask?.type) === m.id
-                                ? 'bg-[#00E5FF] text-black border-[#00E5FF]'
-                                : 'bg-[#222] text-[#8A8A8A] border-[#333] hover:text-white'
-                            }`}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                      </div>
+                  {/* 1.3 SUB-TAB: MASK (CapCut Advanced Mask Engine) */}
+                  {activeVideoSubTab === 'mask' && (() => {
+                    const currentMask = typeof clip.mask === 'string' ? { type: clip.mask } : (clip.mask || { type: 'none' });
+                    const maskType = currentMask.type || 'none';
+                    const hasActiveMask = maskType !== 'none';
 
-                      <div className="flex items-center justify-between pt-1 border-t border-[#2B2B2B]">
-                        <span className="text-[11px] text-[#8A8A8A]">Invert mask:</span>
-                        <input
-                          type="checkbox"
-                          checked={typeof clip.mask === 'object' ? clip.mask?.invert : false}
-                          onChange={(e) =>
-                            updateClip(clip.id, {
-                              mask: {
-                                type: typeof clip.mask === 'string' ? clip.mask : clip.mask?.type || 'circle',
-                                invert: e.target.checked
-                              }
-                            })
-                          }
-                          className="accent-[#00E5FF]"
-                        />
+                    const updateMaskProp = (props: any) => {
+                      updateClip(clip.id, {
+                        mask: {
+                          invert: false,
+                          feather: 0,
+                          width: 500,
+                          height: 350,
+                          x: 0,
+                          y: 0,
+                          rotation: 0,
+                          roundness: 30,
+                          ...currentMask,
+                          type: props.type || (maskType === 'none' ? 'circle' : maskType),
+                          ...props
+                        }
+                      });
+                    };
+
+                    return (
+                      <div className="flex flex-col gap-3 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-white uppercase">Mask Presets</span>
+                          {hasActiveMask && (
+                            <button
+                              onClick={() => updateClip(clip.id, { mask: 'none' })}
+                              className="text-[10px] text-[#888] hover:text-rose-400 transition-colors"
+                            >
+                              Xóa mask
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Presets Grid */}
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[
+                            { id: 'none', label: 'None' },
+                            { id: 'split', label: 'Split' },
+                            { id: 'filmstrip', label: 'Filmstrip' },
+                            { id: 'circle', label: 'Circle' },
+                            { id: 'rect', label: 'Rectangle' },
+                            { id: 'heart', label: 'Heart' },
+                            { id: 'star', label: 'Star' }
+                          ].map((m) => (
+                            <button
+                              key={m.id}
+                              onClick={() => {
+                                if (m.id === 'none') {
+                                  updateClip(clip.id, { mask: 'none' });
+                                } else {
+                                  updateMaskProp({ type: m.id });
+                                }
+                              }}
+                              className={`py-1 rounded text-[10px] font-semibold border transition-all ${
+                                maskType === m.id
+                                  ? 'bg-[#00E5FF] text-black font-bold border-[#00E5FF] shadow-[0_0_8px_rgba(0,229,255,0.4)]'
+                                  : 'bg-[#222] text-[#8A8A8A] border-[#333] hover:text-white'
+                              }`}
+                            >
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Advanced Mask Parameters */}
+                        {hasActiveMask && (
+                          <div className="flex flex-col gap-2.5 pt-2 border-t border-[#2B2B2B]">
+                            {/* Invert Mask Toggle */}
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-[#8A8A8A]">Invert mask (Đảo ngược)</span>
+                              <button
+                                onClick={() => updateMaskProp({ invert: !currentMask.invert })}
+                                className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
+                                  currentMask.invert ? 'bg-[#00E5FF]' : 'bg-[#333]'
+                                }`}
+                              >
+                                <div
+                                  className={`w-3 h-3 rounded-full bg-white transition-transform ${
+                                    currentMask.invert ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+
+                            {/* Feather (Viền mờ) */}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-[#8A8A8A]">Feather (Độ nhòe viền):</span>
+                                <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={currentMask.feather || 0}
+                                    onChange={(e) => updateMaskProp({ feather: Math.max(0, parseInt(e.target.value) || 0) })}
+                                    className="w-8 bg-transparent text-right outline-none text-white text-[11px]"
+                                  />
+                                  <span className="text-[#777] ml-0.5">px</span>
+                                </div>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={currentMask.feather || 0}
+                                onChange={(e) => updateMaskProp({ feather: parseInt(e.target.value) })}
+                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                              />
+                            </div>
+
+                            {/* Width & Height */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-[#8A8A8A]">Width:</span>
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max="2000"
+                                    value={currentMask.width || 500}
+                                    onChange={(e) => updateMaskProp({ width: parseInt(e.target.value) || 100 })}
+                                    className="w-12 bg-[#121212] border border-[#2B2B2B] rounded px-1 text-right text-white text-[11px] font-mono outline-none"
+                                  />
+                                </div>
+                                <input
+                                  type="range"
+                                  min="50"
+                                  max="1200"
+                                  value={currentMask.width || 500}
+                                  onChange={(e) => updateMaskProp({ width: parseInt(e.target.value) })}
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-[#8A8A8A]">Height:</span>
+                                  <input
+                                    type="number"
+                                    min="20"
+                                    max="2000"
+                                    value={currentMask.height || 350}
+                                    onChange={(e) => updateMaskProp({ height: parseInt(e.target.value) || 100 })}
+                                    className="w-12 bg-[#121212] border border-[#2B2B2B] rounded px-1 text-right text-white text-[11px] font-mono outline-none"
+                                  />
+                                </div>
+                                <input
+                                  type="range"
+                                  min="50"
+                                  max="1200"
+                                  value={currentMask.height || 350}
+                                  onChange={(e) => updateMaskProp({ height: parseInt(e.target.value) })}
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Roundness for Rectangle */}
+                            {maskType === 'rect' && (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-[11px]">
+                                  <span className="text-[#8A8A8A]">Roundness (Bo góc):</span>
+                                  <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="150"
+                                      value={currentMask.roundness || 0}
+                                      onChange={(e) => updateMaskProp({ roundness: Math.max(0, parseInt(e.target.value) || 0) })}
+                                      className="w-8 bg-transparent text-right outline-none text-white text-[11px]"
+                                    />
+                                    <span className="text-[#777] ml-0.5">px</span>
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="150"
+                                  value={currentMask.roundness || 0}
+                                  onChange={(e) => updateMaskProp({ roundness: parseInt(e.target.value) })}
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                />
+                              </div>
+                            )}
+
+                            {/* Position X / Y */}
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-[#8A8A8A]">Center Position:</span>
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1 bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                  <span className="text-[#777]">X</span>
+                                  <input
+                                    type="number"
+                                    value={currentMask.x || 0}
+                                    onChange={(e) => updateMaskProp({ x: parseInt(e.target.value) || 0 })}
+                                    className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1 bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                  <span className="text-[#777]">Y</span>
+                                  <input
+                                    type="number"
+                                    value={currentMask.y || 0}
+                                    onChange={(e) => updateMaskProp({ y: parseInt(e.target.value) || 0 })}
+                                    className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Rotation */}
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-[#8A8A8A]">Rotation:</span>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="range"
+                                  min="-180"
+                                  max="180"
+                                  value={currentMask.rotation || 0}
+                                  onChange={(e) => updateMaskProp({ rotation: parseInt(e.target.value) })}
+                                  className="accent-[#00E5FF] h-1.5 w-24 bg-[#2A2A2A] rounded cursor-pointer"
+                                />
+                                <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1 py-0.5 text-xs font-mono">
+                                  <input
+                                    type="number"
+                                    value={currentMask.rotation || 0}
+                                    onChange={(e) => updateMaskProp({ rotation: parseInt(e.target.value) || 0 })}
+                                    className="w-8 bg-transparent text-right outline-none text-white text-[11px]"
+                                  />
+                                  <span className="text-[#777]">°</span>
+                                </div>
+                                <button
+                                  onClick={() => updateMaskProp({ rotation: ((currentMask.rotation || 0) + 90) % 360 })}
+                                  className="p-1 rounded bg-[#222] hover:bg-[#333] text-[#00E5FF]"
+                                  title="Xoay mask 90°"
+                                >
+                                  <RotateCw className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* 1.4 SUB-TAB: RETOUCH */}
                   {activeVideoSubTab === 'retouch' && (
@@ -841,43 +1325,202 @@ export const Inspector: React.FC = () => {
                 </div>
               )}
 
-              {/* TAB 2: ANIMATION */}
+              {/* TAB 2: ANIMATION & TRANSITIONS (CapCut Transitions Engine) */}
               {activeMainTab === 'animation' && (
-                <div className="flex flex-col gap-3 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
-                  <span className="text-[11px] font-bold text-white uppercase">Animation Presets</span>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[10px] text-[#8A8A8A]">In Animation:</span>
-                    <select
-                      value={clip.animation?.in || 'none'}
-                      onChange={(e) =>
-                        updateClip(clip.id, {
-                          animation: { ...clip.animation, in: e.target.value }
-                        })
-                      }
-                      className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-xs outline-none"
-                    >
-                      <option value="none">None</option>
-                      <option value="fadeIn">Fade In</option>
-                      <option value="zoomIn">Zoom In</option>
-                      <option value="slideUp">Slide Up</option>
-                      <option value="pop">Pop In</option>
-                    </select>
+                <div className="flex flex-col gap-3">
+                  {/* Animation Presets (In / Out) */}
+                  <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                    <span className="text-[11px] font-bold text-white uppercase">Clip Animation</span>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#8A8A8A]">In Animation:</span>
+                        <select
+                          value={clip.animation?.in || 'none'}
+                          onChange={(e) =>
+                            updateClip(clip.id, {
+                              animation: { ...clip.animation, in: e.target.value }
+                            })
+                          }
+                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                        >
+                          <option value="none">None</option>
+                          <option value="fadeIn">Fade In</option>
+                          <option value="zoomIn">Zoom In</option>
+                          <option value="slideUp">Slide Up</option>
+                          <option value="pop">Pop In</option>
+                        </select>
+                      </div>
 
-                    <span className="text-[10px] text-[#8A8A8A] pt-1">Out Animation:</span>
-                    <select
-                      value={clip.animation?.out || 'none'}
-                      onChange={(e) =>
-                        updateClip(clip.id, {
-                          animation: { ...clip.animation, out: e.target.value }
-                        })
-                      }
-                      className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-xs outline-none"
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#8A8A8A]">Out Animation:</span>
+                        <select
+                          value={clip.animation?.out || 'none'}
+                          onChange={(e) =>
+                            updateClip(clip.id, {
+                              animation: { ...clip.animation, out: e.target.value }
+                            })
+                          }
+                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                        >
+                          <option value="none">None</option>
+                          <option value="fadeOut">Fade Out</option>
+                          <option value="zoomOut">Zoom Out</option>
+                          <option value="slideDown">Slide Down</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transition In & Transition Out */}
+                  <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                    <span className="text-[11px] font-bold text-[#00E5FF] uppercase">Transitions (Chuyển cảnh)</span>
+
+                    {/* Transition In */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#8A8A8A]">Transition In:</span>
+                        <select
+                          value={clip.transitionIn?.type || clip.transitionType || 'none'}
+                          onChange={(e) =>
+                            updateClip(clip.id, {
+                              transitionType: e.target.value as any,
+                              transitionIn: {
+                                type: e.target.value,
+                                duration: clip.transitionIn?.duration || clip.transitionDuration || 0.8
+                              }
+                            })
+                          }
+                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                        >
+                          <option value="none">None</option>
+                          <option value="fade">Fade (Mờ dần)</option>
+                          <option value="dissolve">Dissolve (Hòa tan)</option>
+                          <option value="whiteFlash">White Flash (Chớp trắng)</option>
+                          <option value="slideLeft">Slide Left (Trượt trái)</option>
+                          <option value="slideRight">Slide Right (Trượt phải)</option>
+                          <option value="slideUp">Slide Up (Trượt lên)</option>
+                          <option value="slideDown">Slide Down (Trượt xuống)</option>
+                          <option value="zoomIn">Zoom In (Thu phóng vào)</option>
+                          <option value="zoomOut">Zoom Out (Thu phóng ra)</option>
+                          <option value="whipPan">Whip Pan (Lia nhanh)</option>
+                          <option value="spin">Spin (Xoay tròn)</option>
+                          <option value="glitch">Glitch (Nhiễu sóng)</option>
+                          <option value="blur">Blur (Làm mờ)</option>
+                          <option value="push">Push (Đẩy cảnh)</option>
+                          <option value="wipe">Wipe (Quét cảnh)</option>
+                          <option value="lightLeak">Light Leak (Rò sáng)</option>
+                        </select>
+                      </div>
+
+                      {/* Transition In Duration */}
+                      {(clip.transitionIn?.type || clip.transitionType) && (clip.transitionIn?.type !== 'none' && clip.transitionType !== 'none') && (
+                        <div className="flex items-center justify-between text-[11px] pl-2 border-l border-[#00E5FF]/40">
+                          <span className="text-[#8A8A8A]">Thời lượng:</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="3.0"
+                              step="0.1"
+                              value={clip.transitionIn?.duration || clip.transitionDuration || 0.8}
+                              onChange={(e) => {
+                                const dur = parseFloat(e.target.value);
+                                updateClip(clip.id, {
+                                  transitionDuration: dur,
+                                  transitionIn: {
+                                    type: clip.transitionIn?.type || clip.transitionType || 'fade',
+                                    duration: dur
+                                  }
+                                });
+                              }}
+                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer"
+                            />
+                            <span className="font-mono text-white text-[11px]">
+                              {(clip.transitionIn?.duration || clip.transitionDuration || 0.8).toFixed(1)}s
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Transition Out */}
+                    <div className="flex flex-col gap-1.5 pt-1.5 border-t border-[#2B2B2B]">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#8A8A8A]">Transition Out:</span>
+                        <select
+                          value={clip.transitionOut?.type || 'none'}
+                          onChange={(e) =>
+                            updateClip(clip.id, {
+                              transitionOut: {
+                                type: e.target.value,
+                                duration: clip.transitionOut?.duration || 0.8
+                              }
+                            })
+                          }
+                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                        >
+                          <option value="none">None</option>
+                          <option value="fade">Fade Out</option>
+                          <option value="dissolve">Dissolve Out</option>
+                          <option value="zoomOut">Zoom Out</option>
+                          <option value="slideLeft">Slide Left</option>
+                          <option value="slideRight">Slide Right</option>
+                        </select>
+                      </div>
+
+                      {clip.transitionOut?.type && clip.transitionOut.type !== 'none' && (
+                        <div className="flex items-center justify-between text-[11px] pl-2 border-l border-[#00E5FF]/40">
+                          <span className="text-[#8A8A8A]">Thời lượng:</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="range"
+                              min="0.1"
+                              max="3.0"
+                              step="0.1"
+                              value={clip.transitionOut?.duration || 0.8}
+                              onChange={(e) => {
+                                const dur = parseFloat(e.target.value);
+                                updateClip(clip.id, {
+                                  transitionOut: {
+                                    type: clip.transitionOut?.type || 'fade',
+                                    duration: dur
+                                  }
+                                });
+                              }}
+                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer"
+                            />
+                            <span className="font-mono text-white text-[11px]">
+                              {(clip.transitionOut?.duration || 0.8).toFixed(1)}s
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Apply to All Clips Button */}
+                    <button
+                      onClick={() => {
+                        const targetIn = clip.transitionIn || (clip.transitionType ? { type: clip.transitionType, duration: clip.transitionDuration || 0.8 } : undefined);
+                        const targetOut = clip.transitionOut;
+                        let count = 0;
+                        clips.forEach((c) => {
+                          if (c.track === 'video' || c.type === 'video' || c.type === 'image') {
+                            updateClip(c.id, {
+                              transitionIn: targetIn,
+                              transitionOut: targetOut,
+                              transitionType: targetIn?.type as any,
+                              transitionDuration: targetIn?.duration
+                            });
+                            count++;
+                          }
+                        });
+                        showToast(`Đã áp dụng chuyển cảnh cho ${count} phân đoạn!`, 'success');
+                      }}
+                      className="w-full mt-1 py-1.5 rounded bg-[#222] hover:bg-[#2A2A2A] border border-[#333] hover:border-[#00E5FF]/50 text-white font-semibold text-[11px] transition-colors flex items-center justify-center gap-1"
                     >
-                      <option value="none">None</option>
-                      <option value="fadeOut">Fade Out</option>
-                      <option value="zoomOut">Zoom Out</option>
-                      <option value="slideDown">Slide Down</option>
-                    </select>
+                      <Copy className="w-3 h-3 text-[#00E5FF]" />
+                      <span>Áp dụng cho tất cả phân đoạn</span>
+                    </button>
                   </div>
                 </div>
               )}
