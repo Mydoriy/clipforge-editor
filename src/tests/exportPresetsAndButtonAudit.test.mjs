@@ -59,3 +59,4 @@ test('UI Button Audit: 100% Active Handlers Across All Components', async () => 
   scan(dir);
   assert.deepEqual(missing, [], 'All buttons must have active onClick or submit handlers');
 });
+

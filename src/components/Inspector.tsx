@@ -910,15 +910,33 @@ export const Inspector: React.FC = () => {
                               </select>
                             </div>
 
+                            {/* Smooth Slow-motion Toggle (CapCut Optical Flow) */}
+                            <div className="flex items-center justify-between text-[11px] pt-1">
+                              <div className="flex flex-col">
+                                <span className="text-[#8A8A8A]">Smooth Slow-motion</span>
+                                <span className="text-[9px] text-[#555]">Optical Flow mượt mà</span>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={clip.smoothSlowMo || false}
+                                onChange={(e) => {
+                                  updateClip(clip.id, { smoothSlowMo: e.target.checked });
+                                  showToast(e.target.checked ? 'Đã bật Smooth Slow-motion (Optical Flow)' : 'Đã tắt Smooth Slow-motion', 'info');
+                                }}
+                                className="accent-[#00E5FF] cursor-pointer"
+                              />
+                            </div>
+
                             {/* Reverse & Freeze Frame Actions */}
                             <div className="grid grid-cols-2 gap-1.5 pt-1">
                               <button
                                 onClick={() => {
-                                  updateClip(clip.id, { isReversed: !clip.isReversed });
-                                  showToast(clip.isReversed ? 'Đã tắt tua ngược' : 'Đã bật tua ngược (Reverse)', 'info');
+                                  const nextRev = !(clip.reverse || clip.isReversed);
+                                  updateClip(clip.id, { reverse: nextRev, isReversed: nextRev });
+                                  showToast(nextRev ? 'Đã bật tua ngược (Reverse)' : 'Đã tắt tua ngược', 'info');
                                 }}
                                 className={`py-1 rounded text-[10px] font-semibold border transition-colors ${
-                                  clip.isReversed
+                                  clip.reverse || clip.isReversed
                                     ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
                                     : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
                                 }`}
@@ -927,11 +945,12 @@ export const Inspector: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => {
-                                  updateClip(clip.id, { isFreeze: !clip.isFreeze });
-                                  showToast(clip.isFreeze ? 'Đã hủy đóng băng' : 'Đã đóng băng khung hình (Freeze)', 'success');
+                                  const nextFreeze = !(clip.freezeFrame || clip.isFreeze);
+                                  updateClip(clip.id, { freezeFrame: nextFreeze, isFreeze: nextFreeze });
+                                  showToast(nextFreeze ? 'Đã đóng băng khung hình (Freeze)' : 'Đã hủy đóng băng', 'success');
                                 }}
                                 className={`py-1 rounded text-[10px] font-semibold border transition-colors ${
-                                  clip.isFreeze
+                                  clip.freezeFrame || clip.isFreeze
                                     ? 'bg-amber-400/20 text-amber-300 border-amber-400'
                                     : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
                                 }`}

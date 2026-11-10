@@ -152,6 +152,22 @@ export const PlayerCanvas: React.FC = () => {
   const canvasWidth = Math.round(aspectConfig.w * qualityFactor);
   const canvasHeight = Math.round(aspectConfig.h * qualityFactor);
 
+  // Ref-based state synchronization for smooth 60fps playback without effect recreation
+  const currentTimeRef = useRef(currentTime);
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  const durationRef = useRef(duration);
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+
+  const loopPlaybackRef = useRef(loopPlayback);
+  useEffect(() => {
+    loopPlaybackRef.current = loopPlayback;
+  }, [loopPlayback]);
+
   // Master Playback Timer Loop with Live FPS, Dropped Frames tracking, and Auto-Proxy Suggestion
   useEffect(() => {
     let animId: number;
@@ -196,15 +212,19 @@ export const PlayerCanvas: React.FC = () => {
           }
         }
 
-        const nextTime = currentTime + delta;
-        if (nextTime >= duration) {
-          if (loopPlayback && duration > 0) {
+        const nextTime = currentTimeRef.current + delta;
+        const dur = durationRef.current;
+        if (nextTime >= dur) {
+          if (loopPlaybackRef.current && dur > 0) {
+            currentTimeRef.current = 0;
             setCurrentTime(0);
           } else {
             setIsPlaying(false);
+            currentTimeRef.current = 0;
             setCurrentTime(0);
           }
         } else {
+          currentTimeRef.current = nextTime;
           setCurrentTime(nextTime);
         }
       }
@@ -214,7 +234,7 @@ export const PlayerCanvas: React.FC = () => {
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, duration, currentTime, setCurrentTime, setIsPlaying, loopPlayback, fps, isProxyEnabled]);
+  }, [isPlaying, fps, isProxyEnabled, setCurrentTime, setIsPlaying]);
 
   // Synchronize audio playback with currentTime and isPlaying
   useEffect(() => {

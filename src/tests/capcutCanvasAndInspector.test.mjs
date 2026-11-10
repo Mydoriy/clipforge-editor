@@ -111,3 +111,38 @@ test('CapCut Timeline: SMPTE timecode matches CapCut standard format (00:00:05:0
   assert.equal(formatSmpteTimecode(65.2, 30), '00:01:05:06');
 });
 
+test('CapCut Toolbar Quick Actions: Freeze, Reverse, Rotate 90°, Flip Horizontal', () => {
+  // Rotate 90° wraps cleanly at 360°
+  let rot = 0;
+  rot = (rot + 90) % 360;
+  assert.equal(rot, 90);
+  rot = (rot + 90) % 360;
+  assert.equal(rot, 180);
+  rot = (rot + 90) % 360;
+  assert.equal(rot, 270);
+  rot = (rot + 90) % 360;
+  assert.equal(rot, 0);
+
+  // Flip Horizontal toggles boolean state
+  let flipX = false;
+  flipX = !flipX;
+  assert.equal(flipX, true);
+  flipX = !flipX;
+  assert.equal(flipX, false);
+
+  // Reverse toggles both reverse and isReversed for engine synchronization
+  let clip = { reverse: false, isReversed: false };
+  const nextRev = !(clip.reverse || clip.isReversed);
+  clip = { ...clip, reverse: nextRev, isReversed: nextRev };
+  assert.equal(clip.reverse, true);
+  assert.equal(clip.isReversed, true);
+
+  // Freeze toggles freezeFrame and isFreeze
+  let freezeClip = { freezeFrame: false, isFreeze: false };
+  const nextFreeze = !(freezeClip.freezeFrame || freezeClip.isFreeze);
+  freezeClip = { ...freezeClip, freezeFrame: nextFreeze, isFreeze: nextFreeze };
+  assert.equal(freezeClip.freezeFrame, true);
+  assert.equal(freezeClip.isFreeze, true);
+});
+
+

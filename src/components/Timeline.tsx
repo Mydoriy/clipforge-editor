@@ -44,6 +44,8 @@ import {
   Film,
   Snowflake,
   RotateCcw,
+  RotateCw,
+  FlipHorizontal,
   Gauge,
   Edit3,
   AlertTriangle
@@ -1556,6 +1558,89 @@ export const Timeline: React.FC = () => {
             title={!selectedClipId ? 'Vui lòng chọn một clip để khóa hoặc mở khóa' : selectedClip?.locked ? 'Mở khóa clip này' : 'Khóa clip bảo vệ không cho sửa/xóa nhầm'}
           >
             {selectedClip?.locked ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+          </button>
+
+          <div className="h-4 w-[1px] bg-[#333333] mx-0.5" />
+
+          {/* 6. CapCut Quick Actions: Freeze Frame, Reverse, Rotate 90°, Flip Horizontal */}
+          <button
+            onClick={() => selectedClipId && handleFreezeFrame(selectedClipId)}
+            disabled={!selectedClipId}
+            className={`p-1.5 rounded-md transition-colors ${
+              selectedClip?.freezeFrame || selectedClip?.isFreeze
+                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                : selectedClipId
+                ? 'hover:bg-[#262626] text-white hover:text-sky-400'
+                : 'text-[#8A8A8A]/40 cursor-not-allowed'
+            }`}
+            title={!selectedClipId ? 'Chọn một clip để dừng hình' : 'Tạo đoạn dừng hình 3s (Freeze Frame)'}
+          >
+            <Snowflake className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (!selectedClipId || !selectedClip) return;
+              const nextRev = !selectedClip.reverse;
+              updateClip(selectedClipId, { reverse: nextRev, isReversed: nextRev });
+              showToast(nextRev ? 'Đã bật tua ngược clip (Reverse)' : 'Đã tắt tua ngược', 'info');
+            }}
+            disabled={!selectedClipId}
+            className={`p-1.5 rounded-md transition-colors ${
+              selectedClip?.reverse
+                ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border border-[#1FC8DB]/40'
+                : selectedClipId
+                ? 'hover:bg-[#262626] text-white hover:text-[#1FC8DB]'
+                : 'text-[#8A8A8A]/40 cursor-not-allowed'
+            }`}
+            title={!selectedClipId ? 'Chọn một clip để tua ngược' : 'Tua ngược clip (Reverse)'}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (!selectedClipId || !selectedClip) return;
+              const curRot = selectedClip.rotation || selectedClip.transform?.rotation || 0;
+              const nextRot = (curRot + 90) % 360;
+              updateClip(selectedClipId, {
+                rotation: nextRot,
+                transform: { ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), rotation: nextRot }
+              });
+              showToast(`Đã xoay clip sang ${nextRot}°`, 'info');
+            }}
+            disabled={!selectedClipId}
+            className={`p-1.5 rounded-md transition-colors ${
+              selectedClipId
+                ? 'hover:bg-[#262626] text-white hover:text-[#1FC8DB]'
+                : 'text-[#8A8A8A]/40 cursor-not-allowed'
+            }`}
+            title={!selectedClipId ? 'Chọn một clip để xoay' : 'Xoay clip 90° (Rotate 90°)'}
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (!selectedClipId || !selectedClip) return;
+              const nextFlip = !selectedClip.flipX;
+              updateClip(selectedClipId, {
+                flipX: nextFlip,
+                transform: { ...(selectedClip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), flipX: nextFlip }
+              });
+              showToast(nextFlip ? 'Đã lật gương ngang clip (Flip X)' : 'Đã khôi phục hướng lật', 'info');
+            }}
+            disabled={!selectedClipId}
+            className={`p-1.5 rounded-md transition-colors ${
+              selectedClip?.flipX
+                ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border border-[#1FC8DB]/40'
+                : selectedClipId
+                ? 'hover:bg-[#262626] text-white hover:text-[#1FC8DB]'
+                : 'text-[#8A8A8A]/40 cursor-not-allowed'
+            }`}
+            title={!selectedClipId ? 'Chọn một clip để lật gương' : 'Lật gương ngang (Flip Horizontal)'}
+          >
+            <FlipHorizontal className="w-3.5 h-3.5" />
           </button>
         </div>
 
