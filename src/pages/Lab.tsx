@@ -157,6 +157,7 @@ export const Lab: React.FC = () => {
   const [preflightModalOpen, setPreflightModalOpen] = useState(false);
   const [preflightResult, setPreflightResult] = useState<PreflightCheckResult | null>(null);
   const [assigningSlotId, setAssigningSlotId] = useState<string | null>(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
   // Learned Items State (Step 5)
   const [learnedList, setLearnedList] = useState<LearnedItem[]>([]);
@@ -1389,16 +1390,16 @@ export const Lab: React.FC = () => {
         {/* STEP 4: PHÒNG REMIX (Workbench & Side-by-Side Preview)                */}
         {/* ==================================================================== */}
         {activeStep === 4 && timeline && (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden relative">
             {/* Left: Slots Filmstrip & Timeline Overview */}
-            <div className="flex-1 flex flex-col border-r border-gray-800 overflow-hidden">
+            <div className="flex-1 min-w-0 flex flex-col lg:border-r border-gray-800 overflow-hidden">
               {/* Top Preview Canvas & Comparison */}
-              <div className="flex-1 bg-black flex flex-col items-center justify-center relative p-4">
+              <div className="flex-1 bg-black flex flex-col items-center justify-center relative p-2 sm:p-4">
                 {/* Synchronized Side-by-Side Canvas */}
                 <div className="w-full max-w-2xl aspect-[9/16] max-h-[58vh] bg-[#0A0D14] border border-gray-800 rounded-xl overflow-hidden flex relative shadow-2xl">
                   {/* Reference Side (50%) */}
                   <div className="w-1/2 h-full border-r border-gray-700/60 relative flex flex-col items-center justify-center bg-gray-950">
-                    <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-rose-600/90 text-white text-[10px] font-bold rounded shadow">
+                    <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-rose-600/90 text-white text-[9px] sm:text-[10px] font-bold rounded shadow max-w-[85%] truncate">
                       Tham chiếu – không xuất
                     </div>
                     <div className="text-xs text-gray-500 flex flex-col items-center">
@@ -1409,7 +1410,7 @@ export const Lab: React.FC = () => {
 
                   {/* User Remix Side (50%) */}
                   <div className="w-1/2 h-full relative flex flex-col items-center justify-center bg-[#070A10]">
-                    <div className="absolute top-2 right-2 z-10 px-2 py-0.5 bg-cyan-600/90 text-white text-[10px] font-bold rounded shadow">
+                    <div className="absolute top-2 right-2 z-10 px-2 py-0.5 bg-cyan-600/90 text-white text-[9px] sm:text-[10px] font-bold rounded shadow max-w-[85%] truncate">
                       Clip của bạn (Remix)
                     </div>
                     {selectedSlot?.assignedClip ? (
@@ -1442,46 +1443,61 @@ export const Lab: React.FC = () => {
               {/* Bottom: Multi-Track Working Timeline (CapCut-style Cuts, Audio Waveform & FX) */}
               <div className="h-64 border-t border-gray-800 bg-[#0B0F19] p-3 flex flex-col shrink-0 overflow-hidden">
                 {/* Timeline Header Info & Actions */}
-                <div className="flex items-center justify-between text-xs text-gray-300 pb-2 border-b border-gray-800 shrink-0">
+                <div className="flex items-center justify-between text-xs text-gray-300 pb-2 border-b border-gray-800 shrink-0 gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-white flex items-center gap-1.5 text-xs">
                       <Film className="w-3.5 h-3.5 text-cyan-400" />
-                      Timeline Làm Việc (TikTok Remix)
+                      <span className="hidden xs:inline">Timeline Làm Việc</span> (Remix)
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800 text-[10px] font-mono">
                       ⏱️ 15.00s (9:16)
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 text-[10px] font-mono flex items-center gap-1">
-                      <Music className="w-2.5 h-2.5" /> 128 BPM Energetic Beat
+                    <span className="hidden md:inline-flex px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 text-[10px] font-mono items-center gap-1">
+                      <Music className="w-2.5 h-2.5" /> 128 BPM
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 text-[10px] font-mono flex items-center gap-1">
-                      <CheckCircle className="w-2.5 h-2.5" /> 6 Hiệu ứng ClipForge ✓
+                    <span className="hidden lg:inline-flex px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 text-[10px] font-mono items-center gap-1">
+                      <CheckCircle className="w-2.5 h-2.5" /> 6 Hiệu ứng
                     </span>
-                    <span className="text-[11px] text-gray-400">
+                    <span className="text-[11px] text-gray-400 hidden sm:inline">
                       Đã gán: {timeline.filledSlotsCount} / {timeline.totalSlots} cảnh
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* Mobile/Tablet Inspector Trigger Button (<1024px) */}
+                    <button
+                      onClick={() => setIsInspectorOpen(true)}
+                      className="lg:hidden px-2 py-1 bg-gray-800 hover:bg-gray-700 text-[11px] text-cyan-300 border border-cyan-800 rounded flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Xem chi tiết kỹ thuật phân cảnh"
+                    >
+                      <Sliders className="w-3 h-3 text-cyan-400" />
+                      <span>{selectedSlot ? `Cảnh #${selectedSlot.index + 1}` : 'Chi tiết'}</span>
+                    </button>
+
                     <button
                       onClick={handleAutoFill}
-                      className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-[11px] text-cyan-300 border border-cyan-800 rounded flex items-center gap-1 cursor-pointer transition-colors"
+                      className="px-2 sm:px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-[11px] text-cyan-300 border border-cyan-800 rounded flex items-center gap-1 cursor-pointer transition-colors"
                       title="Tự động gán 4 clip mẫu khớp nhịp beat 128 BPM"
                     >
-                      <RefreshCw className="w-3 h-3" /> Auto Fill clip
+                      <RefreshCw className="w-3 h-3" />
+                      <span className="hidden sm:inline">Auto Fill clip</span>
+                      <span className="sm:hidden">Auto Fill</span>
                     </button>
                     <button
                       onClick={handleOpenInMainEditor}
-                      className="px-3 py-1 bg-gradient-to-r from-[#1FC8DB] to-[#0070F3] hover:brightness-110 text-[11px] font-bold text-white rounded shadow flex items-center gap-1.5 cursor-pointer transition-all"
+                      className="px-2.5 sm:px-3 py-1 bg-gradient-to-r from-[#1FC8DB] to-[#0070F3] hover:brightness-110 text-[11px] font-bold text-white rounded shadow flex items-center gap-1.5 cursor-pointer transition-all"
                       title="Mở toàn bộ 4 phân cảnh, audio 128 BPM và hiệu ứng trong giao diện CapCut chính"
                     >
-                      <Scissors className="w-3 h-3" /> Mở trong CapCut Editor (/editor) <ExternalLink className="w-3 h-3" />
+                      <Scissors className="w-3 h-3" />
+                      <span className="hidden sm:inline">Mở trong CapCut Editor (/editor)</span>
+                      <span className="sm:hidden">Mở Editor</span>
+                      <ExternalLink className="w-3 h-3 hidden sm:inline" />
                     </button>
                   </div>
                 </div>
 
                 {/* SMPTE Time Ruler */}
                 <div className="relative h-6 bg-[#070A12] border-b border-gray-800/80 flex items-center px-2 text-[9px] font-mono text-gray-400 select-none shrink-0">
-                  <div className="w-28 shrink-0 text-gray-500 font-sans text-[10px] font-semibold border-r border-gray-800">
+                  <div className="w-20 sm:w-28 shrink-0 text-gray-500 font-sans text-[9px] sm:text-[10px] font-semibold border-r border-gray-800 truncate px-1">
                     THỜI GIAN
                   </div>
                   <div className="flex-1 relative h-full flex items-center">
@@ -1503,7 +1519,7 @@ export const Lab: React.FC = () => {
                 <div className="flex-1 flex flex-col justify-between overflow-y-auto pt-1 gap-1">
                   {/* Track 1: Track Hiệu ứng & Chuyển cảnh (FX Track) */}
                   <div className="flex items-center h-10 border border-gray-800/80 rounded bg-[#0A0D18] shrink-0">
-                    <div className="w-28 shrink-0 px-2 flex items-center gap-1.5 text-[10px] font-bold text-purple-300 border-r border-gray-800">
+                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-purple-300 border-r border-gray-800 truncate">
                       <Sparkles className="w-3 h-3 text-purple-400" />
                       <span>Hiệu ứng FX</span>
                     </div>
@@ -1549,7 +1565,7 @@ export const Lab: React.FC = () => {
 
                   {/* Track 2: Track Cắt Phân Cảnh Video (4 Phân Cảnh Rõ Ràng) */}
                   <div className="flex items-center h-14 border border-gray-800/80 rounded bg-[#0B0F1C] shrink-0">
-                    <div className="w-28 shrink-0 px-2 flex items-center gap-1.5 text-[10px] font-bold text-cyan-300 border-r border-gray-800">
+                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-cyan-300 border-r border-gray-800 truncate">
                       <Scissors className="w-3 h-3 text-cyan-400" />
                       <span>Cắt Cảnh (4)</span>
                     </div>
@@ -1597,7 +1613,7 @@ export const Lab: React.FC = () => {
 
                   {/* Track 3: Track Âm Thanh & Sóng Âm (Audio Waveform & 128 BPM Beat Grid) */}
                   <div className="flex items-center h-12 border border-gray-800/80 rounded bg-[#090C16] shrink-0">
-                    <div className="w-28 shrink-0 px-2 flex items-center gap-1.5 text-[10px] font-bold text-amber-300 border-r border-gray-800">
+                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-amber-300 border-r border-gray-800 truncate">
                       <Music className="w-3 h-3 text-amber-400" />
                       <span>Audio (128 BPM)</span>
                     </div>
@@ -1650,13 +1666,45 @@ export const Lab: React.FC = () => {
               </div>
             </div>
 
+            {/* Backdrop Scrim on Mobile & Tablet (<1024px) */}
+            {isInspectorOpen && (
+              <div
+                className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+                onClick={() => setIsInspectorOpen(false)}
+                onTouchStart={() => setIsInspectorOpen(false)}
+                aria-label="Đóng bảng chi tiết"
+                role="button"
+                tabIndex={0}
+              />
+            )}
+
             {/* Right: Slot Technique Inspector Panel */}
-            <div className="w-80 border-l border-gray-800 bg-[#0E1424] p-4 flex flex-col justify-between overflow-y-auto">
+            <div
+              className={`
+                bg-[#0E1424] p-4 flex flex-col justify-between overflow-y-auto z-50 transition-all duration-300
+                lg:static lg:z-auto lg:w-80 lg:border-l lg:border-gray-800 lg:flex
+                md:max-lg:fixed md:max-lg:top-0 md:max-lg:right-0 md:max-lg:bottom-0 md:max-lg:w-80 md:max-lg:border-l md:max-lg:border-gray-700 md:max-lg:shadow-2xl
+                ${isInspectorOpen ? 'md:max-lg:translate-x-0' : 'md:max-lg:translate-x-full'}
+                max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:max-h-[82vh] max-md:border-t max-md:border-gray-700 max-md:rounded-t-2xl max-md:shadow-2xl
+                ${isInspectorOpen ? 'max-md:translate-y-0' : 'max-md:translate-y-full max-md:pointer-events-none'}
+                ${!isInspectorOpen ? 'hidden lg:flex' : 'flex'}
+              `}
+            >
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-                  <h3 className="font-bold text-xs text-white uppercase tracking-wider">
-                    {selectedSlot ? `Phân cảnh: Cảnh #${selectedSlot.index + 1}` : 'Chọn phân cảnh'}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    {/* Mobile/Tablet Close Button */}
+                    <button
+                      onClick={() => setIsInspectorOpen(false)}
+                      className="lg:hidden p-1 text-gray-400 hover:text-white rounded hover:bg-gray-800 cursor-pointer"
+                      aria-label="Đóng bảng chi tiết"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <h3 className="font-bold text-xs text-white uppercase tracking-wider">
+                      {selectedSlot ? `Phân cảnh: Cảnh #${selectedSlot.index + 1}` : 'Chọn phân cảnh'}
+                    </h3>
+                  </div>
                   <button
                     onClick={() => {
                       if (selectedSlot) {
@@ -1664,7 +1712,7 @@ export const Lab: React.FC = () => {
                         userMediaInputRef.current?.click();
                       }
                     }}
-                    className="px-2 py-1 bg-cyan-600/30 hover:bg-cyan-600/50 text-[10px] text-cyan-200 border border-cyan-500 rounded cursor-pointer"
+                    className="px-2 py-1 bg-cyan-600/30 hover:bg-cyan-600/50 text-[10px] text-cyan-200 border border-cyan-500 rounded cursor-pointer min-h-[32px] flex items-center"
                   >
                     + Thay clip
                   </button>
@@ -1700,7 +1748,7 @@ export const Lab: React.FC = () => {
                                     setTimeline(toggleSlotTechnique(timeline, selectedSlot.id, key, e.target.checked));
                                   }
                                 }}
-                                className="w-4 h-4 rounded text-cyan-500 cursor-pointer"
+                                className="w-5 h-5 rounded text-cyan-500 cursor-pointer min-w-[20px] min-h-[20px]"
                               />
                             </div>
                           ))}
@@ -1714,8 +1762,11 @@ export const Lab: React.FC = () => {
               {/* Next Button to Step 5 */}
               <div className="pt-4 border-t border-gray-800">
                 <button
-                  onClick={() => setActiveStep(5)}
-                  className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow cursor-pointer"
+                  onClick={() => {
+                    setIsInspectorOpen(false);
+                    setActiveStep(5);
+                  }}
+                  className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow cursor-pointer min-h-[40px]"
                 >
                   <Save className="w-3.5 h-3.5" />
                   Xem Kỹ thuật đã học & Quota &rarr;

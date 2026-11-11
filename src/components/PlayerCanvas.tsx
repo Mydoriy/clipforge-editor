@@ -516,6 +516,111 @@ export const PlayerCanvas: React.FC = () => {
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
+  const panOffsetRef = useRef(panOffset);
+  useEffect(() => {
+    panOffsetRef.current = panOffset;
+  }, [panOffset]);
+
+  const zoomModeRef = useRef(zoomMode);
+  useEffect(() => {
+    zoomModeRef.current = zoomMode;
+  }, [zoomMode]);
+
+  // Viewport 2-Finger Pinch-to-Zoom & Pan with Palm Rejection
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    let touchState: {
+      startDist: number;
+      startMidX: number;
+      startMidY: number;
+      initialZoom: number;
+      initialPan: { x: number; y: number };
+    } | null = null;
+
+    let lastTapTime = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length >= 2) {
+        e.preventDefault();
+        // Palm rejection: filter strictly to first 2 active touch contacts
+        const p1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        const p2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        const currentZoom = typeof zoomModeRef.current === 'number' ? zoomModeRef.current : 1.0;
+
+        touchState = {
+          startDist: dist,
+          startMidX: midX,
+          startMidY: midY,
+          initialZoom: currentZoom,
+          initialPan: { ...panOffsetRef.current }
+        };
+        setIsPanning(true);
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTapTime < 300) {
+          setZoomMode('fit');
+          setPanOffset({ x: 0, y: 0 });
+          showToast('Đã đặt lại khung hình (Fit)', 'info');
+        }
+        lastTapTime = now;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length >= 2 && touchState && touchState.startDist > 0) {
+        e.preventDefault();
+        // Palm rejection: filter to first 2 touches
+        const p1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        const p2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+        const currDist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const currMidX = (p1.x + p2.x) / 2;
+        const currMidY = (p1.y + p2.y) / 2;
+
+        // Pinch zoom calculation with [0.25, 4.0] clamping
+        const rawZoom = touchState.initialZoom * (currDist / touchState.startDist);
+        const newZoom = Math.max(0.25, Math.min(4.0, parseFloat(rawZoom.toFixed(2))));
+        setZoomMode(newZoom);
+
+        // 2-finger pan translation
+        const dx = currMidX - touchState.startMidX;
+        const dy = currMidY - touchState.startMidY;
+        setPanOffset({
+          x: touchState.initialPan.x + dx,
+          y: touchState.initialPan.y + dy
+        });
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        touchState = null;
+        setIsPanning(false);
+      }
+    };
+
+    const onTouchCancel = () => {
+      touchState = null;
+      setIsPanning(false);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    el.addEventListener('touchcancel', onTouchCancel);
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchCancel);
+    };
+  }, []);
+
   // Viewport Pan Start (Middle click or Space + Left click)
   const handleViewportMouseDown = (e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && isSpacePressed)) {
@@ -539,6 +644,32 @@ export const PlayerCanvas: React.FC = () => {
     }
   };
 
+  // Pointer Handlers for Direct Manipulation on Canvas with Pointer Capture
+  const handlePointerDownOnClip = (
+    e: React.PointerEvent,
+    action: 'move' | 'scale' | 'rotate',
+    corner?: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'
+  ) => {
+    e.stopPropagation();
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (!selectedClip) return;
+
+    try {
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
+    setIsDraggingClip(true);
+    setDragAction(action);
+    setScaleCorner(corner || null);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setInitialClipPos({
+      x: selectedClip.x || selectedClip.transform?.x || 0,
+      y: selectedClip.y || selectedClip.transform?.y || (selectedClip.type === 'text' ? -110 : 0),
+      scale: selectedClip.scale || selectedClip.transform?.scale || 1.0,
+      rotation: selectedClip.rotation || selectedClip.transform?.rotation || 0
+    });
+  };
+
   // Mouse Handlers for Direct Manipulation on Canvas (8-point handles)
   const handleMouseDownOnClip = (
     e: React.MouseEvent,
@@ -560,9 +691,9 @@ export const PlayerCanvas: React.FC = () => {
     });
   };
 
-  // Window MouseMove / MouseUp for Direct Manipulation & Panning
+  // Window MouseMove / MouseUp / PointerMove / PointerUp for Direct Manipulation & Panning
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent | PointerEvent) => {
       if (isPanning) {
         const dx = e.clientX - panStartRef.current.x;
         const dy = e.clientY - panStartRef.current.y;
@@ -661,9 +792,15 @@ export const PlayerCanvas: React.FC = () => {
     if (isDraggingClip || isPanning) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handleMouseMove);
+      window.addEventListener('pointerup', handleMouseUp);
+      window.addEventListener('pointercancel', handleMouseUp);
       return () => {
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('pointermove', handleMouseMove);
+        window.removeEventListener('pointerup', handleMouseUp);
+        window.removeEventListener('pointercancel', handleMouseUp);
       };
     }
   }, [isDraggingClip, isPanning, dragAction, dragStart, initialClipPos, selectedClip, updateClip, scaleCorner]);
@@ -888,7 +1025,7 @@ export const PlayerCanvas: React.FC = () => {
         onClick={() => selectClip(null)}
         onDoubleClick={handleViewportDoubleClick}
         onMouseDown={handleViewportMouseDown}
-        className={`flex-1 relative flex items-center justify-center p-3 overflow-hidden bg-[#0D0D0D] select-none ${
+        className={`flex-1 relative flex items-center justify-center p-3 overflow-hidden bg-[#0D0D0D] select-none touch-none ${
           isPanning ? 'cursor-grabbing' : isSpacePressed ? 'cursor-grab' : ''
         }`}
       >
@@ -1055,6 +1192,7 @@ export const PlayerCanvas: React.FC = () => {
           {/* ======================================================== */}
           {isSelectedClipActive && (
             <div
+              onPointerDown={(e) => handlePointerDownOnClip(e, 'move')}
               onMouseDown={(e) => handleMouseDownOnClip(e, 'move')}
               onDoubleClick={() => handleDoubleClickText(selectedClip)}
               style={{
@@ -1065,61 +1203,86 @@ export const PlayerCanvas: React.FC = () => {
                 width: selectedClip.type === 'text' ? `${Math.max(160, (selectedClip.text?.length || 10) * 14)}px` : '75%',
                 height: selectedClip.type === 'text' ? '54px' : '65%'
               }}
-              className="border-2 border-[#1FC8DB] cursor-move z-20 group pointer-events-auto shadow-[0_0_12px_rgba(31,200,219,0.3)]"
+              className="border-2 border-[#1FC8DB] cursor-move z-20 group pointer-events-auto shadow-[0_0_12px_rgba(31,200,219,0.3)] touch-none"
             >
-              {/* Rotation Handle (Stem & Circle) */}
+              {/* Rotation Handle (Stem & Circle) - Hit area >= 44px */}
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'rotate')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'rotate')}
-                className="absolute -top-7 left-1/2 -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing"
+                className="absolute -top-10 left-1/2 -translate-x-1/2 w-11 h-11 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none z-30 touch-target-44"
                 title="Kéo để xoay góc"
               >
-                <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-[#1FC8DB] shadow-md hover:scale-125 transition-transform" />
-                <div className="w-[1.5px] h-3.5 bg-[#1FC8DB]" />
+                <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-[#1FC8DB] shadow-md hover:scale-125 transition-transform pointer-events-none" />
+                <div className="w-[1.5px] h-3.5 bg-[#1FC8DB] pointer-events-none" />
               </div>
 
-              {/* 4 Corner Scale Handles */}
+              {/* 4 Corner Scale Handles - Hit area >= 40px */}
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'tl')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'tl')}
-                className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute -top-5 -left-5 w-10 h-10 flex items-center justify-center cursor-nwse-resize touch-none z-30 touch-target-40"
                 title="Kéo góc trên-trái"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'tr')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'tr')}
-                className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute -top-5 -right-5 w-10 h-10 flex items-center justify-center cursor-nesw-resize touch-none z-30 touch-target-40"
                 title="Kéo góc trên-phải"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'bl')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'bl')}
-                className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nesw-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute -bottom-5 -left-5 w-10 h-10 flex items-center justify-center cursor-nesw-resize touch-none z-30 touch-target-40"
                 title="Kéo góc dưới-trái"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'br')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'br')}
-                className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-nwse-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute -bottom-5 -right-5 w-10 h-10 flex items-center justify-center cursor-nwse-resize touch-none z-30 touch-target-40"
                 title="Kéo góc dưới-phải"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
 
-              {/* 4 Edge Center Scale Handles (CapCut style) */}
+              {/* 4 Edge Center Scale Handles (CapCut style) - Hit area >= 40px */}
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 't')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 't')}
-                className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ns-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 flex items-center justify-center cursor-ns-resize touch-none z-30 touch-target-40"
                 title="Kéo cạnh trên"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'b')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'b')}
-                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ns-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-10 h-10 flex items-center justify-center cursor-ns-resize touch-none z-30 touch-target-40"
                 title="Kéo cạnh dưới"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'l')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'l')}
-                className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ew-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute top-1/2 -left-5 -translate-y-1/2 w-10 h-10 flex items-center justify-center cursor-ew-resize touch-none z-30 touch-target-40"
                 title="Kéo cạnh trái"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
               <div
+                onPointerDown={(e) => handlePointerDownOnClip(e, 'scale', 'r')}
                 onMouseDown={(e) => handleMouseDownOnClip(e, 'scale', 'r')}
-                className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm cursor-ew-resize shadow hover:scale-125 transition-transform z-30"
+                className="absolute top-1/2 -right-5 -translate-y-1/2 w-10 h-10 flex items-center justify-center cursor-ew-resize touch-none z-30 touch-target-40"
                 title="Kéo cạnh phải"
-              />
+              >
+                <div className="w-3 h-3 bg-white border-2 border-[#1FC8DB] rounded-sm shadow hover:scale-125 transition-transform pointer-events-none" />
+              </div>
 
               {/* Inline Text Editing Input */}
               {isEditingInlineText && selectedClip.type === 'text' && (
@@ -1236,7 +1399,7 @@ export const PlayerCanvas: React.FC = () => {
           {/* Timecode Toggle Button (HH:MM:SS:FF <-> Frame count) */}
           <button
             onClick={() => setTimecodeDisplayMode(timecodeDisplayMode === 'smpte' ? 'frames' : 'smpte')}
-            className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] font-mono text-[11px] font-medium transition-all ${
+            className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] font-mono text-[11px] font-medium transition-all touch-target-40 min-h-[36px] flex items-center ${
               duration === 0 || clips.length === 0 ? 'opacity-40' : 'text-[#E6E6E6]'
             }`}
             title="Bấm để chuyển đổi giữa Timecode (HH:MM:SS:FF) và Số Frame"
@@ -1259,7 +1422,7 @@ export const PlayerCanvas: React.FC = () => {
           {/* Step -1 Frame (Left) */}
           <button
             onClick={() => setCurrentTime(Math.max(0, currentTime - 1 / fps))}
-            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            className="hidden sm:inline-flex min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors touch-target-40"
             title="Lùi 1 frame (←)"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -1268,7 +1431,7 @@ export const PlayerCanvas: React.FC = () => {
           {/* Rewind 1s */}
           <button
             onClick={() => setCurrentTime(Math.max(0, currentTime - 1))}
-            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            className="hidden sm:inline-flex min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors touch-target-40"
             title="Lùi 1 giây (Shift+←)"
           >
             <RotateCcw className="w-3 h-3" />
@@ -1282,7 +1445,7 @@ export const PlayerCanvas: React.FC = () => {
               masterAudio.playSynthesizer('click');
               setIsPlaying(!isPlaying);
             }}
-            className="px-4 py-1.5 bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 rounded-md font-bold text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shadow-md shadow-cyan-500/20"
+            className="px-4 py-1.5 bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 rounded-md font-bold text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shadow-md shadow-cyan-500/20 touch-target-44 min-h-[36px]"
             title={isPlaying ? 'Tạm dừng (Space)' : 'Phát video (Space)'}
           >
             {isPlaying ? (
@@ -1301,7 +1464,7 @@ export const PlayerCanvas: React.FC = () => {
           {/* Forward 1s */}
           <button
             onClick={() => setCurrentTime(Math.min(duration, currentTime + 1))}
-            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            className="hidden sm:inline-flex min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors touch-target-40"
             title="Tiến 1 giây (Shift+→)"
           >
             <RotateCw className="w-3 h-3" />
@@ -1310,7 +1473,7 @@ export const PlayerCanvas: React.FC = () => {
           {/* Step +1 Frame (Right) */}
           <button
             onClick={() => setCurrentTime(Math.min(duration, currentTime + 1 / fps))}
-            className="p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors"
+            className="hidden sm:inline-flex min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 hover:text-[#1FC8DB] hover:bg-[#262626] rounded transition-colors touch-target-40"
             title="Tiến 1 frame (→)"
           >
             <ChevronRight className="w-3.5 h-3.5" />
@@ -1326,37 +1489,40 @@ export const PlayerCanvas: React.FC = () => {
                 e.stopPropagation();
                 setQualityDropdownOpen(!qualityDropdownOpen);
               }}
-              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
+              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-white flex items-center gap-1 transition-colors touch-target-40 min-h-[36px]"
               title="Chất lượng Preview"
             >
               <span>{previewQuality === 'full' ? 'Full' : previewQuality === 'half' ? 'Half (1/2)' : 'Quarter (1/4)'}</span>
             </button>
             {qualityDropdownOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
-              >
-                {[
-                  { id: 'full', label: 'Full (100%)' },
-                  { id: 'half', label: 'Half (50%)' },
-                  { id: 'quarter', label: 'Quarter (25%)' }
-                ].map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => {
-                      setPreviewQuality(q.id as any);
-                      setQualityDropdownOpen(false);
-                      showToast(`Chất lượng preview: ${q.label}`, 'info');
-                    }}
-                    className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
-                      previewQuality === q.id ? 'text-[#1FC8DB] font-bold' : ''
-                    }`}
-                  >
-                    <span>{q.label}</span>
-                    {previewQuality === q.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setQualityDropdownOpen(false)} />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+                >
+                  {[
+                    { id: 'full', label: 'Full (100%)' },
+                    { id: 'half', label: 'Half (50%)' },
+                    { id: 'quarter', label: 'Quarter (25%)' }
+                  ].map((q) => (
+                    <button
+                      key={q.id}
+                      onClick={() => {
+                        setPreviewQuality(q.id as any);
+                        setQualityDropdownOpen(false);
+                        showToast(`Chất lượng preview: ${q.label}`, 'info');
+                      }}
+                      className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
+                        previewQuality === q.id ? 'text-[#1FC8DB] font-bold' : ''
+                      }`}
+                    >
+                      <span>{q.label}</span>
+                      {previewQuality === q.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -1367,46 +1533,49 @@ export const PlayerCanvas: React.FC = () => {
                 e.stopPropagation();
                 setZoomDropdownOpen(!zoomDropdownOpen);
               }}
-              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-white flex items-center gap-1 transition-colors"
+              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-white flex items-center gap-1 transition-colors touch-target-40 min-h-[36px]"
               title="Mức phóng to Player (Fit / 25-400%)"
             >
               <span>{zoomMode === 'fit' ? 'Fit' : `${Math.round(zoomMode * 100)}%`}</span>
             </button>
             {zoomDropdownOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50 max-h-48 overflow-y-auto"
-              >
-                {[
-                  { id: 'fit', label: 'Fit' },
-                  { id: 0.25, label: '25%' },
-                  { id: 0.5, label: '50%' },
-                  { id: 0.75, label: '75%' },
-                  { id: 1.0, label: '100%' },
-                  { id: 1.5, label: '150%' },
-                  { id: 2.0, label: '200%' },
-                  { id: 4.0, label: '400%' }
-                ].map((z) => (
-                  <button
-                    key={String(z.id)}
-                    onClick={() => {
-                      if (z.id === 'fit') {
-                        setZoomMode('fit');
-                        setPanOffset({ x: 0, y: 0 });
-                      } else {
-                        setZoomMode(z.id as any);
-                      }
-                      setZoomDropdownOpen(false);
-                    }}
-                    className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
-                      zoomMode === z.id ? 'text-[#1FC8DB] font-bold' : ''
-                    }`}
-                  >
-                    <span>{z.label}</span>
-                    {zoomMode === z.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setZoomDropdownOpen(false)} />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50 max-h-48 overflow-y-auto"
+                >
+                  {[
+                    { id: 'fit', label: 'Fit' },
+                    { id: 0.25, label: '25%' },
+                    { id: 0.5, label: '50%' },
+                    { id: 0.75, label: '75%' },
+                    { id: 1.0, label: '100%' },
+                    { id: 1.5, label: '150%' },
+                    { id: 2.0, label: '200%' },
+                    { id: 4.0, label: '400%' }
+                  ].map((z) => (
+                    <button
+                      key={String(z.id)}
+                      onClick={() => {
+                        if (z.id === 'fit') {
+                          setZoomMode('fit');
+                          setPanOffset({ x: 0, y: 0 });
+                        } else {
+                          setZoomMode(z.id as any);
+                        }
+                        setZoomDropdownOpen(false);
+                      }}
+                      className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
+                        zoomMode === z.id ? 'text-[#1FC8DB] font-bold' : ''
+                      }`}
+                    >
+                      <span>{z.label}</span>
+                      {zoomMode === z.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -1417,42 +1586,45 @@ export const PlayerCanvas: React.FC = () => {
                 e.stopPropagation();
                 setRatioDropdownOpen(!ratioDropdownOpen);
               }}
-              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-[#1FC8DB] flex items-center gap-1 transition-colors"
+              className="px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-[11px] font-semibold text-[#1FC8DB] flex items-center gap-1 transition-colors touch-target-40 min-h-[36px]"
               title="Đổi tỉ lệ khung hình (Ratio)"
             >
               <span>{currentAspect}</span>
             </button>
             {ratioDropdownOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full right-0 mb-1 w-44 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
-              >
-                <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold">Tỉ lệ khung hình</div>
-                {[
-                  { id: '9:16', label: '9:16 (TikTok, Reels)' },
-                  { id: '16:9', label: '16:9 (YouTube ngang)' },
-                  { id: '1:1', label: '1:1 (Vuông Instagram)' },
-                  { id: '4:3', label: '4:3 (Truyền thống)' },
-                  { id: '3:4', label: '3:4 (Chân dung)' },
-                  { id: '21:9', label: '21:9 (Ultrawide)' },
-                  { id: 'original', label: 'Original (Gốc)' },
-                  { id: 'custom', label: 'Custom (Tùy chỉnh)' }
-                ].map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => {
-                      handleChangeAspect(r.id);
-                      setRatioDropdownOpen(false);
-                    }}
-                    className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
-                      currentAspect === r.id ? 'text-[#1FC8DB] font-bold' : ''
-                    }`}
-                  >
-                    <span>{r.label}</span>
-                    {currentAspect === r.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setRatioDropdownOpen(false)} />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-full right-0 mb-1 w-44 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+                >
+                  <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold">Tỉ lệ khung hình</div>
+                  {[
+                    { id: '9:16', label: '9:16 (TikTok, Reels)' },
+                    { id: '16:9', label: '16:9 (YouTube ngang)' },
+                    { id: '1:1', label: '1:1 (Vuông Instagram)' },
+                    { id: '4:3', label: '4:3 (Truyền thống)' },
+                    { id: '3:4', label: '3:4 (Chân dung)' },
+                    { id: '21:9', label: '21:9 (Ultrawide)' },
+                    { id: 'original', label: 'Original (Gốc)' },
+                    { id: 'custom', label: 'Custom (Tùy chỉnh)' }
+                  ].map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => {
+                        handleChangeAspect(r.id);
+                        setRatioDropdownOpen(false);
+                      }}
+                      className={`px-2.5 py-1 text-left hover:bg-[#262626] flex items-center justify-between ${
+                        currentAspect === r.id ? 'text-[#1FC8DB] font-bold' : ''
+                      }`}
+                    >
+                      <span>{r.label}</span>
+                      {currentAspect === r.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -1463,7 +1635,7 @@ export const PlayerCanvas: React.FC = () => {
                 e.stopPropagation();
                 setSleepTimerDropdownOpen(!sleepTimerDropdownOpen);
               }}
-              className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border text-[11px] font-semibold flex items-center gap-1 transition-colors ${
+              className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border text-[11px] font-semibold flex items-center gap-1 transition-colors touch-target-40 min-h-[36px] ${
                 sleepTimerState.isActive
                   ? 'border-[#1FC8DB] text-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.3)]'
                   : 'border-[#333333] text-[#A0A0A0] hover:text-white'
@@ -1482,59 +1654,62 @@ export const PlayerCanvas: React.FC = () => {
               </span>
             </button>
             {sleepTimerDropdownOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full right-0 mb-1 w-52 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
-              >
-                <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold flex items-center justify-between border-b border-[#2A2A2A] pb-1.5 mb-1">
-                  <span>Hẹn giờ tự tắt</span>
-                  {sleepTimerState.isActive && (
-                    <span className="text-[#1FC8DB] font-mono">
-                      {sleepTimerState.remainingSeconds !== null
-                        ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}`
-                        : 'Bật'}
-                    </span>
-                  )}
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSleepTimerDropdownOpen(false)} />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-full right-0 mb-1 w-52 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+                >
+                  <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold flex items-center justify-between border-b border-[#2A2A2A] pb-1.5 mb-1">
+                    <span>Hẹn giờ tự tắt</span>
+                    {sleepTimerState.isActive && (
+                      <span className="text-[#1FC8DB] font-mono">
+                        {sleepTimerState.remainingSeconds !== null
+                          ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}`
+                          : 'Bật'}
+                      </span>
+                    )}
+                  </div>
+                  {[
+                    { opt: 'off' as SleepTimerOption, label: 'Tắt hẹn giờ' },
+                    { opt: 15 as SleepTimerOption, label: '15 phút' },
+                    { opt: 30 as SleepTimerOption, label: '30 phút' },
+                    { opt: 45 as SleepTimerOption, label: '45 phút' },
+                    { opt: 60 as SleepTimerOption, label: '60 phút' },
+                    { opt: 'end_of_track' as SleepTimerOption, label: 'Khi phát hết Timeline' }
+                  ].map((item) => (
+                    <button
+                      key={String(item.opt)}
+                      onClick={() => {
+                        if (item.opt === 'off') {
+                          sleepTimerManager.cancel();
+                          showToast('Đã tắt hẹn giờ', 'info');
+                        } else {
+                          sleepTimerManager.setOption(item.opt, () => {
+                            setIsPlaying(false);
+                            showToast('⏱️ Hẹn giờ: Đã tự động dừng phát', 'info');
+                          });
+                          showToast(`⏱️ Đã đặt hẹn giờ: ${item.label}`, 'success');
+                        }
+                        setSleepTimerDropdownOpen(false);
+                      }}
+                      className={`px-2.5 py-1.5 text-left hover:bg-[#262626] flex items-center justify-between transition-colors ${
+                        sleepTimerState.option === item.opt ? 'text-[#1FC8DB] font-bold bg-[#1FC8DB]/10' : ''
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {sleepTimerState.option === item.opt && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                    </button>
+                  ))}
                 </div>
-                {[
-                  { opt: 'off' as SleepTimerOption, label: 'Tắt hẹn giờ' },
-                  { opt: 15 as SleepTimerOption, label: '15 phút' },
-                  { opt: 30 as SleepTimerOption, label: '30 phút' },
-                  { opt: 45 as SleepTimerOption, label: '45 phút' },
-                  { opt: 60 as SleepTimerOption, label: '60 phút' },
-                  { opt: 'end_of_track' as SleepTimerOption, label: 'Khi phát hết Timeline' }
-                ].map((item) => (
-                  <button
-                    key={String(item.opt)}
-                    onClick={() => {
-                      if (item.opt === 'off') {
-                        sleepTimerManager.cancel();
-                        showToast('Đã tắt hẹn giờ', 'info');
-                      } else {
-                        sleepTimerManager.setOption(item.opt, () => {
-                          setIsPlaying(false);
-                          showToast('⏱️ Hẹn giờ: Đã tự động dừng phát', 'info');
-                        });
-                        showToast(`⏱️ Đã đặt hẹn giờ: ${item.label}`, 'success');
-                      }
-                      setSleepTimerDropdownOpen(false);
-                    }}
-                    className={`px-2.5 py-1.5 text-left hover:bg-[#262626] flex items-center justify-between transition-colors ${
-                      sleepTimerState.option === item.opt ? 'text-[#1FC8DB] font-bold bg-[#1FC8DB]/10' : ''
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    {sleepTimerState.option === item.opt && <Check className="w-3 h-3 text-[#1FC8DB]" />}
-                  </button>
-                ))}
-              </div>
+              </>
             )}
           </div>
 
           {/* Fullscreen Button */}
           <button
             onClick={handleToggleFullscreen}
-            className="p-1.5 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-white transition-colors"
+            className="p-1.5 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] text-white transition-colors touch-target-40 min-h-[36px] min-w-[36px] flex items-center justify-center"
             title={isFullscreen ? 'Thu nhỏ (Thoát toàn màn hình)' : 'Toàn màn hình (Fullscreen)'}
           >
             {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}

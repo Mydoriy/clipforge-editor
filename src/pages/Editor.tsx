@@ -629,26 +629,40 @@ export const Editor: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const updatePosition = (clientX: number, clientY: number) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
 
       if (isDraggingRowRef.current) {
-        const offsetY = e.clientY - rect.top;
+        const offsetY = clientY - rect.top;
         const newPct = Math.min(75, Math.max(30, (offsetY / rect.height) * 100));
         setPanelDimensions({ top: newPct });
       } else if (isDraggingCol1Ref.current) {
-        const offsetX = e.clientX - rect.left;
+        const offsetX = clientX - rect.left;
         const newPct = Math.min(50, Math.max(20, (offsetX / rect.width) * 100));
         setPanelDimensions({ left: newPct });
       } else if (isDraggingCol2Ref.current) {
-        const offsetRight = rect.right - e.clientX;
+        const offsetRight = rect.right - clientX;
         const newPct = Math.min(50, Math.max(20, (offsetRight / rect.width) * 100));
         setPanelDimensions({ right: newPct });
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRowRef.current && !isDraggingCol1Ref.current && !isDraggingCol2Ref.current) return;
+      updatePosition(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRowRef.current && !isDraggingCol1Ref.current && !isDraggingCol2Ref.current) return;
+      if (e.touches && e.touches.length > 0) {
+        if (e.cancelable) e.preventDefault();
+        updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleDragEnd = () => {
+      if (!isDraggingRowRef.current && !isDraggingCol1Ref.current && !isDraggingCol2Ref.current) return;
       isDraggingRowRef.current = false;
       isDraggingCol1Ref.current = false;
       isDraggingCol2Ref.current = false;
@@ -657,17 +671,23 @@ export const Editor: React.FC = () => {
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleDragEnd);
+    window.addEventListener('touchcancel', handleDragEnd);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleDragEnd);
+      window.removeEventListener('touchcancel', handleDragEnd);
     };
   }, [setPanelDimensions]);
 
   const isCompactDetails = windowWidth < 1100;
 
   return (
-    <div className="theme-editor flex-1 flex flex-col h-screen min-w-[1280px] min-h-[720px] overflow-hidden select-none bg-[#141414] text-[#E6E6E6]">
+    <div className="theme-editor w-full min-w-0 min-h-0 flex-1 flex flex-col h-screen h-[100dvh] overflow-hidden select-none bg-[#141414] text-[#E6E6E6]">
       {/* Editor Header: Height 44px */}
       <Header isEditor={true} />
 
@@ -813,7 +833,12 @@ export const Editor: React.FC = () => {
               document.body.style.cursor = 'col-resize';
               document.body.style.userSelect = 'none';
             }}
-            className="splitter-col"
+            onTouchStart={(e) => {
+              if (e.cancelable) e.preventDefault();
+              isDraggingCol1Ref.current = true;
+              document.body.style.userSelect = 'none';
+            }}
+            className="splitter-col touch-none"
             title="Kéo để thay đổi kích thước Panel trái & Player"
           />
 
@@ -847,7 +872,12 @@ export const Editor: React.FC = () => {
                   document.body.style.cursor = 'col-resize';
                   document.body.style.userSelect = 'none';
                 }}
-                className="splitter-col"
+                onTouchStart={(e) => {
+                  if (e.cancelable) e.preventDefault();
+                  isDraggingCol2Ref.current = true;
+                  document.body.style.userSelect = 'none';
+                }}
+                className="splitter-col touch-none"
                 title="Kéo để thay đổi kích thước Player & Details"
               />
 
@@ -897,7 +927,12 @@ export const Editor: React.FC = () => {
                 document.body.style.cursor = 'row-resize';
                 document.body.style.userSelect = 'none';
               }}
-              className="splitter-row"
+              onTouchStart={(e) => {
+                if (e.cancelable) e.preventDefault();
+                isDraggingRowRef.current = true;
+                document.body.style.userSelect = 'none';
+              }}
+              className="splitter-row touch-none"
               title="Kéo để thay đổi tỉ lệ Hàng trên & Timeline"
             />
 

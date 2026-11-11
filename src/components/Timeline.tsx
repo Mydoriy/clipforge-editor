@@ -34,6 +34,8 @@ import {
   Maximize2,
   Bookmark,
   ChevronDown,
+  ChevronRight,
+  ChevronLeft,
   Check,
   X,
   Volume2,
@@ -139,6 +141,31 @@ export const Timeline: React.FC = () => {
   // Relink state & input
   const relinkInputRef = useRef<HTMLInputElement | null>(null);
   const [relinkingClipId, setRelinkingClipId] = useState<string | null>(null);
+
+  // Responsive collapsible track headers on mobile (< 768px) and scroll sync
+  const [trackHeaderCollapsed, setTrackHeaderCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const trackHeadersScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Long-press timer & touch gesture coordinates for mobile clips
+  const longPressTimerRef = useRef<any>(null);
+  const isLongPressTriggeredRef = useRef(false);
+  const touchStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setTrackHeaderCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleTimelineScroll = () => {
+    if (timelineRef.current && trackHeadersScrollRef.current) {
+      trackHeadersScrollRef.current.scrollTop = timelineRef.current.scrollTop;
+    }
+  };
 
   // Virtualization window for rendering hundreds of clips smoothly
   const [visibleTimeRange, setVisibleTimeRange] = useState<{ start: number; end: number }>({
@@ -842,6 +869,32 @@ export const Timeline: React.FC = () => {
     updatePlayheadFromClientX(e.clientX);
   };
 
+  const handlePlayheadPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
+    setIsScrubbingPlayhead(true);
+    updatePlayheadFromClientX(e.clientX);
+  };
+
+  const handlePlayheadPointerMove = (e: React.PointerEvent) => {
+    if (isScrubbingPlayhead) {
+      e.preventDefault();
+      updatePlayheadFromClientX(e.clientX);
+    }
+  };
+
+  const handlePlayheadPointerUp = (e: React.PointerEvent) => {
+    if (isScrubbingPlayhead) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      setIsScrubbingPlayhead(false);
+    }
+  };
+
   // Timeline Canvas Click / Tool Handler
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!timelineRef.current) return;
@@ -1021,6 +1074,90 @@ export const Timeline: React.FC = () => {
     setOrigClipDuration(clip.duration);
   };
 
+  // Clip Pointer Down with 500ms Long-Press Timer for Mobile Context Menu
+  const handleClipPointerDown = (e: React.PointerEvent, clip: TimelineClip) => {
+    const parentTrack = tracks.find((t) => t.id === clip.track);
+    const isLocked = clip.locked || parentTrack?.locked;
+
+    isLongPressTriggeredRef.current = false;
+    touchStartPosRef.current = { x: e.clientX, y: e.clientY };
+
+    // 500ms long-press timer for touchscreens
+    if (e.pointerType === 'touch') {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = setTimeout(() => {
+        isLongPressTriggeredRef.current = true;
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(50); } catch (_) {}
+        }
+        selectClip(clip.id);
+        setContextMenu({
+          open: true,
+          x: Math.min(window.innerWidth - 230, Math.max(10, e.clientX)),
+          y: Math.min(window.innerHeight - 380, Math.max(10, e.clientY)),
+          clipId: clip.id
+        });
+        setDraggingClipId(null);
+      }, 500);
+    }
+
+    if (activeTool === 'razor') return;
+
+    if (!isLocked) {
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch (_) {}
+
+      selectClip(clip.id, e.shiftKey || e.ctrlKey || e.metaKey);
+      setDraggingClipId(clip.id);
+      setTrimmingHandle(null);
+      setDragStartX(e.clientX);
+      setOrigClipStart(clip.start);
+      setOrigClipDuration(clip.duration);
+    }
+  };
+
+  const handleClipPointerMove = (e: React.PointerEvent) => {
+    // Cancel long press if finger movement exceeds 8px jitter threshold
+    const dist = Math.hypot(e.clientX - touchStartPosRef.current.x, e.clientY - touchStartPosRef.current.y);
+    if (dist > 8 && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleClipPointerUp = (e: React.PointerEvent) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (isLongPressTriggeredRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+  };
+
+  // Trim Start Pointer Handle
+  const handleTrimStartPointerDown = (e: React.PointerEvent, clip: TimelineClip) => {
+    e.stopPropagation();
+    const parentTrack = tracks.find((t) => t.id === clip.track);
+    if (clip.locked || parentTrack?.locked) return;
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
+
+    selectClip(clip.id);
+    setDraggingClipId(clip.id);
+    setTrimmingHandle('start');
+    setDragStartX(e.clientX);
+    setOrigClipStart(clip.start);
+    setOrigClipDuration(clip.duration);
+    setTrimTooltip({ duration: clip.duration, delta: 0 });
+  };
+
   // Trim Start Handle
   const handleTrimStartMouseDown = (e: React.MouseEvent, clip: TimelineClip) => {
     e.stopPropagation();
@@ -1030,6 +1167,25 @@ export const Timeline: React.FC = () => {
     selectClip(clip.id);
     setDraggingClipId(clip.id);
     setTrimmingHandle('start');
+    setDragStartX(e.clientX);
+    setOrigClipStart(clip.start);
+    setOrigClipDuration(clip.duration);
+    setTrimTooltip({ duration: clip.duration, delta: 0 });
+  };
+
+  // Trim End Pointer Handle
+  const handleTrimEndPointerDown = (e: React.PointerEvent, clip: TimelineClip) => {
+    e.stopPropagation();
+    const parentTrack = tracks.find((t) => t.id === clip.track);
+    if (clip.locked || parentTrack?.locked) return;
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
+
+    selectClip(clip.id);
+    setDraggingClipId(clip.id);
+    setTrimmingHandle('end');
     setDragStartX(e.clientX);
     setOrigClipStart(clip.start);
     setOrigClipDuration(clip.duration);
@@ -1189,6 +1345,25 @@ export const Timeline: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (draggingClipId || trimmingHandle || isScrubbingPlayhead) {
+      const handleWindowPointerMove = (e: PointerEvent) => {
+        handleGlobalMouseMove(e as any);
+      };
+      const handleWindowPointerUp = () => {
+        handleGlobalMouseUp();
+      };
+      window.addEventListener('pointermove', handleWindowPointerMove);
+      window.addEventListener('pointerup', handleWindowPointerUp);
+      window.addEventListener('pointercancel', handleWindowPointerUp);
+      return () => {
+        window.removeEventListener('pointermove', handleWindowPointerMove);
+        window.removeEventListener('pointerup', handleWindowPointerUp);
+        window.removeEventListener('pointercancel', handleWindowPointerUp);
+      };
+    }
+  }, [draggingClipId, trimmingHandle, isScrubbingPlayhead, dragStartX, origClipStart, origClipDuration, duration, timelineZoom, clips, tracks, hoveredTrackId]);
+
   // Context Menu Actions
   const handleClipContextMenu = (e: React.MouseEvent, clip: TimelineClip) => {
     e.preventDefault();
@@ -1318,6 +1493,9 @@ export const Timeline: React.FC = () => {
       onMouseMove={handleGlobalMouseMove}
       onMouseUp={handleGlobalMouseUp}
       onMouseLeave={handleGlobalMouseUp}
+      onPointerMove={(e) => handleGlobalMouseMove(e as any)}
+      onPointerUp={handleGlobalMouseUp}
+      onPointerCancel={handleGlobalMouseUp}
       className="h-full flex flex-col bg-[#141414] border-t border-[#333333] select-none text-xs text-[#E6E6E6]"
     >
       {/* ======================================================== */}
@@ -1853,95 +2031,129 @@ export const Timeline: React.FC = () => {
       {/* ======================================================== */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Track Headers (Left Column) */}
-        <div className="w-48 border-r border-[#333333] bg-[#1F1F1F] flex flex-col shrink-0 z-20 shadow-md">
-          <div className="h-7 border-b border-[#333333] bg-[#262626] px-2.5 flex items-center justify-between text-[10px] text-[#8A8A8A] font-mono">
-            <span>TRACKS</span>
-            <span className="text-[9px] opacity-70 font-sans">{tracks.length} tracks</span>
+        <div className={`${trackHeaderCollapsed ? 'w-14' : 'w-48'} border-r border-[#333333] bg-[#1F1F1F] flex flex-col shrink-0 z-20 shadow-md transition-[width] duration-150`}>
+          <div className="h-7 border-b border-[#333333] bg-[#262626] px-2 flex items-center justify-between text-[10px] text-[#8A8A8A] font-mono">
+            {!trackHeaderCollapsed && <span>TRACKS</span>}
+            {!trackHeaderCollapsed && <span className="text-[9px] opacity-70 font-sans">{tracks.length} tracks</span>}
+            <button
+              onClick={() => setTrackHeaderCollapsed(!trackHeaderCollapsed)}
+              className="p-1 rounded hover:bg-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB] transition-colors ml-auto min-w-[24px] min-h-[24px] flex items-center justify-center touch-target-40"
+              title={trackHeaderCollapsed ? 'Mở rộng Track Header (w-48)' : 'Thu gọn Track Header (w-14)'}
+            >
+              {trackHeaderCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto scrollbar-none">
+          <div ref={trackHeadersScrollRef} className="flex-1 overflow-y-auto scrollbar-none">
             {tracks.map((track) => {
               const Icon = track.icon;
               return (
                 <div
                   key={track.id}
                   style={{ height: `${track.height || 44}px` }}
-                  className="border-b border-[#333333]/60 px-2 flex items-center justify-between text-xs font-semibold text-[#8A8A8A] hover:bg-[#262626]/50 transition-all group"
+                  className={`border-b border-[#333333]/60 px-2 flex items-center text-xs font-semibold text-[#8A8A8A] hover:bg-[#262626]/50 transition-all group ${
+                    trackHeaderCollapsed ? 'justify-center relative' : 'justify-between'
+                  }`}
                 >
-                  <div className="flex items-center gap-1.5 min-w-0 mr-1 flex-1">
-                    <Icon className="w-3.5 h-3.5 shrink-0 text-[#1FC8DB]" />
-                    {editingTrackId === track.id ? (
-                      <input
-                        type="text"
-                        value={editingTrackName}
-                        onChange={(e) => setEditingTrackName(e.target.value)}
-                        onBlur={() => handleSaveRenameTrack(track.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveRenameTrack(track.id);
-                          if (e.key === 'Escape') setEditingTrackId(null);
-                        }}
-                        autoFocus
-                        className="bg-[#2E2E2E] text-white border border-[#1FC8DB] rounded px-1 py-0.5 text-[11px] w-full outline-none"
-                      />
-                    ) : (
-                      <span
-                        onDoubleClick={() => handleStartRenameTrack(track.id, track.name)}
-                        className="truncate text-[11px] text-[#CCCCCC] cursor-text hover:text-[#1FC8DB] transition-colors"
-                        title="Nhấp đúp để đổi tên track"
-                      >
-                        {track.name}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    {/* Rename icon */}
-                    <button
-                      onClick={() => handleStartRenameTrack(track.id, track.name)}
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[#333333] text-[#8A8A8A] hover:text-white transition-all"
-                      title="Đổi tên track"
+                  {trackHeaderCollapsed ? (
+                    /* Collapsed Icon-Only View (w-14) */
+                    <div
+                      className="relative flex items-center justify-center w-full h-full cursor-pointer"
+                      onClick={() => toggleTrackMute(track.id)}
+                      title={`${track.name} (Bấm để Mute, Đúp để Khóa)`}
+                      onDoubleClick={() => toggleTrackLock(track.id)}
                     >
-                      <Edit3 className="w-2.5 h-2.5" />
-                    </button>
+                      <Icon className="w-4 h-4 text-[#1FC8DB]" />
+                      {/* Compact Status Indicator Badges */}
+                      {track.muted && (
+                        <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-1 ring-black" />
+                      )}
+                      {track.locked && (
+                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 ring-1 ring-black" />
+                      )}
+                      {track.hidden && (
+                        <span className="absolute top-1 left-1 w-2 h-2 rounded-full bg-slate-500 ring-1 ring-black" />
+                      )}
+                    </div>
+                  ) : (
+                    /* Expanded Track Header View (w-48) */
+                    <>
+                      <div className="flex items-center gap-1.5 min-w-0 mr-1 flex-1">
+                        <Icon className="w-3.5 h-3.5 shrink-0 text-[#1FC8DB]" />
+                        {editingTrackId === track.id ? (
+                          <input
+                            type="text"
+                            value={editingTrackName}
+                            onChange={(e) => setEditingTrackName(e.target.value)}
+                            onBlur={() => handleSaveRenameTrack(track.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveRenameTrack(track.id);
+                              if (e.key === 'Escape') setEditingTrackId(null);
+                            }}
+                            autoFocus
+                            className="bg-[#2E2E2E] text-white border border-[#1FC8DB] rounded px-1 py-0.5 text-[11px] w-full outline-none"
+                          />
+                        ) : (
+                          <span
+                            onDoubleClick={() => handleStartRenameTrack(track.id, track.name)}
+                            className="truncate text-[11px] text-[#CCCCCC] cursor-text hover:text-[#1FC8DB] transition-colors"
+                            title="Nhấp đúp để đổi tên track"
+                          >
+                            {track.name}
+                          </span>
+                        )}
+                      </div>
 
-                    {/* Height Toggle */}
-                    <button
-                      onClick={() => toggleTrackHeight(track.id)}
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB] transition-all text-[9px] font-mono"
-                      title={`Độ cao: ${track.height || 44}px (Bấm để đổi 36 / 52 / 68px)`}
-                    >
-                      {track.height === 36 ? 'S' : track.height === 68 ? 'L' : 'M'}
-                    </button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {/* Rename icon */}
+                        <button
+                          onClick={() => handleStartRenameTrack(track.id, track.name)}
+                          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[#333333] text-[#8A8A8A] hover:text-white transition-all touch-target-40"
+                          title="Đổi tên track"
+                        >
+                          <Edit3 className="w-2.5 h-2.5" />
+                        </button>
 
-                    {/* Mute Toggle */}
-                    {(track.id.startsWith('audio') || track.id.startsWith('video')) && (
-                      <button
-                        onClick={() => toggleTrackMute(track.id)}
-                        className={`p-1 rounded hover:bg-[#333333] transition-colors ${track.muted ? 'text-rose-400' : 'text-[#8A8A8A] hover:text-white'}`}
-                        title={track.muted ? 'Bật âm thanh track' : 'Tắt âm thanh track (Mute)'}
-                      >
-                        {track.muted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                      </button>
-                    )}
+                        {/* Height Toggle */}
+                        <button
+                          onClick={() => toggleTrackHeight(track.id)}
+                          className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB] transition-all text-[9px] font-mono touch-target-40"
+                          title={`Độ cao: ${track.height || 44}px (Bấm để đổi 36 / 52 / 68px)`}
+                        >
+                          {track.height === 36 ? 'S' : track.height === 68 ? 'L' : 'M'}
+                        </button>
 
-                    {/* Hide Toggle */}
-                    <button
-                      onClick={() => toggleTrackHidden(track.id)}
-                      className={`p-1 rounded hover:bg-[#333333] transition-colors ${track.hidden ? 'text-amber-400' : 'text-[#8A8A8A] hover:text-white'}`}
-                      title={track.hidden ? 'Hiện track' : 'Ẩn track (Hide)'}
-                    >
-                      {track.hidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    </button>
+                        {/* Mute Toggle */}
+                        {(track.id.startsWith('audio') || track.id.startsWith('video')) && (
+                          <button
+                            onClick={() => toggleTrackMute(track.id)}
+                            className={`p-2 sm:p-1 min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded hover:bg-[#333333] transition-colors touch-manipulation touch-target-40 ${track.muted ? 'text-rose-400' : 'text-[#8A8A8A] hover:text-white'}`}
+                            title={track.muted ? 'Bật âm thanh track' : 'Tắt âm thanh track (Mute)'}
+                          >
+                            {track.muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
 
-                    {/* Lock Toggle */}
-                    <button
-                      onClick={() => toggleTrackLock(track.id)}
-                      className={`p-1 rounded hover:bg-[#333333] transition-colors ${track.locked ? 'text-amber-400' : 'text-[#8A8A8A] hover:text-white'}`}
-                      title={track.locked ? 'Mở khóa track' : 'Khóa track (Lock)'}
-                    >
-                      {track.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                    </button>
-                  </div>
+                        {/* Hide Toggle */}
+                        <button
+                          onClick={() => toggleTrackHidden(track.id)}
+                          className={`p-2 sm:p-1 min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded hover:bg-[#333333] transition-colors touch-manipulation touch-target-40 ${track.hidden ? 'text-amber-400' : 'text-[#8A8A8A] hover:text-white'}`}
+                          title={track.hidden ? 'Hiện track' : 'Ẩn track (Hide)'}
+                        >
+                          {track.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+
+                        {/* Lock Toggle */}
+                        <button
+                          onClick={() => toggleTrackLock(track.id)}
+                          className={`p-2 sm:p-1 min-w-[36px] min-h-[36px] sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded hover:bg-[#333333] transition-colors touch-manipulation touch-target-40 ${track.locked ? 'text-amber-400' : 'text-[#8A8A8A] hover:text-white'}`}
+                          title={track.locked ? 'Mở khóa track' : 'Khóa track (Lock)'}
+                        >
+                          {track.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -1951,6 +2163,7 @@ export const Timeline: React.FC = () => {
         {/* Scrollable Timeline Grid (Right Area) */}
         <div
           ref={timelineRef}
+          onScroll={handleTimelineScroll}
           onMouseDown={handleTimelineBgMouseDown}
           onMouseMove={handleTimelineMouseMove}
           onMouseLeave={handleTimelineMouseLeave}
@@ -1970,7 +2183,11 @@ export const Timeline: React.FC = () => {
             {/* Top Ruler with SMPTE Timecode Ticks & Markers */}
             <div
               onMouseDown={handleRulerMouseDown}
-              className="h-7 border-b border-[#333333] bg-[#1F1F1F]/95 flex items-center text-[10px] font-mono text-[#8A8A8A] px-1 relative select-none cursor-ew-resize sticky top-0 z-30 backdrop-blur shadow-sm"
+              onPointerDown={handlePlayheadPointerDown}
+              onPointerMove={handlePlayheadPointerMove}
+              onPointerUp={handlePlayheadPointerUp}
+              onPointerCancel={handlePlayheadPointerUp}
+              className="h-7 border-b border-[#333333] bg-[#1F1F1F]/95 flex items-center text-[10px] font-mono text-[#8A8A8A] px-1 relative select-none cursor-ew-resize sticky top-0 z-30 backdrop-blur shadow-sm touch-none"
             >
               {Array.from({ length: Math.ceil(duration) + 1 }).map((_, sec) => {
                 const isMajor = sec % (timelineZoom >= 2 ? 1 : timelineZoom >= 1 ? 2 : 5) === 0;
@@ -2035,20 +2252,26 @@ export const Timeline: React.FC = () => {
             {/* Needle Pin-head Playhead (Đầu hình ghim, kéo scrub được) */}
             <div
               onMouseDown={handleRulerMouseDown}
-              className="absolute top-0 bottom-0 z-35 flex flex-col items-center cursor-ew-resize group select-none pointer-events-auto"
+              onPointerDown={handlePlayheadPointerDown}
+              onPointerMove={handlePlayheadPointerMove}
+              onPointerUp={handlePlayheadPointerUp}
+              onPointerCancel={handlePlayheadPointerUp}
+              className="absolute top-0 bottom-0 z-35 flex flex-col items-center cursor-ew-resize group select-none pointer-events-auto touch-none"
               style={{ left: `${(currentTime / duration) * 100}%` }}
             >
-              {/* Pin Head (Needle top with grip & triangle tip) */}
-              <div className="relative -mt-1 flex flex-col items-center">
-                <div className="w-3.5 h-4 rounded-t-sm bg-[#1FC8DB] shadow-[0_0_10px_rgba(31,200,219,0.7)] flex items-center justify-center cursor-grab active:cursor-grabbing hover:brightness-125 transition-all">
+              {/* Pin Head (40x40px Touch Hit Box) */}
+              <div className="relative -mt-3 w-10 h-10 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none z-40 touch-target-40">
+                <div className="w-3.5 h-4 rounded-t-sm bg-[#1FC8DB] shadow-[0_0_10px_rgba(31,200,219,0.7)] flex items-center justify-center hover:brightness-125 transition-all pointer-events-none">
                   <div className="w-1 h-1.5 rounded-full bg-slate-950/80" />
                 </div>
                 {/* Triangular down-pointing needle tip */}
-                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[#1FC8DB]" />
+                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-[#1FC8DB] pointer-events-none" />
               </div>
 
-              {/* Glowing vertical needle line */}
-              <div className="w-[1.5px] h-full bg-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.9)]" />
+              {/* Vertical stem with 24px Touch Hit Zone */}
+              <div className="w-6 flex justify-center h-full touch-none cursor-ew-resize">
+                <div className="w-[1.5px] h-full bg-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.9)]" />
+              </div>
             </div>
 
             {/* Empty State: Drag material here and start to create */}
@@ -2149,13 +2372,18 @@ export const Timeline: React.FC = () => {
                           key={clip.id}
                           data-clip-id={clip.id}
                           onMouseDown={(e) => handleClipMouseDown(e, clip)}
+                          onPointerDown={(e) => handleClipPointerDown(e, clip)}
+                          onPointerMove={handleClipPointerMove}
+                          onPointerUp={handleClipPointerUp}
+                          onPointerCancel={handleClipPointerUp}
                           onContextMenu={(e) => handleClipContextMenu(e, clip)}
                           style={{
                             left: `${leftPercent}%`,
                             width: `${Math.max(2.5, widthPercent)}%`,
-                            height: `${clipHeight}px`
+                            height: `${clipHeight}px`,
+                            touchAction: 'none'
                           }}
-                          className={`absolute rounded-md border flex items-center justify-between text-xs font-semibold select-none group transition-all shadow-md overflow-hidden ${
+                          className={`absolute rounded-md border flex items-center justify-between text-xs font-semibold select-none group transition-all shadow-md touch-none ${
                             track.color
                           } ${
                             isSelected
@@ -2203,14 +2431,21 @@ export const Timeline: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Trim Handle Left (Start) - CapCut White Handle */}
+                          {/* Trim Handle Left (Start) - Expanded Touch Area >= 40px */}
                           <div
                             onMouseDown={(e) => handleTrimStartMouseDown(e, clip)}
+                            onPointerDown={(e) => handleTrimStartPointerDown(e, clip)}
                             title="Kéo để cắt đầu clip (Trim Start)"
-                            className={`absolute left-0 top-0 bottom-0 w-2 rounded-l-md cursor-ew-resize transition-all z-30 ${
-                              isSelected ? 'bg-white shadow-[0_0_4px_white]' : 'bg-white/20 opacity-0 group-hover:opacity-100'
-                            }`}
-                          />
+                            className="absolute -left-3 top-0 bottom-0 w-9 min-w-[36px] z-30 flex items-center justify-start cursor-ew-resize touch-none select-none touch-target-40"
+                          >
+                            <div
+                              className={`w-2 h-full rounded-l-md pointer-events-none transition-all ${
+                                isSelected
+                                  ? 'bg-white shadow-[0_0_6px_white]'
+                                  : 'bg-white/40 sm:bg-white/20 opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
+                              }`}
+                            />
+                          </div>
 
                           {/* Trim Tooltip (Floating duration display) */}
                           {trimTooltip && draggingClipId === clip.id && (
@@ -2278,14 +2513,21 @@ export const Timeline: React.FC = () => {
                             </span>
                           )}
 
-                          {/* Trim Handle Right (End) - CapCut White Handle */}
+                          {/* Trim Handle Right (End) - Expanded Touch Area >= 40px */}
                           <div
                             onMouseDown={(e) => handleTrimEndMouseDown(e, clip)}
+                            onPointerDown={(e) => handleTrimEndPointerDown(e, clip)}
                             title="Kéo để cắt đuôi clip (Trim End)"
-                            className={`absolute right-0 top-0 bottom-0 w-2 rounded-r-md cursor-ew-resize transition-all z-30 ${
-                              isSelected ? 'bg-white shadow-[0_0_4px_white]' : 'bg-white/20 opacity-0 group-hover:opacity-100'
-                            }`}
-                          />
+                            className="absolute -right-3 top-0 bottom-0 w-9 min-w-[36px] z-30 flex items-center justify-end cursor-ew-resize touch-none select-none touch-target-40"
+                          >
+                            <div
+                              className={`w-2 h-full rounded-r-md pointer-events-none transition-all ${
+                                isSelected
+                                  ? 'bg-white shadow-[0_0_6px_white]'
+                                  : 'bg-white/40 sm:bg-white/20 opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
+                              }`}
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -2311,14 +2553,20 @@ export const Timeline: React.FC = () => {
       </div>
 
       {/* ======================================================== */}
-      {/* CONTEXT MENU (CHUỘT PHẢI TRÊN CLIP)                      */}
+      {/* CONTEXT MENU (CHUỘT PHẢI / LONG-PRESS TRÊN CLIP)          */}
       {/* ======================================================== */}
       {contextMenu && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          className="fixed z-50 bg-[#1F1F1F] border border-[#333333] shadow-2xl rounded-lg py-1.5 min-w-[210px] text-xs text-[#E6E6E6] flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none divide-y divide-[#2B2B2B]"
-        >
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/10 select-none"
+            onPointerDown={() => setContextMenu(null)}
+            onClick={() => setContextMenu(null)}
+          />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+            className="fixed z-50 bg-[#1F1F1F] border border-[#333333] shadow-2xl rounded-lg py-1.5 min-w-[210px] text-xs text-[#E6E6E6] flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none divide-y divide-[#2B2B2B]"
+          >
           {/* Section 1: Cut, Split, Delete */}
           <div className="py-1 flex flex-col gap-0.5">
             <button
@@ -2506,6 +2754,7 @@ export const Timeline: React.FC = () => {
             </button>
           </div>
         </div>
+        </>
       )}
 
       {/* ======================================================== */}

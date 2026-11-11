@@ -29,9 +29,9 @@ const PageLoader: React.FC = () => (
 
 const MainLayout: React.FC = () => {
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#0B0F19]">
+    <div className="flex flex-col h-screen h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#0B0F19] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
       <Header />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         <Sidebar />
         <Suspense fallback={<PageLoader />}>
           <Outlet />

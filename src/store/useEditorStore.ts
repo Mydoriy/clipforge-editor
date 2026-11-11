@@ -351,7 +351,7 @@ export const useEditorStore = create<EditorState>()(
       },
       signOut: () => set({ user: null }),
 
-      sidebarOpen: true,
+      sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 

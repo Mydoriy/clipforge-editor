@@ -216,7 +216,7 @@ export const Inspector: React.FC = () => {
         toggleKeyframeAtPlayhead();
       }}
       title={`${title} ${hasKeyframeAtPlayhead ? '(Đang ở keyframe - Bấm để xóa)' : '(Bấm để thêm keyframe)'}`}
-      className={`p-0.5 leading-none transition-all ${
+      className={`p-0.5 leading-none transition-all touch-target-40 inline-flex items-center justify-center ${
         hasKeyframeAtPlayhead
           ? 'text-[#00E5FF] font-bold drop-shadow-[0_0_6px_#00E5FF] scale-110'
           : 'text-[#666] hover:text-[#00E5FF]'
@@ -310,7 +310,7 @@ export const Inspector: React.FC = () => {
                   <button
                     key={t.id}
                     onClick={() => setActiveMainTab(t.id as any)}
-                    className={`py-2 relative transition-colors ${
+                    className={`py-2 relative transition-colors touch-target-40 ${
                       activeMainTab === t.id ? 'text-[#00E5FF] font-bold' : 'text-[#8A8A8A] hover:text-white'
                     }`}
                   >
@@ -336,7 +336,7 @@ export const Inspector: React.FC = () => {
                       <button
                         key={st.id}
                         onClick={() => setActiveVideoSubTab(st.id as any)}
-                        className={`flex-1 py-1 text-center rounded text-[11px] font-medium transition-all ${
+                        className={`flex-1 py-1 text-center rounded text-[11px] font-medium transition-all touch-target-40 ${
                           activeVideoSubTab === st.id
                             ? 'bg-[#2A2A2A] text-white shadow-sm font-semibold'
                             : 'text-[#8A8A8A] hover:text-[#CCC]'
@@ -380,7 +380,7 @@ export const Inspector: React.FC = () => {
                                 })
                               }
                               title="Reset transform (0, 0, 100%, 0°)"
-                              className="text-[#888] hover:text-[#00E5FF] transition-colors"
+                              className="p-1 rounded touch-target-40 text-[#888] hover:text-[#00E5FF] transition-colors"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
@@ -430,7 +430,8 @@ export const Inspector: React.FC = () => {
                                       transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scale: val }
                                     });
                                   }}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                 />
                               </div>
                             ) : (
@@ -474,7 +475,8 @@ export const Inspector: React.FC = () => {
                                         transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleX: val }
                                       });
                                     }}
-                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                   />
                                 </div>
 
@@ -517,7 +519,8 @@ export const Inspector: React.FC = () => {
                                         transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleY: val }
                                       });
                                     }}
-                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                   />
                                 </div>
                               </div>
@@ -754,7 +757,7 @@ export const Inspector: React.FC = () => {
                             <button
                               onClick={() => updateClip(clip.id, { blendMode: 'normal', opacity: 1.0 })}
                               title="Reset blend"
-                              className="text-[#888] hover:text-[#00E5FF] transition-colors"
+                              className="p-1 rounded touch-target-40 text-[#888] hover:text-[#00E5FF] transition-colors"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
@@ -816,7 +819,8 @@ export const Inspector: React.FC = () => {
                                 step="0.01"
                                 value={clip.opacity ?? 1}
                                 onChange={(e) => updateClip(clip.id, { opacity: parseFloat(e.target.value) })}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                               />
                             </div>
                           </div>
@@ -871,7 +875,8 @@ export const Inspector: React.FC = () => {
                                 step="0.1"
                                 value={clip.speed || 1.0}
                                 onChange={(e) => updateClip(clip.id, { speed: parseFloat(e.target.value) })}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                               />
                             </div>
 
@@ -1049,7 +1054,8 @@ export const Inspector: React.FC = () => {
                                     chromaKey: { ...clip.chromaKey, enabled: true, similarity: parseInt(e.target.value) }
                                   })
                                 }
-                                className="accent-[#00E5FF] cursor-pointer"
+                                className="accent-[#00E5FF] cursor-pointer touch-slider"
+                                style={{ touchAction: 'none' }}
                               />
                             </div>
                           </div>
@@ -1197,7 +1203,8 @@ export const Inspector: React.FC = () => {
                                 max="100"
                                 value={currentMask.feather || 0}
                                 onChange={(e) => updateMaskProp({ feather: parseInt(e.target.value) })}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                               />
                             </div>
 
@@ -1221,7 +1228,8 @@ export const Inspector: React.FC = () => {
                                   max="1200"
                                   value={currentMask.width || 500}
                                   onChange={(e) => updateMaskProp({ width: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                 />
                               </div>
 
@@ -1243,7 +1251,8 @@ export const Inspector: React.FC = () => {
                                   max="1200"
                                   value={currentMask.height || 350}
                                   onChange={(e) => updateMaskProp({ height: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                 />
                               </div>
                             </div>
@@ -1271,7 +1280,8 @@ export const Inspector: React.FC = () => {
                                   max="150"
                                   value={currentMask.roundness || 0}
                                   onChange={(e) => updateMaskProp({ roundness: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer"
+                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                 />
                               </div>
                             )}
@@ -1311,7 +1321,8 @@ export const Inspector: React.FC = () => {
                                   max="180"
                                   value={currentMask.rotation || 0}
                                   onChange={(e) => updateMaskProp({ rotation: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 w-24 bg-[#2A2A2A] rounded cursor-pointer"
+                                  className="accent-[#00E5FF] h-1.5 w-24 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  style={{ touchAction: 'none' }}
                                 />
                                 <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1 py-0.5 text-xs font-mono">
                                   <input
@@ -1368,7 +1379,8 @@ export const Inspector: React.FC = () => {
                                   },
                                 });
                               }}
-                              className="accent-[#00E5FF] cursor-pointer"
+                              className="accent-[#00E5FF] cursor-pointer touch-slider"
+                              style={{ touchAction: 'none' }}
                             />
                           </div>
                         );
@@ -1486,7 +1498,8 @@ export const Inspector: React.FC = () => {
                                   }
                                 });
                               }}
-                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer"
+                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                              style={{ touchAction: 'none' }}
                             />
                             <span className="font-mono text-white text-[11px]">
                               {(clip.transitionIn?.duration || clip.transitionDuration || 0.8).toFixed(1)}s
@@ -1540,7 +1553,8 @@ export const Inspector: React.FC = () => {
                                   }
                                 });
                               }}
-                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer"
+                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                              style={{ touchAction: 'none' }}
                             />
                             <span className="font-mono text-white text-[11px]">
                               {(clip.transitionOut?.duration || 0.8).toFixed(1)}s
@@ -1600,7 +1614,8 @@ export const Inspector: React.FC = () => {
                           max={p.max}
                           value={(clip as any)[p.key] ?? p.def}
                           onChange={(e) => updateClip(clip.id, { [p.key]: parseInt(e.target.value) })}
-                          className="accent-[#00E5FF] cursor-pointer"
+                          className="accent-[#00E5FF] cursor-pointer touch-slider"
+                          style={{ touchAction: 'none' }}
                         />
                       </div>
                     ))}
@@ -1723,7 +1738,8 @@ export const Inspector: React.FC = () => {
                     step="0.05"
                     value={clip.volume ?? 1}
                     onChange={(e) => updateClip(clip.id, { volume: parseFloat(e.target.value) })}
-                    className="accent-[#1FC8DB] cursor-pointer"
+                    className="accent-[#1FC8DB] cursor-pointer touch-slider"
+                    style={{ touchAction: 'none' }}
                   />
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <div className="flex flex-col gap-0.5">
@@ -1917,7 +1933,7 @@ export const Inspector: React.FC = () => {
                     });
                     showToast('Đã đặt lại thông số chỉnh màu!', 'info');
                   }}
-                  className="px-2 py-0.5 rounded bg-[#1F1F1F] hover:bg-[#333] text-[10px] text-[#8A8A8A] hover:text-white"
+                  className="px-2 py-0.5 rounded bg-[#1F1F1F] hover:bg-[#333] text-[10px] text-[#8A8A8A] hover:text-white touch-target-40"
                 >
                   Reset
                 </button>
@@ -1941,7 +1957,8 @@ export const Inspector: React.FC = () => {
                     onChange={(e) => updateClip(clip.id, {
                       adjustments: { ...clip.adjustments, temperature: parseInt(e.target.value) }
                     })}
-                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer touch-slider"
+                    style={{ touchAction: 'none' }}
                   />
                 </div>
 
@@ -1959,7 +1976,8 @@ export const Inspector: React.FC = () => {
                     onChange={(e) => updateClip(clip.id, {
                       adjustments: { ...clip.adjustments, tint: parseInt(e.target.value) }
                     })}
-                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer touch-slider"
+                    style={{ touchAction: 'none' }}
                   />
                 </div>
 
@@ -1977,7 +1995,8 @@ export const Inspector: React.FC = () => {
                     onChange={(e) => updateClip(clip.id, {
                       adjustments: { ...clip.adjustments, saturation: parseInt(e.target.value) }
                     })}
-                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer touch-slider"
+                    style={{ touchAction: 'none' }}
                   />
                 </div>
 
@@ -1995,7 +2014,8 @@ export const Inspector: React.FC = () => {
                     onChange={(e) => updateClip(clip.id, {
                       adjustments: { ...clip.adjustments, brightness: parseInt(e.target.value) }
                     })}
-                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer touch-slider"
+                    style={{ touchAction: 'none' }}
                   />
                 </div>
 
@@ -2013,7 +2033,8 @@ export const Inspector: React.FC = () => {
                     onChange={(e) => updateClip(clip.id, {
                       adjustments: { ...clip.adjustments, contrast: parseInt(e.target.value) }
                     })}
-                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#1F1F1F] rounded cursor-pointer touch-slider"
+                    style={{ touchAction: 'none' }}
                   />
                 </div>
               </div>

@@ -352,7 +352,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {!isEditor && (
           <button
             onClick={toggleSidebar}
-            className="p-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] hover-lift md:hidden"
+            className="p-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] hover-lift lg:hidden touch-target-44"
             title="Thu gọn / Mở sidebar"
           >
             <MenuIcon className="w-4 h-4" />
@@ -367,7 +367,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all ${
+              className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border transition-all touch-target-44 ${
                 menuOpen
                   ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
                   : 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#E6E6E6] hover:text-[#1FC8DB]'
@@ -694,7 +694,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
               onClick={undo}
               disabled={undoStack.length === 0}
               title={undoStack.length === 0 ? 'Không có thao tác nào để hoàn tác (Ctrl+Z)' : 'Hoàn tác (Undo - Ctrl+Z)'}
-              className={`p-1.5 rounded-md transition-colors ${
+              className={`p-1.5 rounded-md transition-colors touch-target-44 ${
                 undoStack.length === 0
                   ? 'text-[#555555] cursor-not-allowed opacity-40'
                   : 'text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626]'
@@ -710,7 +710,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
                   ? 'Không có thao tác nào để làm lại (Ctrl+Shift+Z / Ctrl+Y)'
                   : 'Làm lại (Redo - Ctrl+Shift+Z)'
               }
-              className={`p-1.5 rounded-md transition-colors ${
+              className={`p-1.5 rounded-md transition-colors touch-target-44 ${
                 redoStack.length === 0
                   ? 'text-[#555555] cursor-not-allowed opacity-40'
                   : 'text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626]'
@@ -835,7 +835,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             <button
               onClick={() => setLayoutDropdownOpen(!layoutDropdownOpen)}
               title="Tùy chọn bố cục làm việc (Layout)"
-              className={`p-1.5 rounded-md border transition-all ${
+              className={`p-1.5 rounded-md border transition-all touch-target-44 ${
                 layoutDropdownOpen
                   ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
                   : 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
@@ -884,7 +884,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           <button
             onClick={() => openModal('shortcuts')}
             title="Xem phím tắt (Keyboard shortcuts)"
-            className="p-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#262626] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] transition-all"
+            className="p-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#262626] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] transition-all touch-target-44"
           >
             <Keyboard className="w-3.5 h-3.5" />
           </button>
@@ -895,7 +895,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           <button
             onClick={toggleSafeZone}
             title={safeZoneEnabled ? 'Tắt vùng an toàn 9:16' : 'Bật vùng an toàn 9:16 (TikTok/Reels)'}
-            className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border transition-all ${
+            className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border transition-all touch-target-44 ${
               safeZoneEnabled
                 ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
                 : 'bg-[#2E2E2E] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
@@ -910,7 +910,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <div className="relative">
           <button
             onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-            className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border transition-all ${
+            className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border transition-all touch-target-44 ${
               isEditor
                 ? 'bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border-[#333333]'
                 : 'bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border-[#1F2937]'
@@ -963,7 +963,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <div className="relative">
           <button
             onClick={() => setNotifDrawerOpen(!notifDrawerOpen)}
-            className={`relative p-1.5 rounded-md border transition-all ${
+            className={`relative p-1.5 rounded-md border transition-all touch-target-44 ${
               isEditor
                 ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
                 : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
@@ -1027,7 +1027,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <button
           onClick={() => openModal('betaTasks')}
           aria-label="Kịch bản thử nghiệm Beta kín (Closed Beta Tasks)"
-          className={`px-2 py-1.5 rounded-md border text-[11px] font-bold flex items-center gap-1 transition-all ${
+          className={`px-2 py-1.5 rounded-md border text-[11px] font-bold flex items-center gap-1 transition-all touch-target-44 ${
             isEditor
               ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/40 text-amber-300'
               : 'bg-amber-950/50 hover:bg-amber-900/60 border-amber-500/40 text-amber-300'
@@ -1042,7 +1042,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <button
           onClick={() => openModal('feedback')}
           aria-label="Báo lỗi hoặc Góp ý phát triển (Feedback & Bug Report)"
-          className={`p-1.5 rounded-md border transition-all ${
+          className={`p-1.5 rounded-md border transition-all touch-target-44 ${
             isEditor
               ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB]'
               : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#22D3EE]'
@@ -1056,7 +1056,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <button
           onClick={() => openModal('settings')}
           aria-label="Cài đặt hệ thống (Settings)"
-          className={`p-1.5 rounded-md border transition-all ${
+          className={`p-1.5 rounded-md border transition-all touch-target-44 ${
             isEditor
               ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
               : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
@@ -1071,7 +1071,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           onClick={() => {
             showToast('👑 Tài khoản PRO VIP: Đang hoạt động ở mức hạn cao nhất (4K 60fps & AI Unlimited)!', 'success');
           }}
-          className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md transition-all shadow-sm bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/25 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 active:scale-95 cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md transition-all shadow-sm bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/25 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 active:scale-95 cursor-pointer touch-target-44"
           title="Tài khoản PRO VIP vĩnh viễn (Mức hạn cao nhất)"
         >
           <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
@@ -1082,7 +1082,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {isEditor && (
           <button
             onClick={() => openModal('share')}
-            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border border-[#333333] hover:border-[#1FC8DB] transition-all"
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border border-[#333333] hover:border-[#1FC8DB] transition-all touch-target-44"
             title="Chia sẻ dự án (.capproj, link, Web Share)"
           >
             <Share2 className="w-3.5 h-3.5 text-[#1FC8DB]" />
@@ -1093,7 +1093,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         {/* Nút Export (Cyan) */}
         <button
           onClick={() => openModal('export')}
-          className="flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-md bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 transition-all shadow-sm active:scale-95"
+          className="flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-md bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 transition-all shadow-sm active:scale-95 touch-target-44"
           title="Xuất video hoàn tất (MP4 / WebM)"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -1102,27 +1102,27 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
 
         {/* Cụm cửa sổ (– ☐ ✕) */}
         {isEditor && (
-          <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-[#333333]">
+          <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-[#333333]">
             <button
               onClick={() => {
                 toggleShowTimeline();
                 showToast(showTimeline ? 'Đã thu gọn Timeline để mở rộng không gian xem' : 'Đã hiển thị lại Timeline', 'info');
               }}
-              className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors"
+              className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors touch-target-44"
               title={showTimeline ? 'Thu gọn Timeline (–)' : 'Mở rộng Timeline (–)'}
             >
               <Minus className="w-3 h-3" />
             </button>
             <button
               onClick={toggleFullscreen}
-              className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors"
+              className="p-1 rounded text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] transition-colors touch-target-44"
               title="Phóng to toàn màn hình (☐)"
             >
               <Square className="w-3 h-3" />
             </button>
             <button
               onClick={handleHomeNavigation}
-              className="p-1 rounded text-[#8A8A8A] hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+              className="p-1 rounded text-[#8A8A8A] hover:text-rose-400 hover:bg-rose-950/40 transition-colors touch-target-44"
               title="Đóng về trang chủ (✕)"
             >
               <X className="w-3 h-3" />
