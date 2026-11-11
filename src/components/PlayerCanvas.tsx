@@ -22,12 +22,14 @@ import {
   Repeat,
   Square,
   Type,
-  X
+  X,
+  Clock
 } from 'lucide-react';
 import { db } from '../db';
 import { sharedCompositor } from '../engine/compositor';
 import { masterAudio } from '../engine/audioEngine';
 import { generateMediaMetadata } from '../engine/storageProxy';
+import { sleepTimerManager, backgroundAudioManager, type SleepTimerOption } from '../engine/backgroundAudioSleepTimer';
 
 export const PlayerCanvas: React.FC = () => {
   const {
@@ -94,6 +96,27 @@ export const PlayerCanvas: React.FC = () => {
   const [qualityDropdownOpen, setQualityDropdownOpen] = useState(false);
   const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
+  const [sleepTimerDropdownOpen, setSleepTimerDropdownOpen] = useState(false);
+  const [sleepTimerState, setSleepTimerState] = useState(sleepTimerManager.getState());
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setMenuOpen(false);
+      setQualityDropdownOpen(false);
+      setZoomDropdownOpen(false);
+      setRatioDropdownOpen(false);
+      setSleepTimerDropdownOpen(false);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
+
+  // Subscribe to sleep timer updates
+  useEffect(() => {
+    const unsubscribe = sleepTimerManager.subscribe((st) => setSleepTimerState(st));
+    return () => unsubscribe();
+  }, []);
 
   // Direct Manipulation States
   const [isDraggingClip, setIsDraggingClip] = useState(false);
@@ -215,6 +238,7 @@ export const PlayerCanvas: React.FC = () => {
         const nextTime = currentTimeRef.current + delta;
         const dur = durationRef.current;
         if (nextTime >= dur) {
+          sleepTimerManager.notifyTrackEnded();
           if (loopPlaybackRef.current && dur > 0) {
             currentTimeRef.current = 0;
             setCurrentTime(0);
@@ -235,6 +259,32 @@ export const PlayerCanvas: React.FC = () => {
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
   }, [isPlaying, fps, isProxyEnabled, setCurrentTime, setIsPlaying]);
+
+  // Synchronize MediaSession & Screen WakeLock with playback state (Mobile/Tablet lock screen)
+  useEffect(() => {
+    if (isPlaying) {
+      backgroundAudioManager.updateMediaSession(
+        {
+          title: timelineTitle || 'ClipForge Project',
+          artist: 'ClipForge Timeline',
+          album: 'ClipForge Video Studio',
+          duration: duration || 0
+        },
+        {
+          onPlay: () => setIsPlaying(true),
+          onPause: () => setIsPlaying(false),
+          onSeek: (time) => setCurrentTime(Math.max(0, Math.min(duration, time))),
+          onNext: () => setCurrentTime(Math.min(duration, currentTime + 5)),
+          onPrev: () => setCurrentTime(Math.max(0, currentTime - 5))
+        }
+      );
+      backgroundAudioManager.setPlaybackState('playing');
+      backgroundAudioManager.requestWakeLock().catch(() => {});
+    } else {
+      backgroundAudioManager.setPlaybackState('paused');
+      backgroundAudioManager.releaseWakeLock();
+    }
+  }, [isPlaying, timelineTitle, duration, currentTime, setIsPlaying, setCurrentTime]);
 
   // Synchronize audio playback with currentTime and isPlaying
   useEffect(() => {
@@ -1400,6 +1450,81 @@ export const PlayerCanvas: React.FC = () => {
                   >
                     <span>{r.label}</span>
                     {currentAspect === r.id && <Check className="w-3 h-3 text-[#1FC8DB]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sleep Timer (Hẹn giờ tự tắt trên Mobile / Tablet / Desktop) */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSleepTimerDropdownOpen(!sleepTimerDropdownOpen);
+              }}
+              className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border text-[11px] font-semibold flex items-center gap-1 transition-colors ${
+                sleepTimerState.isActive
+                  ? 'border-[#1FC8DB] text-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.3)]'
+                  : 'border-[#333333] text-[#A0A0A0] hover:text-white'
+              }`}
+              title="Hẹn giờ tự tắt (Sleep Timer)"
+            >
+              <Clock className="w-3 h-3" />
+              <span>
+                {sleepTimerState.option === 'off'
+                  ? 'Hẹn giờ'
+                  : sleepTimerState.option === 'end_of_track'
+                  ? 'Hết track'
+                  : sleepTimerState.remainingSeconds !== null
+                  ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}`
+                  : `${sleepTimerState.option}p`}
+              </span>
+            </button>
+            {sleepTimerDropdownOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-full right-0 mb-1 w-52 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+              >
+                <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold flex items-center justify-between border-b border-[#2A2A2A] pb-1.5 mb-1">
+                  <span>Hẹn giờ tự tắt</span>
+                  {sleepTimerState.isActive && (
+                    <span className="text-[#1FC8DB] font-mono">
+                      {sleepTimerState.remainingSeconds !== null
+                        ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}`
+                        : 'Bật'}
+                    </span>
+                  )}
+                </div>
+                {[
+                  { opt: 'off' as SleepTimerOption, label: 'Tắt hẹn giờ' },
+                  { opt: 15 as SleepTimerOption, label: '15 phút' },
+                  { opt: 30 as SleepTimerOption, label: '30 phút' },
+                  { opt: 45 as SleepTimerOption, label: '45 phút' },
+                  { opt: 60 as SleepTimerOption, label: '60 phút' },
+                  { opt: 'end_of_track' as SleepTimerOption, label: 'Khi phát hết Timeline' }
+                ].map((item) => (
+                  <button
+                    key={String(item.opt)}
+                    onClick={() => {
+                      if (item.opt === 'off') {
+                        sleepTimerManager.cancel();
+                        showToast('Đã tắt hẹn giờ', 'info');
+                      } else {
+                        sleepTimerManager.setOption(item.opt, () => {
+                          setIsPlaying(false);
+                          showToast('⏱️ Hẹn giờ: Đã tự động dừng phát', 'info');
+                        });
+                        showToast(`⏱️ Đã đặt hẹn giờ: ${item.label}`, 'success');
+                      }
+                      setSleepTimerDropdownOpen(false);
+                    }}
+                    className={`px-2.5 py-1.5 text-left hover:bg-[#262626] flex items-center justify-between transition-colors ${
+                      sleepTimerState.option === item.opt ? 'text-[#1FC8DB] font-bold bg-[#1FC8DB]/10' : ''
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                    {sleepTimerState.option === item.opt && <Check className="w-3 h-3 text-[#1FC8DB]" />}
                   </button>
                 ))}
               </div>

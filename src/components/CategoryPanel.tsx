@@ -22,6 +22,13 @@ import { safeAddMedia } from '../lib/db';
 import { createDefaultTimeline } from '../types/project';
 import confetti from 'canvas-confetti';
 import {
+  sleepTimerManager,
+  backgroundAudioManager,
+  matchesSearchQuery,
+  renderCc0SongWav,
+  type SleepTimerOption,
+} from '../engine/backgroundAudioSleepTimer';
+import {
   FolderOpen,
   Globe,
   Music,
@@ -78,6 +85,8 @@ import {
   Shapes,
   Palette,
   Download,
+  Clock,
+  Headphones,
   Languages,
   Sun,
   Contrast,
@@ -497,6 +506,18 @@ export const CategoryPanel: React.FC = () => {
   const [musicSearch, setMusicSearch] = useState('');
   const [playingMusicId, setPlayingMusicId] = useState<string | null>(null);
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sleep Timer & Background Audio (Mobile / Tablet)
+  const [sleepTimerState, setSleepTimerState] = useState(sleepTimerManager.getState());
+  const [showSleepTimerMenu, setShowSleepTimerMenu] = useState(false);
+  const [isBackgroundAudioOn, setIsBackgroundAudioOn] = useState(backgroundAudioManager.isEnabled());
+  const [activeTrackPlaying, setActiveTrackPlaying] = useState<{ id: string; title: string; tag: string } | null>(null);
+
+  useEffect(() => {
+    return sleepTimerManager.subscribe((state) => {
+      setSleepTimerState(state);
+    });
+  }, []);
   const [sfxCategory, setSfxCategory] = useState<string>('all');
   const [sfxSearch, setSfxSearch] = useState('');
   const [isExtractingAudio, setIsExtractingAudio] = useState(false);
@@ -3357,24 +3378,128 @@ export const CategoryPanel: React.FC = () => {
 
             {/* 2.1 KHO NHẠC (MUSIC) */}
             {audioSubnav === 'music' && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 relative pb-16">
                 {/* Copyright info */}
                 <div className="p-2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-200 text-[10px] flex items-center gap-1.5 leading-tight">
                   <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span>Kho nhạc tích hợp đạt chuẩn CC0 / Royalty-Free. Khi import nhạc riêng, vui lòng đảm bảo bạn sở hữu quyền sử dụng.</span>
                 </div>
 
-                {/* Search & Genre Filter */}
+                {/* Mobile & Tablet Friendly Toolbar: Sleep Timer & Background Audio */}
+                <div className="flex items-center justify-between bg-[#181818] p-2 rounded-lg border border-[#333333] relative">
+                  {/* Sleep Timer Selector Button */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowSleepTimerMenu(!showSleepTimerMenu)}
+                      className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all min-h-[36px] ${
+                        sleepTimerState.isActive
+                          ? 'bg-purple-600/30 text-purple-300 border border-purple-500 shadow-sm'
+                          : 'bg-[#262626] text-[#A0A0A0] hover:text-white border border-[#3A3A3A]'
+                      }`}
+                      title="Chọn thời gian tự tắt nhạc (Sleep Timer)"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span className="font-mono text-[11px]">
+                        {sleepTimerState.isActive && sleepTimerState.remainingSeconds !== null
+                          ? `Tắt: ${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}`
+                          : sleepTimerState.option === 'end_of_track'
+                          ? 'Tắt: Hết bài'
+                          : 'Hẹn giờ tự tắt'}
+                      </span>
+                      <ChevronDown className="w-3 h-3 opacity-60" />
+                    </button>
+
+                    {/* Sleep Timer Dropdown Popover */}
+                    {showSleepTimerMenu && (
+                      <div className="absolute z-50 mt-1 top-full left-0 w-52 bg-[#1E1E1E] border border-[#3A3A3A] rounded-lg shadow-2xl p-1.5 flex flex-col gap-1 animate-in fade-in">
+                        <div className="text-[10px] font-bold text-[#8A8A8A] px-2 py-1 uppercase border-b border-[#333333]">
+                          Thời gian tự tắt (Sleep Timer)
+                        </div>
+                        {[
+                          { label: '15 phút', val: 15 },
+                          { label: '30 phút', val: 30 },
+                          { label: '45 phút', val: 45 },
+                          { label: '60 phút', val: 60 },
+                          { label: 'Khi hết bài hát', val: 'end_of_track' },
+                          { label: 'Tắt hẹn giờ', val: 'off' },
+                        ].map((opt) => (
+                          <button
+                            key={String(opt.val)}
+                            onClick={() => {
+                              sleepTimerManager.setOption(opt.val as SleepTimerOption, () => {
+                                musicAudioRef.current?.pause();
+                                setPlayingMusicId(null);
+                                setActiveTrackPlaying(null);
+                                showToast('Đã tự động tắt phát nhạc theo hẹn giờ (Sleep Timer)', 'info');
+                              });
+                              setShowSleepTimerMenu(false);
+                              showToast(
+                                opt.val === 'off'
+                                  ? 'Đã tắt tính năng hẹn giờ'
+                                  : `Đã đặt thời gian tự tắt: ${opt.label}`,
+                                'success'
+                              );
+                            }}
+                            className={`w-full text-left px-2.5 py-2 rounded text-xs flex items-center justify-between min-h-[36px] ${
+                              sleepTimerState.option === opt.val
+                                ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] font-bold'
+                                : 'text-[#C5C5C5] hover:bg-[#2A2A2A] hover:text-white'
+                            }`}
+                          >
+                            <span>{opt.label}</span>
+                            {sleepTimerState.option === opt.val && <Check className="w-3.5 h-3.5 text-[#1FC8DB]" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Background Playback Toggle */}
+                  <button
+                    onClick={() => {
+                      const nextState = !isBackgroundAudioOn;
+                      setIsBackgroundAudioOn(nextState);
+                      backgroundAudioManager.setEnabled(nextState);
+                      showToast(
+                        nextState
+                          ? 'Đã BẬT phát dưới nền (Phát nhạc ngay cả khi khóa màn hình mobile/tablet)'
+                          : 'Đã TẮT phát dưới nền',
+                        'info'
+                      );
+                    }}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all min-h-[36px] ${
+                      isBackgroundAudioOn
+                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800'
+                        : 'bg-[#262626] text-[#7A7A7A] hover:text-white border border-[#3A3A3A]'
+                    }`}
+                    title="Phát dưới nền khi khóa màn hình hoặc đổi tab (iOS / Android)"
+                  >
+                    <Headphones className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span className="hidden sm:inline">Phát dưới nền:</span>
+                    <span className="font-bold">{isBackgroundAudioOn ? 'BẬT' : 'TẮT'}</span>
+                  </button>
+                </div>
+
+                {/* Search & Genre Filter with Accents Support & Clear Button */}
                 <div className="flex flex-col gap-2">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-2.5" />
+                    <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-3" />
                     <input
                       type="text"
                       value={musicSearch}
                       onChange={(e) => setMusicSearch(e.target.value)}
                       placeholder="Tìm bài hát, thể loại, giai điệu..."
-                      className="w-full bg-[#262626] border border-[#333333] focus:border-[#1FC8DB] rounded-md pl-8 pr-3 py-1.5 text-xs text-white outline-none"
+                      className="w-full bg-[#262626] border border-[#333333] focus:border-[#1FC8DB] rounded-md pl-8 pr-8 py-2 text-xs text-white outline-none min-h-[38px]"
                     />
+                    {musicSearch && (
+                      <button
+                        onClick={() => setMusicSearch('')}
+                        className="absolute right-2 top-2.5 p-1 rounded-full text-[#8A8A8A] hover:text-white hover:bg-[#333333] transition-colors"
+                        title="Xóa tìm kiếm"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
@@ -3390,7 +3515,7 @@ export const CategoryPanel: React.FC = () => {
                       <button
                         key={g.id}
                         onClick={() => setMusicCategory(g.id as any)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap transition-colors ${
+                        className={`px-2.5 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors min-h-[32px] ${
                           musicCategory === g.id
                             ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border border-[#1FC8DB]/50 font-bold'
                             : 'bg-[#262626] text-[#8A8A8A] hover:text-white'
@@ -3409,7 +3534,7 @@ export const CategoryPanel: React.FC = () => {
                     <div className="flex flex-col gap-1.5">
                       {dbMediaList
                         .filter((m) => m.type === 'audio')
-                        .filter((m) => !musicSearch || m.name.toLowerCase().includes(musicSearch.toLowerCase()))
+                        .filter((m) => !musicSearch || matchesSearchQuery(m.name, musicSearch))
                         .map((track) => (
                           <div
                             key={track.id}
@@ -3421,18 +3546,34 @@ export const CategoryPanel: React.FC = () => {
                                   if (playingMusicId === track.id) {
                                     musicAudioRef.current?.pause();
                                     setPlayingMusicId(null);
+                                    setActiveTrackPlaying(null);
+                                    backgroundAudioManager.setPlaybackState('paused');
                                   } else {
                                     if (musicAudioRef.current) musicAudioRef.current.pause();
                                     const audio = new Audio(URL.createObjectURL(track.blob));
-                                    audio.onended = () => setPlayingMusicId(null);
+                                    audio.onended = () => {
+                                      setPlayingMusicId(null);
+                                      setActiveTrackPlaying(null);
+                                      sleepTimerManager.notifyTrackEnded();
+                                      backgroundAudioManager.setPlaybackState('none');
+                                    };
                                     audio.play().catch(() => {});
                                     musicAudioRef.current = audio;
                                     setPlayingMusicId(track.id);
+                                    setActiveTrackPlaying({ id: track.id, title: track.name, tag: 'Đã tải lên' });
+
+                                    backgroundAudioManager.updateMediaSession(
+                                      { title: track.name, artist: 'Nhạc của bạn', album: 'ClipForge Imports' },
+                                      {
+                                        onPlay: () => { audio.play().catch(() => {}); backgroundAudioManager.setPlaybackState('playing'); },
+                                        onPause: () => { audio.pause(); backgroundAudioManager.setPlaybackState('paused'); }
+                                      }
+                                    );
                                   }
                                 }}
-                                className="p-1.5 rounded-full bg-[#1FC8DB]/20 text-[#1FC8DB] hover:bg-[#1FC8DB] hover:text-black shrink-0"
+                                className="p-2 rounded-full bg-[#1FC8DB]/20 text-[#1FC8DB] hover:bg-[#1FC8DB] hover:text-black shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
                               >
-                                {playingMusicId === track.id ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                                {playingMusicId === track.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
                               </button>
                               <div className="flex flex-col truncate">
                                 <span className="font-semibold text-white text-xs truncate">{track.name}</span>
@@ -3454,7 +3595,7 @@ export const CategoryPanel: React.FC = () => {
                                 });
                                 showToast(`Đã thêm "${track.name}" vào track Audio!`, 'success');
                               }}
-                              className="px-2.5 py-1 rounded bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold text-[10px] transition-colors shrink-0"
+                              className="px-2.5 py-1.5 rounded bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold text-[10px] transition-colors shrink-0 min-h-[32px] cursor-pointer"
                             >
                               + Thêm
                             </button>
@@ -3464,7 +3605,7 @@ export const CategoryPanel: React.FC = () => {
                   </div>
                 )}
 
-                {/* Kho nhạc mẫu bản quyền mở CC0 */}
+                {/* Kho nhạc mẫu bản quyền mở CC0 với âm thanh thật và MediaSession */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold text-[#8A8A8A] uppercase">Kho nhạc CC0 (Bản quyền mở)</span>
                   <div className="flex flex-col gap-1.5">
@@ -3479,7 +3620,7 @@ export const CategoryPanel: React.FC = () => {
                       { id: 'mus-8', title: 'Trap Beat 808 Bass Boost', cat: 'phonk', duration: 15, tag: 'Bass mạnh', color: 'from-fuchsia-600 to-pink-900' }
                     ]
                       .filter((m) => musicCategory === 'all' || m.cat === musicCategory)
-                      .filter((m) => !musicSearch || m.title.toLowerCase().includes(musicSearch.toLowerCase()))
+                      .filter((m) => !musicSearch || matchesSearchQuery(`${m.title} ${m.tag} ${m.cat}`, musicSearch))
                       .map((bgm) => (
                         <div
                           key={bgm.id}
@@ -3491,17 +3632,38 @@ export const CategoryPanel: React.FC = () => {
                                 if (playingMusicId === bgm.id) {
                                   musicAudioRef.current?.pause();
                                   setPlayingMusicId(null);
+                                  setActiveTrackPlaying(null);
+                                  backgroundAudioManager.setPlaybackState('paused');
                                 } else {
                                   if (musicAudioRef.current) musicAudioRef.current.pause();
-                                  audioManager.playSfx('beat');
                                   setPlayingMusicId(bgm.id);
-                                  setTimeout(() => setPlayingMusicId(null), 1500);
+                                  setActiveTrackPlaying({ id: bgm.id, title: bgm.title, tag: bgm.tag });
+
+                                  const wavBlob = await renderCc0SongWav(bgm.id, bgm.duration);
+                                  const url = URL.createObjectURL(wavBlob);
+                                  const audio = new Audio(url);
+                                  audio.onended = () => {
+                                    setPlayingMusicId(null);
+                                    setActiveTrackPlaying(null);
+                                    sleepTimerManager.notifyTrackEnded();
+                                    backgroundAudioManager.setPlaybackState('none');
+                                  };
+                                  audio.play().catch(() => {});
+                                  musicAudioRef.current = audio;
+
+                                  backgroundAudioManager.updateMediaSession(
+                                    { title: bgm.title, artist: bgm.tag, album: 'ClipForge CC0 Music' },
+                                    {
+                                      onPlay: () => { audio.play().catch(() => {}); backgroundAudioManager.setPlaybackState('playing'); },
+                                      onPause: () => { audio.pause(); backgroundAudioManager.setPlaybackState('paused'); }
+                                    }
+                                  );
                                 }
                               }}
-                              className="p-2 rounded-full bg-[#2E2E2E] hover:bg-[#1FC8DB] text-white hover:text-black transition-colors shrink-0"
-                              title="Nghe thử beat"
+                              className="p-2 rounded-full bg-[#2E2E2E] hover:bg-[#1FC8DB] text-white hover:text-black transition-colors shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
+                              title="Nghe thử bài hát thật"
                             >
-                              {playingMusicId === bgm.id ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                              {playingMusicId === bgm.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
                             </button>
                             <div className="flex flex-col truncate">
                               <span className="font-semibold text-white text-xs truncate">{bgm.title}</span>
@@ -3515,7 +3677,7 @@ export const CategoryPanel: React.FC = () => {
 
                           <button
                             onClick={async () => {
-                              const wavBlob = await audioManager.renderSfxWav('beat');
+                              const wavBlob = await renderCc0SongWav(bgm.id, bgm.duration);
                               const url = URL.createObjectURL(wavBlob);
                               addClip({
                                 track: 'audio',
@@ -3528,7 +3690,7 @@ export const CategoryPanel: React.FC = () => {
                               });
                               showToast(`Đã thêm BGM "${bgm.title}" vào timeline!`, 'success');
                             }}
-                            className="px-2.5 py-1 rounded bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold text-[10px] transition-colors shrink-0"
+                            className="px-2.5 py-1.5 rounded bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold text-[10px] transition-colors shrink-0 min-h-[32px] cursor-pointer"
                           >
                             + Thêm
                           </button>
@@ -3540,11 +3702,70 @@ export const CategoryPanel: React.FC = () => {
                 {/* Import Audio shortcut */}
                 <button
                   onClick={() => mediaFileInputRef.current?.click()}
-                  className="w-full py-2 rounded-md border border-dashed border-[#333333] hover:border-[#1FC8DB] text-[#8A8A8A] hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-2.5 rounded-md border border-dashed border-[#333333] hover:border-[#1FC8DB] text-[#8A8A8A] hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors min-h-[40px] cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5 text-[#1FC8DB]" />
                   <span>+ Tải thêm tệp nhạc từ máy tính (.mp3, .wav, .m4a)</span>
                 </button>
+
+                {/* Floating Mini Player for Mobile & Tablet */}
+                {activeTrackPlaying && (
+                  <div className="sticky bottom-0 z-30 p-2.5 bg-[#141824]/95 backdrop-blur border border-cyan-500/40 rounded-lg shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-200">
+                    <div className="flex items-center gap-2 overflow-hidden flex-1">
+                      <div className="p-2 rounded-full bg-[#1FC8DB] text-slate-950 shrink-0">
+                        <Music className="w-3.5 h-3.5 animate-pulse" />
+                      </div>
+                      <div className="flex flex-col truncate">
+                        <span className="font-bold text-white text-xs truncate">{activeTrackPlaying.title}</span>
+                        <div className="text-[10px] text-cyan-400 font-mono flex items-center gap-1.5">
+                          <span>{activeTrackPlaying.tag}</span>
+                          {sleepTimerState.isActive && (
+                            <span className="text-purple-300 bg-purple-950/80 px-1.5 py-0.2 rounded border border-purple-800 text-[9px] font-bold">
+                              ⏱️ {sleepTimerState.remainingSeconds !== null ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}` : 'Hết bài'}
+                            </span>
+                          )}
+                          {isBackgroundAudioOn && (
+                            <span className="text-emerald-300 bg-emerald-950/80 px-1 rounded border border-emerald-800 text-[8px]">
+                              Phát nền ✓
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => {
+                          if (musicAudioRef.current) {
+                            if (musicAudioRef.current.paused) {
+                              musicAudioRef.current.play().catch(() => {});
+                              backgroundAudioManager.setPlaybackState('playing');
+                            } else {
+                              musicAudioRef.current.pause();
+                              backgroundAudioManager.setPlaybackState('paused');
+                            }
+                          }
+                        }}
+                        className="p-2 rounded-full bg-[#2E2E2E] hover:bg-[#3A3A3A] text-white min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
+                        title={musicAudioRef.current?.paused ? 'Tiếp tục phát' : 'Tạm dừng'}
+                      >
+                        {musicAudioRef.current?.paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (musicAudioRef.current) musicAudioRef.current.pause();
+                          setPlayingMusicId(null);
+                          setActiveTrackPlaying(null);
+                          backgroundAudioManager.setPlaybackState('none');
+                        }}
+                        className="p-2 rounded-full bg-[#262626] hover:bg-[#333333] text-[#8A8A8A] hover:text-white min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
+                        title="Đóng nghe thử"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
