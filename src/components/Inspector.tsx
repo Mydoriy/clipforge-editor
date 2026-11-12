@@ -218,8 +218,8 @@ export const Inspector: React.FC = () => {
       title={`${title} ${hasKeyframeAtPlayhead ? '(Đang ở keyframe - Bấm để xóa)' : '(Bấm để thêm keyframe)'}`}
       className={`p-0.5 leading-none transition-all touch-target-40 inline-flex items-center justify-center ${
         hasKeyframeAtPlayhead
-          ? 'text-[#00E5FF] font-bold drop-shadow-[0_0_6px_#00E5FF] scale-110'
-          : 'text-[#666] hover:text-[#00E5FF]'
+          ? 'text-[#1FC8DB] font-bold drop-shadow-[0_0_6px_rgba(31,200,219,0.5)] scale-110'
+          : 'text-[#666] hover:text-[#1FC8DB]'
       }`}
     >
       {hasKeyframeAtPlayhead ? '◆' : '◇'}
@@ -300,7 +300,7 @@ export const Inspector: React.FC = () => {
               )}
 
               {/* CapCut Primary Top Tabs: Video | Animation | Adjust | AI stylize */}
-              <div className="flex items-center border-b border-[#2E2E2E] px-1 gap-5 text-xs font-semibold">
+              <div className="flex items-center border-b border-[#262626] px-1 gap-5 text-xs font-semibold">
                 {[
                   { id: 'video', label: 'Video' },
                   { id: 'animation', label: 'Animation' },
@@ -311,12 +311,12 @@ export const Inspector: React.FC = () => {
                     key={t.id}
                     onClick={() => setActiveMainTab(t.id as any)}
                     className={`py-2 relative transition-colors touch-target-40 ${
-                      activeMainTab === t.id ? 'text-[#00E5FF] font-bold' : 'text-[#8A8A8A] hover:text-white'
+                      activeMainTab === t.id ? 'text-[#1FC8DB] font-bold' : 'text-[#8A8A8A] hover:text-white'
                     }`}
                   >
                     {t.label}
                     {activeMainTab === t.id && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00E5FF] rounded-full shadow-[0_0_6px_#00E5FF]" />
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1FC8DB] rounded-full shadow-[0_0_6px_rgba(31,200,219,0.6)]" />
                     )}
                   </button>
                 ))}
@@ -326,7 +326,7 @@ export const Inspector: React.FC = () => {
               {activeMainTab === 'video' && (
                 <div className="flex flex-col gap-2.5">
                   {/* CapCut Sub-tabs Pill Bar */}
-                  <div className="flex items-center gap-1 p-1 bg-[#161616] rounded-md border border-[#2B2B2B] mt-1 mb-1">
+                  <div className="flex items-center gap-1 p-1 bg-[#161616] rounded-md border border-[#262626] mt-1 mb-1">
                     {[
                       { id: 'basic', label: 'Basic' },
                       { id: 'removeBg', label: 'Remove BG' },
@@ -351,7 +351,7 @@ export const Inspector: React.FC = () => {
                   {activeVideoSubTab === 'basic' && (
                     <div className="flex flex-col gap-3">
                       {/* TRANSFORM ACCORDION (CapCut Layout) */}
-                      <div className="flex flex-col gap-2 pb-3 border-b border-[#2B2B2B]">
+                      <div className="flex flex-col gap-2 pb-3 border-b border-[#262626]">
                         <div className="flex items-center justify-between text-xs font-bold text-white cursor-pointer py-1">
                           <div
                             className="flex items-center gap-1.5 select-none"
@@ -380,7 +380,7 @@ export const Inspector: React.FC = () => {
                                 })
                               }
                               title="Reset transform (0, 0, 100%, 0°)"
-                              className="p-1 rounded touch-target-40 text-[#888] hover:text-[#00E5FF] transition-colors"
+                              className="p-1 rounded touch-target-40 text-[#888] hover:text-[#1FC8DB] transition-colors"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
@@ -396,7 +396,7 @@ export const Inspector: React.FC = () => {
                                 <div className="flex items-center justify-between text-[11px]">
                                   <span className="text-[#8A8A8A]">Scale</span>
                                   <div className="flex items-center gap-1.5">
-                                    <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                    <div className="flex items-center bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                       <input
                                         type="number"
                                         step="1"
@@ -430,7 +430,7 @@ export const Inspector: React.FC = () => {
                                       transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scale: val }
                                     });
                                   }}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                                   style={{ touchAction: 'none' }}
                                 />
                               </div>
@@ -441,7 +441,7 @@ export const Inspector: React.FC = () => {
                                   <div className="flex items-center justify-between text-[11px]">
                                     <span className="text-[#8A8A8A]">Scale X</span>
                                     <div className="flex items-center gap-1.5">
-                                      <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                      <div className="flex items-center bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                         <input
                                           type="number"
                                           step="1"
@@ -475,8 +475,8 @@ export const Inspector: React.FC = () => {
                                         transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleX: val }
                                       });
                                     }}
-                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
-                                  style={{ touchAction: 'none' }}
+                                    className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                    style={{ touchAction: 'none' }}
                                   />
                                 </div>
 
@@ -485,7 +485,7 @@ export const Inspector: React.FC = () => {
                                   <div className="flex items-center justify-between text-[11px]">
                                     <span className="text-[#8A8A8A]">Scale Y</span>
                                     <div className="flex items-center gap-1.5">
-                                      <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                      <div className="flex items-center bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                         <input
                                           type="number"
                                           step="1"
@@ -519,8 +519,8 @@ export const Inspector: React.FC = () => {
                                         transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), scaleY: val }
                                       });
                                     }}
-                                    className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
-                                  style={{ touchAction: 'none' }}
+                                    className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                    style={{ touchAction: 'none' }}
                                   />
                                 </div>
                               </div>
@@ -532,7 +532,7 @@ export const Inspector: React.FC = () => {
                               <button
                                 onClick={() => setUniformScale(!uniformScale)}
                                 className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
-                                  uniformScale ? 'bg-[#00E5FF]' : 'bg-[#333]'
+                                  uniformScale ? 'bg-[#1FC8DB]' : 'bg-[#333333]'
                                 }`}
                               >
                                 <div
@@ -547,7 +547,7 @@ export const Inspector: React.FC = () => {
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="text-[#8A8A8A]">Position</span>
                               <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1 bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                <div className="flex items-center gap-1 bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-[11px] font-mono">
                                   <span className="text-[#777]">X</span>
                                   <input
                                     type="number"
@@ -562,7 +562,7 @@ export const Inspector: React.FC = () => {
                                     className="w-12 bg-transparent text-right outline-none text-white text-[11px]"
                                   />
                                 </div>
-                                <div className="flex items-center gap-1 bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                <div className="flex items-center gap-1 bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-[11px] font-mono">
                                   <span className="text-[#777]">Y</span>
                                   <input
                                     type="number"
@@ -585,7 +585,7 @@ export const Inspector: React.FC = () => {
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="text-[#8A8A8A]">Rotate</span>
                               <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1 bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                <div className="flex items-center gap-1 bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-[11px] font-mono">
                                   <input
                                     type="number"
                                     step="0.1"
@@ -609,11 +609,11 @@ export const Inspector: React.FC = () => {
                                       transform: { ...(clip.transform || { x: 0, y: 0, scale: 1, rotation: 0 }), rotation: next }
                                     });
                                   }}
-                                  className="w-5 h-5 rounded-full border border-[#444] flex items-center justify-center cursor-pointer hover:border-[#00E5FF] transition-colors"
+                                  className="w-5 h-5 rounded-full border border-[#444] flex items-center justify-center cursor-pointer hover:border-[#1FC8DB] transition-colors"
                                   title="Rotate 90°"
                                 >
                                   <div
-                                    className="w-1 h-2 bg-[#00E5FF] rounded-full"
+                                    className="w-1 h-2 bg-[#1FC8DB] rounded-full"
                                     style={{ transform: `rotate(${clip.rotation || clip.transform?.rotation || 0}deg)` }}
                                   />
                                 </div>
@@ -629,8 +629,8 @@ export const Inspector: React.FC = () => {
                                   onClick={() => updateClip(clip.id, { flipX: !clip.flipX })}
                                   className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-colors ${
                                     clip.flipX
-                                      ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
-                                      : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                      ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border-[#1FC8DB]'
+                                      : 'bg-[#1F1F1F] text-[#888] border-[#333333] hover:text-white'
                                   }`}
                                   title="Lật ngang (Horizontal Flip)"
                                 >
@@ -640,8 +640,8 @@ export const Inspector: React.FC = () => {
                                   onClick={() => updateClip(clip.id, { flipY: !clip.flipY })}
                                   className={`px-2 py-0.5 rounded text-[10px] font-medium border transition-colors ${
                                     clip.flipY
-                                      ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
-                                      : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                      ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border-[#1FC8DB]'
+                                      : 'bg-[#1F1F1F] text-[#888] border-[#333333] hover:text-white'
                                   }`}
                                   title="Lật dọc (Vertical Flip)"
                                 >
@@ -651,7 +651,7 @@ export const Inspector: React.FC = () => {
                             </div>
 
                             {/* 6 Alignment buttons in a sleek row (CapCut Image 2) */}
-                            <div className="grid grid-cols-6 gap-1 bg-[#181818] p-1 rounded border border-[#2B2B2B] mt-1">
+                            <div className="grid grid-cols-6 gap-1 bg-[#141414] p-1 rounded-md border border-[#333333] mt-1">
                               <button
                                 onClick={() => {
                                   const x = -200;
@@ -661,9 +661,12 @@ export const Inspector: React.FC = () => {
                                   });
                                 }}
                                 title="Align Left (|←)"
-                                className="p-1 rounded hover:bg-[#2A2A2A] text-[#888] hover:text-[#00E5FF] flex items-center justify-center text-xs font-mono font-bold"
+                                className="p-1.5 rounded hover:bg-[#262626] text-[#888] hover:text-[#1FC8DB] flex items-center justify-center transition-colors touch-target-40"
                               >
-                                |←
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="2.5" y1="2" x2="2.5" y2="14" />
+                                  <rect x="4.5" y="4.5" width="8.5" height="7" rx="1" fill="currentColor" fillOpacity="0.25" />
+                                </svg>
                               </button>
                               <button
                                 onClick={() => {
@@ -673,9 +676,12 @@ export const Inspector: React.FC = () => {
                                   });
                                 }}
                                 title="Align Center (→|←)"
-                                className="p-1 rounded hover:bg-[#2A2A2A] text-[#888] hover:text-[#00E5FF] flex items-center justify-center text-xs font-mono font-bold"
+                                className="p-1.5 rounded hover:bg-[#262626] text-[#888] hover:text-[#1FC8DB] flex items-center justify-center transition-colors touch-target-40"
                               >
-                                →|←
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="8" y1="2" x2="8" y2="14" strokeDasharray="2 1.5" />
+                                  <rect x="3.75" y="4.5" width="8.5" height="7" rx="1" fill="currentColor" fillOpacity="0.25" />
+                                </svg>
                               </button>
                               <button
                                 onClick={() => {
@@ -686,9 +692,12 @@ export const Inspector: React.FC = () => {
                                   });
                                 }}
                                 title="Align Right (→|)"
-                                className="p-1 rounded hover:bg-[#2A2A2A] text-[#888] hover:text-[#00E5FF] flex items-center justify-center text-xs font-mono font-bold"
+                                className="p-1.5 rounded hover:bg-[#262626] text-[#888] hover:text-[#1FC8DB] flex items-center justify-center transition-colors touch-target-40"
                               >
-                                →|
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="13.5" y1="2" x2="13.5" y2="14" />
+                                  <rect x="3" y="4.5" width="8.5" height="7" rx="1" fill="currentColor" fillOpacity="0.25" />
+                                </svg>
                               </button>
                               <button
                                 onClick={() => {
@@ -699,9 +708,12 @@ export const Inspector: React.FC = () => {
                                   });
                                 }}
                                 title="Align Top (⊤)"
-                                className="p-1 rounded hover:bg-[#2A2A2A] text-[#888] hover:text-[#00E5FF] flex items-center justify-center text-xs font-mono font-bold"
+                                className="p-1.5 rounded hover:bg-[#262626] text-[#888] hover:text-[#1FC8DB] flex items-center justify-center transition-colors touch-target-40"
                               >
-                                ⊤
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="2" y1="2.5" x2="14" y2="2.5" />
+                                  <rect x="4.5" y="4.5" width="7" height="8.5" rx="1" fill="currentColor" fillOpacity="0.25" />
+                                </svg>
                               </button>
                               <button
                                 onClick={() => {
@@ -711,9 +723,12 @@ export const Inspector: React.FC = () => {
                                   });
                                 }}
                                 title="Align Middle (⫧)"
-                                className="p-1 rounded hover:bg-[#2A2A2A] text-[#888] hover:text-[#00E5FF] flex items-center justify-center text-xs font-mono font-bold"
+                                className="p-1.5 rounded hover:bg-[#262626] text-[#888] hover:text-[#1FC8DB] flex items-center justify-center transition-colors touch-target-40"
                               >
-                                ⫧
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="2" y1="8" x2="14" y2="8" strokeDasharray="2 1.5" />
+                                  <rect x="4.5" y="3.75" width="7" height="8.5" rx="1" fill="currentColor" fillOpacity="0.25" />
+                                </svg>
                               </button>
                               <button
                                 onClick={() => {
@@ -724,9 +739,12 @@ export const Inspector: React.FC = () => {
                                   });
                                 }}
                                 title="Align Bottom (⊥)"
-                                className="p-1 rounded hover:bg-[#2A2A2A] text-[#888] hover:text-[#00E5FF] flex items-center justify-center text-xs font-mono font-bold"
+                                className="p-1.5 rounded hover:bg-[#262626] text-[#888] hover:text-[#1FC8DB] flex items-center justify-center transition-colors touch-target-40"
                               >
-                                ⊥
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="2" y1="13.5" x2="14" y2="13.5" />
+                                  <rect x="4.5" y="3" width="7" height="8.5" rx="1" fill="currentColor" fillOpacity="0.25" />
+                                </svg>
                               </button>
                             </div>
                           </div>
@@ -734,7 +752,7 @@ export const Inspector: React.FC = () => {
                       </div>
 
                       {/* BLEND ACCORDION (CapCut Layout) */}
-                      <div className="flex flex-col gap-2 pb-3 border-b border-[#2B2B2B]">
+                      <div className="flex flex-col gap-2 pb-3 border-b border-[#262626]">
                         <div className="flex items-center justify-between text-xs font-bold text-white cursor-pointer py-1">
                           <div
                             className="flex items-center gap-1.5 select-none"
@@ -744,7 +762,7 @@ export const Inspector: React.FC = () => {
                               type="checkbox"
                               checked={isBlendEnabled}
                               onChange={(e) => setIsBlendEnabled(e.target.checked)}
-                              className="accent-[#00E5FF] w-3.5 h-3.5 rounded"
+                              className="accent-[#1FC8DB] w-3.5 h-3.5 rounded"
                             />
                             <span>Blend</span>
                             <ChevronDown
@@ -757,7 +775,7 @@ export const Inspector: React.FC = () => {
                             <button
                               onClick={() => updateClip(clip.id, { blendMode: 'normal', opacity: 1.0 })}
                               title="Reset blend"
-                              className="p-1 rounded touch-target-40 text-[#888] hover:text-[#00E5FF] transition-colors"
+                              className="p-1 rounded touch-target-40 text-[#888] hover:text-[#1FC8DB] transition-colors"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                             </button>
@@ -773,7 +791,7 @@ export const Inspector: React.FC = () => {
                               <select
                                 value={clip.blendMode || 'normal'}
                                 onChange={(e) => updateClip(clip.id, { blendMode: e.target.value })}
-                                className="bg-[#181818] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                                className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-[11px] outline-none"
                               >
                                 <option value="normal">Normal</option>
                                 <option value="darken">Darken</option>
@@ -795,7 +813,7 @@ export const Inspector: React.FC = () => {
                               <div className="flex items-center justify-between text-[11px]">
                                 <span className="text-[#8A8A8A]">Opacity</span>
                                 <div className="flex items-center gap-1.5">
-                                  <div className="flex items-center bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                  <div className="flex items-center bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                     <input
                                       type="number"
                                       min="0"
@@ -819,8 +837,8 @@ export const Inspector: React.FC = () => {
                                 step="0.01"
                                 value={clip.opacity ?? 1}
                                 onChange={(e) => updateClip(clip.id, { opacity: parseFloat(e.target.value) })}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
-                                  style={{ touchAction: 'none' }}
+                                className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                style={{ touchAction: 'none' }}
                               />
                             </div>
                           </div>
@@ -828,7 +846,7 @@ export const Inspector: React.FC = () => {
                       </div>
 
                       {/* SPEED & SPEED CURVES ACCORDION (CapCut Layout) */}
-                      <div className="flex flex-col gap-2 pb-3 border-b border-[#2B2B2B]">
+                      <div className="flex flex-col gap-2 pb-3 border-b border-[#262626]">
                         <div
                           className="flex items-center justify-between text-xs font-bold text-white cursor-pointer py-1 select-none"
                           onClick={() => setIsSpeedOpen(!isSpeedOpen)}
@@ -841,7 +859,7 @@ export const Inspector: React.FC = () => {
                             />
                             <span>Speed & Curve (Tốc độ & Đồ thị)</span>
                           </div>
-                          <span className="font-mono text-[#00E5FF] text-[11px]">
+                          <span className="font-mono text-[#1FC8DB] text-[11px] font-semibold">
                             {clip.speed || 1.0}x
                           </span>
                         </div>
@@ -852,7 +870,7 @@ export const Inspector: React.FC = () => {
                             <div className="flex flex-col gap-1.5">
                               <div className="flex items-center justify-between text-[11px]">
                                 <span className="text-[#8A8A8A]">Tốc độ:</span>
-                                <div className="flex items-center gap-1 bg-[#181818] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                <div className="flex items-center gap-1 bg-[#141414] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                   <input
                                     type="number"
                                     step="0.1"
@@ -875,8 +893,8 @@ export const Inspector: React.FC = () => {
                                 step="0.1"
                                 value={clip.speed || 1.0}
                                 onChange={(e) => updateClip(clip.id, { speed: parseFloat(e.target.value) })}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
-                                  style={{ touchAction: 'none' }}
+                                className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                style={{ touchAction: 'none' }}
                               />
                             </div>
 
@@ -888,8 +906,8 @@ export const Inspector: React.FC = () => {
                                   onClick={() => updateClip(clip.id, { speed: preset })}
                                   className={`py-0.5 rounded text-[10px] font-mono border transition-colors ${
                                     (clip.speed || 1.0) === preset
-                                      ? 'bg-[#00E5FF] text-black font-bold border-[#00E5FF]'
-                                      : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                      ? 'bg-[#1FC8DB] text-slate-950 font-bold border-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.35)]'
+                                      : 'bg-[#262626] text-[#888] border-[#333333] hover:text-white hover:border-[#1FC8DB]/50'
                                   }`}
                                 >
                                   {preset}x
@@ -903,7 +921,7 @@ export const Inspector: React.FC = () => {
                               <select
                                 value={typeof clip.speedCurve === 'string' ? clip.speedCurve : 'standard'}
                                 onChange={(e) => updateClip(clip.id, { speedCurve: e.target.value })}
-                                className="bg-[#181818] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                                className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-[11px] outline-none"
                               >
                                 <option value="standard">Tiêu chuẩn (Standard)</option>
                                 <option value="montage">Montage (Đoạn phim)</option>
@@ -928,7 +946,7 @@ export const Inspector: React.FC = () => {
                                   updateClip(clip.id, { smoothSlowMo: e.target.checked });
                                   showToast(e.target.checked ? 'Đã bật Smooth Slow-motion (Optical Flow)' : 'Đã tắt Smooth Slow-motion', 'info');
                                 }}
-                                className="accent-[#00E5FF] cursor-pointer"
+                                className="accent-[#1FC8DB] cursor-pointer"
                               />
                             </div>
 
@@ -942,8 +960,8 @@ export const Inspector: React.FC = () => {
                                 }}
                                 className={`py-1 rounded text-[10px] font-semibold border transition-colors ${
                                   clip.reverse || clip.isReversed
-                                    ? 'bg-[#00E5FF]/20 text-[#00E5FF] border-[#00E5FF]'
-                                    : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                    ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border-[#1FC8DB]'
+                                    : 'bg-[#262626] text-[#888] border-[#333333] hover:text-white hover:border-[#1FC8DB]/50'
                                 }`}
                               >
                                 ◀ Tua ngược
@@ -957,7 +975,7 @@ export const Inspector: React.FC = () => {
                                 className={`py-1 rounded text-[10px] font-semibold border transition-colors ${
                                   clip.freezeFrame || clip.isFreeze
                                     ? 'bg-amber-400/20 text-amber-300 border-amber-400'
-                                    : 'bg-[#181818] text-[#888] border-[#2B2B2B] hover:text-white'
+                                    : 'bg-[#262626] text-[#888] border-[#333333] hover:text-white hover:border-amber-400/50'
                                 }`}
                               >
                                 ❄ Đóng băng
@@ -995,8 +1013,8 @@ export const Inspector: React.FC = () => {
                         }}
                         className={`w-full py-2 rounded-md font-bold text-xs transition-colors flex items-center justify-center gap-1.5 border ${
                           clip.removeBg
-                            ? 'bg-[#00E5FF] text-black border-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.4)]'
-                            : 'bg-[#00E5FF]/15 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border-[#00E5FF]/30'
+                            ? 'bg-[#1FC8DB] text-slate-950 border-[#1FC8DB] shadow-[0_0_12px_rgba(31,200,219,0.35)]'
+                            : 'bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-slate-950 border-[#1FC8DB]/30'
                         }`}
                       >
                         <Wand2 className="w-3.5 h-3.5" />
@@ -1004,7 +1022,7 @@ export const Inspector: React.FC = () => {
                       </button>
 
                       {/* Chroma Key */}
-                      <div className="flex flex-col gap-2 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                      <div className="flex flex-col gap-2 p-2.5 rounded bg-[#141414] border border-[#262626]">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-white uppercase">Chroma key</span>
                           <input
@@ -1020,12 +1038,12 @@ export const Inspector: React.FC = () => {
                                 }
                               })
                             }
-                            className="accent-[#00E5FF]"
+                            className="accent-[#1FC8DB]"
                           />
                         </div>
 
                         {clip.chromaKey?.enabled && (
-                          <div className="flex flex-col gap-2 pt-2 border-t border-[#2B2B2B]">
+                          <div className="flex flex-col gap-2 pt-2 border-t border-[#262626]">
                             <div className="flex items-center justify-between">
                               <span className="text-[11px] text-[#8A8A8A]">Color picker:</span>
                               <input
@@ -1042,7 +1060,7 @@ export const Inspector: React.FC = () => {
                             <div className="flex flex-col gap-0.5">
                               <div className="flex justify-between text-[11px] text-[#8A8A8A]">
                                 <span>Intensity:</span>
-                                <span className="font-mono text-[#00E5FF]">{clip.chromaKey?.similarity || 40}%</span>
+                                <span className="font-mono text-[#1FC8DB] font-semibold">{clip.chromaKey?.similarity || 40}%</span>
                               </div>
                               <input
                                 type="range"
@@ -1054,7 +1072,7 @@ export const Inspector: React.FC = () => {
                                     chromaKey: { ...clip.chromaKey, enabled: true, similarity: parseInt(e.target.value) }
                                   })
                                 }
-                                className="accent-[#00E5FF] cursor-pointer touch-slider"
+                                className="accent-[#1FC8DB] cursor-pointer touch-slider"
                                 style={{ touchAction: 'none' }}
                               />
                             </div>
@@ -1063,7 +1081,7 @@ export const Inspector: React.FC = () => {
                       </div>
 
                       {/* Background */}
-                      <div className="flex flex-col gap-2 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                      <div className="flex flex-col gap-2 p-2.5 rounded bg-[#141414] border border-[#262626]">
                         <span className="text-[11px] font-bold text-white uppercase">Background</span>
                         <div className="grid grid-cols-3 gap-1.5">
                           {['none', 'blur', 'color'].map((b) => (
@@ -1078,10 +1096,10 @@ export const Inspector: React.FC = () => {
                                   }
                                 })
                               }
-                              className={`py-1 rounded text-[10px] font-semibold uppercase border ${
+                              className={`py-1 rounded text-[10px] font-semibold uppercase border transition-all ${
                                 (clip.backgroundConfig?.type || 'none') === b
-                                  ? 'bg-[#00E5FF] text-black border-[#00E5FF]'
-                                  : 'bg-[#222] text-[#8A8A8A] border-[#333] hover:text-white'
+                                  ? 'bg-[#1FC8DB] text-slate-950 font-bold border-[#1FC8DB]'
+                                  : 'bg-[#262626] text-[#8A8A8A] border-[#333333] hover:text-white'
                               }`}
                             >
                               {b}
@@ -1117,7 +1135,7 @@ export const Inspector: React.FC = () => {
                     };
 
                     return (
-                      <div className="flex flex-col gap-3 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                      <div className="flex flex-col gap-3 p-2.5 rounded bg-[#141414] border border-[#262626]">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-white uppercase">Mask Presets</span>
                           {hasActiveMask && (
@@ -1152,8 +1170,8 @@ export const Inspector: React.FC = () => {
                               }}
                               className={`py-1 rounded text-[10px] font-semibold border transition-all ${
                                 maskType === m.id
-                                  ? 'bg-[#00E5FF] text-black font-bold border-[#00E5FF] shadow-[0_0_8px_rgba(0,229,255,0.4)]'
-                                  : 'bg-[#222] text-[#8A8A8A] border-[#333] hover:text-white'
+                                  ? 'bg-[#1FC8DB] text-slate-950 font-bold border-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.35)]'
+                                  : 'bg-[#262626] text-[#8A8A8A] border-[#333333] hover:text-white hover:border-[#1FC8DB]/50'
                               }`}
                             >
                               {m.label}
@@ -1163,14 +1181,14 @@ export const Inspector: React.FC = () => {
 
                         {/* Advanced Mask Parameters */}
                         {hasActiveMask && (
-                          <div className="flex flex-col gap-2.5 pt-2 border-t border-[#2B2B2B]">
+                          <div className="flex flex-col gap-2.5 pt-2 border-t border-[#262626]">
                             {/* Invert Mask Toggle */}
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="text-[#8A8A8A]">Invert mask (Đảo ngược)</span>
                               <button
                                 onClick={() => updateMaskProp({ invert: !currentMask.invert })}
                                 className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
-                                  currentMask.invert ? 'bg-[#00E5FF]' : 'bg-[#333]'
+                                  currentMask.invert ? 'bg-[#1FC8DB]' : 'bg-[#333333]'
                                 }`}
                               >
                                 <div
@@ -1185,7 +1203,7 @@ export const Inspector: React.FC = () => {
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center justify-between text-[11px]">
                                 <span className="text-[#8A8A8A]">Feather (Độ nhòe viền):</span>
-                                <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                <div className="flex items-center bg-[#1F1F1F] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                   <input
                                     type="number"
                                     min="0"
@@ -1203,8 +1221,8 @@ export const Inspector: React.FC = () => {
                                 max="100"
                                 value={currentMask.feather || 0}
                                 onChange={(e) => updateMaskProp({ feather: parseInt(e.target.value) })}
-                                className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
-                                  style={{ touchAction: 'none' }}
+                                className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                style={{ touchAction: 'none' }}
                               />
                             </div>
 
@@ -1219,7 +1237,7 @@ export const Inspector: React.FC = () => {
                                     max="2000"
                                     value={currentMask.width || 500}
                                     onChange={(e) => updateMaskProp({ width: parseInt(e.target.value) || 100 })}
-                                    className="w-12 bg-[#121212] border border-[#2B2B2B] rounded px-1 text-right text-white text-[11px] font-mono outline-none"
+                                    className="w-12 bg-[#1F1F1F] border border-[#333333] rounded px-1 text-right text-white text-[11px] font-mono outline-none"
                                   />
                                 </div>
                                 <input
@@ -1228,7 +1246,7 @@ export const Inspector: React.FC = () => {
                                   max="1200"
                                   value={currentMask.width || 500}
                                   onChange={(e) => updateMaskProp({ width: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                                   style={{ touchAction: 'none' }}
                                 />
                               </div>
@@ -1242,7 +1260,7 @@ export const Inspector: React.FC = () => {
                                     max="2000"
                                     value={currentMask.height || 350}
                                     onChange={(e) => updateMaskProp({ height: parseInt(e.target.value) || 100 })}
-                                    className="w-12 bg-[#121212] border border-[#2B2B2B] rounded px-1 text-right text-white text-[11px] font-mono outline-none"
+                                    className="w-12 bg-[#1F1F1F] border border-[#333333] rounded px-1 text-right text-white text-[11px] font-mono outline-none"
                                   />
                                 </div>
                                 <input
@@ -1251,7 +1269,7 @@ export const Inspector: React.FC = () => {
                                   max="1200"
                                   value={currentMask.height || 350}
                                   onChange={(e) => updateMaskProp({ height: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                                   style={{ touchAction: 'none' }}
                                 />
                               </div>
@@ -1262,7 +1280,7 @@ export const Inspector: React.FC = () => {
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between text-[11px]">
                                   <span className="text-[#8A8A8A]">Roundness (Bo góc):</span>
-                                  <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-xs font-mono">
+                                  <div className="flex items-center bg-[#1F1F1F] border border-[#333333] rounded px-1.5 py-0.5 text-xs font-mono">
                                     <input
                                       type="number"
                                       min="0"
@@ -1280,7 +1298,7 @@ export const Inspector: React.FC = () => {
                                   max="150"
                                   value={currentMask.roundness || 0}
                                   onChange={(e) => updateMaskProp({ roundness: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  className="accent-[#1FC8DB] h-1.5 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                                   style={{ touchAction: 'none' }}
                                 />
                               </div>
@@ -1290,7 +1308,7 @@ export const Inspector: React.FC = () => {
                             <div className="flex items-center justify-between text-[11px]">
                               <span className="text-[#8A8A8A]">Center Position:</span>
                               <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1 bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                <div className="flex items-center gap-1 bg-[#1F1F1F] border border-[#333333] rounded px-1.5 py-0.5 text-[11px] font-mono">
                                   <span className="text-[#777]">X</span>
                                   <input
                                     type="number"
@@ -1299,7 +1317,7 @@ export const Inspector: React.FC = () => {
                                     className="w-10 bg-transparent text-right outline-none text-white text-[11px]"
                                   />
                                 </div>
-                                <div className="flex items-center gap-1 bg-[#121212] border border-[#2B2B2B] rounded px-1.5 py-0.5 text-[11px] font-mono">
+                                <div className="flex items-center gap-1 bg-[#1F1F1F] border border-[#333333] rounded px-1.5 py-0.5 text-[11px] font-mono">
                                   <span className="text-[#777]">Y</span>
                                   <input
                                     type="number"
@@ -1321,10 +1339,10 @@ export const Inspector: React.FC = () => {
                                   max="180"
                                   value={currentMask.rotation || 0}
                                   onChange={(e) => updateMaskProp({ rotation: parseInt(e.target.value) })}
-                                  className="accent-[#00E5FF] h-1.5 w-24 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                                  className="accent-[#1FC8DB] h-1.5 w-24 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                                   style={{ touchAction: 'none' }}
                                 />
-                                <div className="flex items-center bg-[#121212] border border-[#2B2B2B] rounded px-1 py-0.5 text-xs font-mono">
+                                <div className="flex items-center bg-[#1F1F1F] border border-[#333333] rounded px-1 py-0.5 text-xs font-mono">
                                   <input
                                     type="number"
                                     value={currentMask.rotation || 0}
@@ -1335,7 +1353,7 @@ export const Inspector: React.FC = () => {
                                 </div>
                                 <button
                                   onClick={() => updateMaskProp({ rotation: ((currentMask.rotation || 0) + 90) % 360 })}
-                                  className="p-1 rounded bg-[#222] hover:bg-[#333] text-[#00E5FF]"
+                                  className="p-1 rounded bg-[#262626] hover:bg-[#333333] text-[#1FC8DB] transition-colors"
                                   title="Xoay mask 90°"
                                 >
                                   <RotateCw className="w-3 h-3" />
@@ -1350,7 +1368,7 @@ export const Inspector: React.FC = () => {
 
                   {/* 1.4 SUB-TAB: RETOUCH */}
                   {activeVideoSubTab === 'retouch' && (
-                    <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                    <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#141414] border border-[#262626]">
                       <span className="text-[11px] font-bold text-white uppercase">Facial Retouch</span>
                       {[
                         { key: 'smoothSkin', label: 'Smooth Skin' },
@@ -1363,7 +1381,7 @@ export const Inspector: React.FC = () => {
                           <div key={key} className="flex flex-col gap-1">
                             <div className="flex justify-between text-[11px] text-[#8A8A8A]">
                               <span>{label}</span>
-                              <span className="text-[#00E5FF] font-mono">{val}</span>
+                              <span className="text-[#1FC8DB] font-mono font-semibold">{val}</span>
                             </div>
                             <input
                               type="range"
@@ -1379,7 +1397,7 @@ export const Inspector: React.FC = () => {
                                   },
                                 });
                               }}
-                              className="accent-[#00E5FF] cursor-pointer touch-slider"
+                              className="accent-[#1FC8DB] cursor-pointer touch-slider"
                               style={{ touchAction: 'none' }}
                             />
                           </div>
@@ -1394,7 +1412,7 @@ export const Inspector: React.FC = () => {
               {activeMainTab === 'animation' && (
                 <div className="flex flex-col gap-3">
                   {/* Animation Presets (In / Out) */}
-                  <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                  <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#141414] border border-[#262626]">
                     <span className="text-[11px] font-bold text-white uppercase">Clip Animation</span>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between text-[11px]">
@@ -1406,7 +1424,7 @@ export const Inspector: React.FC = () => {
                               animation: { ...clip.animation, in: e.target.value }
                             })
                           }
-                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                          className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-[11px] outline-none"
                         >
                           <option value="none">None</option>
                           <option value="fadeIn">Fade In</option>
@@ -1425,7 +1443,7 @@ export const Inspector: React.FC = () => {
                               animation: { ...clip.animation, out: e.target.value }
                             })
                           }
-                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                          className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-[11px] outline-none"
                         >
                           <option value="none">None</option>
                           <option value="fadeOut">Fade Out</option>
@@ -1437,8 +1455,8 @@ export const Inspector: React.FC = () => {
                   </div>
 
                   {/* Transition In & Transition Out */}
-                  <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
-                    <span className="text-[11px] font-bold text-[#00E5FF] uppercase">Transitions (Chuyển cảnh)</span>
+                  <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#141414] border border-[#262626]">
+                    <span className="text-[11px] font-bold text-[#1FC8DB] uppercase">Transitions (Chuyển cảnh)</span>
 
                     {/* Transition In */}
                     <div className="flex flex-col gap-1.5">
@@ -1455,7 +1473,7 @@ export const Inspector: React.FC = () => {
                               }
                             })
                           }
-                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                          className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-[11px] outline-none"
                         >
                           <option value="none">None</option>
                           <option value="fade">Fade (Mờ dần)</option>
@@ -1479,7 +1497,7 @@ export const Inspector: React.FC = () => {
 
                       {/* Transition In Duration */}
                       {(clip.transitionIn?.type || clip.transitionType) && (clip.transitionIn?.type !== 'none' && clip.transitionType !== 'none') && (
-                        <div className="flex items-center justify-between text-[11px] pl-2 border-l border-[#00E5FF]/40">
+                        <div className="flex items-center justify-between text-[11px] pl-2 border-l border-[#1FC8DB]/40">
                           <span className="text-[#8A8A8A]">Thời lượng:</span>
                           <div className="flex items-center gap-1.5">
                             <input
@@ -1498,7 +1516,7 @@ export const Inspector: React.FC = () => {
                                   }
                                 });
                               }}
-                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                              className="accent-[#1FC8DB] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                               style={{ touchAction: 'none' }}
                             />
                             <span className="font-mono text-white text-[11px]">
@@ -1510,7 +1528,7 @@ export const Inspector: React.FC = () => {
                     </div>
 
                     {/* Transition Out */}
-                    <div className="flex flex-col gap-1.5 pt-1.5 border-t border-[#2B2B2B]">
+                    <div className="flex flex-col gap-1.5 pt-1.5 border-t border-[#262626]">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-[#8A8A8A]">Transition Out:</span>
                         <select
@@ -1523,7 +1541,7 @@ export const Inspector: React.FC = () => {
                               }
                             })
                           }
-                          className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-[11px] outline-none"
+                          className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-[11px] outline-none"
                         >
                           <option value="none">None</option>
                           <option value="fade">Fade Out</option>
@@ -1535,7 +1553,7 @@ export const Inspector: React.FC = () => {
                       </div>
 
                       {clip.transitionOut?.type && clip.transitionOut.type !== 'none' && (
-                        <div className="flex items-center justify-between text-[11px] pl-2 border-l border-[#00E5FF]/40">
+                        <div className="flex items-center justify-between text-[11px] pl-2 border-l border-[#1FC8DB]/40">
                           <span className="text-[#8A8A8A]">Thời lượng:</span>
                           <div className="flex items-center gap-1.5">
                             <input
@@ -1553,7 +1571,7 @@ export const Inspector: React.FC = () => {
                                   }
                                 });
                               }}
-                              className="accent-[#00E5FF] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
+                              className="accent-[#1FC8DB] h-1.5 w-20 bg-[#2A2A2A] rounded cursor-pointer touch-slider"
                               style={{ touchAction: 'none' }}
                             />
                             <span className="font-mono text-white text-[11px]">
@@ -1583,9 +1601,9 @@ export const Inspector: React.FC = () => {
                         });
                         showToast(`Đã áp dụng chuyển cảnh cho ${count} phân đoạn!`, 'success');
                       }}
-                      className="w-full mt-1 py-1.5 rounded bg-[#222] hover:bg-[#2A2A2A] border border-[#333] hover:border-[#00E5FF]/50 text-white font-semibold text-[11px] transition-colors flex items-center justify-center gap-1"
+                      className="w-full mt-1 py-1.5 rounded bg-[#222] hover:bg-[#2A2A2A] border border-[#333] hover:border-[#1FC8DB]/50 text-white font-semibold text-[11px] transition-colors flex items-center justify-center gap-1"
                     >
-                      <Copy className="w-3 h-3 text-[#00E5FF]" />
+                      <Copy className="w-3 h-3 text-[#1FC8DB]" />
                       <span>Áp dụng cho tất cả phân đoạn</span>
                     </button>
                   </div>
@@ -1596,7 +1614,7 @@ export const Inspector: React.FC = () => {
               {activeMainTab === 'adjust' && (
                 <div className="flex flex-col gap-3">
                   {/* Color Tuning */}
-                  <div className="flex flex-col gap-2 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                  <div className="flex flex-col gap-2 p-2.5 rounded bg-[#141414] border border-[#262626]">
                     <span className="text-[11px] font-bold text-white uppercase">Color Adjustment</span>
                     {[
                       { label: 'Brightness', key: 'brightness', min: -50, max: 50, def: 0 },
@@ -1606,7 +1624,7 @@ export const Inspector: React.FC = () => {
                       <div key={p.key} className="flex flex-col gap-0.5">
                         <div className="flex justify-between text-[11px] text-[#8A8A8A]">
                           <span>{p.label}:</span>
-                          <span className="font-mono text-[#00E5FF]">{(clip as any)[p.key] ?? p.def}</span>
+                          <span className="font-mono text-[#1FC8DB] font-semibold">{(clip as any)[p.key] ?? p.def}</span>
                         </div>
                         <input
                           type="range"
@@ -1614,7 +1632,7 @@ export const Inspector: React.FC = () => {
                           max={p.max}
                           value={(clip as any)[p.key] ?? p.def}
                           onChange={(e) => updateClip(clip.id, { [p.key]: parseInt(e.target.value) })}
-                          className="accent-[#00E5FF] cursor-pointer touch-slider"
+                          className="accent-[#1FC8DB] cursor-pointer touch-slider"
                           style={{ touchAction: 'none' }}
                         />
                       </div>
@@ -1622,12 +1640,12 @@ export const Inspector: React.FC = () => {
                   </div>
 
                   {/* LUT Filter */}
-                  <div className="flex flex-col gap-2 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                  <div className="flex flex-col gap-2 p-2.5 rounded bg-[#141414] border border-[#262626]">
                     <span className="text-[11px] font-bold text-white uppercase">LUT Filter</span>
                     <select
                       value={typeof clip.filter === 'object' ? clip.filter?.id : (clip.filter || 'none')}
                       onChange={(e) => updateClip(clip.id, { filter: e.target.value as any })}
-                      className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-xs outline-none"
+                      className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-xs outline-none"
                     >
                       {FILTER_PRESETS.map((f) => (
                         <option key={f.id} value={f.id}>
@@ -1638,12 +1656,12 @@ export const Inspector: React.FC = () => {
                   </div>
 
                   {/* Effects */}
-                  <div className="flex flex-col gap-2 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
+                  <div className="flex flex-col gap-2 p-2.5 rounded bg-[#141414] border border-[#262626]">
                     <span className="text-[11px] font-bold text-white uppercase">Shader Effects</span>
                     <select
                       value={clip.effectType || 'none'}
                       onChange={(e) => updateClip(clip.id, { effectType: e.target.value })}
-                      className="bg-[#121212] border border-[#2B2B2B] rounded px-2 py-1 text-white text-xs outline-none"
+                      className="bg-[#141414] border border-[#333333] focus:border-[#1FC8DB] rounded px-2 py-1 text-white text-xs outline-none"
                     >
                       <option value="none">None</option>
                       <option value="blur">Blur</option>
@@ -1661,8 +1679,8 @@ export const Inspector: React.FC = () => {
 
               {/* TAB 4: AI STYLIZE */}
               {activeMainTab === 'ai' && (
-                <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#181818] border border-[#2B2B2B]">
-                  <span className="text-[11px] font-bold text-[#00E5FF] uppercase">AI Stylize & Effects</span>
+                <div className="flex flex-col gap-2.5 p-2.5 rounded bg-[#141414] border border-[#262626]">
+                  <span className="text-[11px] font-bold text-[#1FC8DB] uppercase">AI Stylize & Effects</span>
                   <button
                     onClick={() => {
                       const isAnime = clip.filter === 'anime_manga';
@@ -1674,8 +1692,8 @@ export const Inspector: React.FC = () => {
                     }}
                     className={`w-full py-2 rounded font-bold text-xs transition-colors flex items-center justify-center gap-1.5 ${
                       clip.filter === 'anime_manga'
-                        ? 'bg-[#00E5FF] text-black shadow-[0_0_12px_rgba(0,229,255,0.4)]'
-                        : 'bg-[#00E5FF]/20 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black'
+                        ? 'bg-[#1FC8DB] text-slate-950 shadow-[0_0_12px_rgba(31,200,219,0.35)]'
+                        : 'bg-[#1FC8DB]/20 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-slate-950'
                     }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
@@ -1841,7 +1859,7 @@ export const Inspector: React.FC = () => {
                           }}
                           className={`py-1 rounded text-[9px] font-semibold border transition-colors ${
                             isActive
-                              ? 'bg-[#00E5FF]/20 border-[#00E5FF] text-[#00E5FF]'
+                              ? 'bg-[#1FC8DB]/20 border-[#1FC8DB] text-[#1FC8DB]'
                               : 'bg-[#1F1F1F] hover:bg-[#2A2A2A] border-[#333333] text-white'
                           }`}
                         >

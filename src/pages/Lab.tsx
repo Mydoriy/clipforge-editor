@@ -893,7 +893,7 @@ export const Lab: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0B0F19] text-gray-100 overflow-hidden select-none">
+    <div className="flex-1 flex flex-col h-full bg-[#141414] text-gray-100 overflow-hidden select-none">
       {/* Hidden File Pickers */}
       <input
         ref={fileInputRef}
@@ -917,7 +917,7 @@ export const Lab: React.FC = () => {
       />
 
       {/* Top Header Bar */}
-      <div className="h-14 border-b border-gray-800 bg-[#0E1422] px-6 flex items-center justify-between shrink-0">
+      <div className="h-14 border-b border-[#333333] bg-[#1F1F1F] px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-gradient-to-br from-[#1FC8DB] to-[#0070F3] rounded-lg shadow-lg">
             <Sparkles className="w-5 h-5 text-white" />
@@ -943,15 +943,15 @@ export const Lab: React.FC = () => {
             <>
               <button
                 onClick={handleAutoFill}
-                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs text-gray-200 rounded border border-gray-700 flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 bg-[#262626] hover:bg-[#2E2E2E] text-xs text-gray-200 rounded border border-[#333333] flex items-center gap-1.5 cursor-pointer transition-colors"
                 title="Tự động gán clip người dùng khớp theo nhịp beat"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <RefreshCw className="w-3.5 h-3.5 text-[#1FC8DB]" />
                 Dựng lại theo nhịp
               </button>
               <button
                 onClick={handleTriggerPreflight}
-                className="px-3 py-1.5 bg-indigo-900/60 hover:bg-indigo-800/80 text-xs text-indigo-300 rounded border border-indigo-700 flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 bg-indigo-950/60 hover:bg-indigo-900/80 text-xs text-indigo-300 rounded border border-indigo-800 flex items-center gap-1.5 cursor-pointer transition-colors"
                 title="Kiểm tra an toàn: đảm bảo không lọt pixel tham chiếu vào file xuất"
               >
                 <ShieldAlert className="w-3.5 h-3.5 text-indigo-400" />
@@ -970,7 +970,7 @@ export const Lab: React.FC = () => {
       </div>
 
       {/* 5-Step Visual Stepper Bar (T7 Pipeline) */}
-      <div className="bg-[#0A0D18] border-b border-gray-800 px-6 py-2.5 flex items-center justify-between text-xs shrink-0">
+      <div className="bg-[#1F1F1F] border-b border-[#333333] px-6 py-2.5 flex items-center justify-between text-xs shrink-0">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
           {[
             { step: 1, label: isVi ? '1. Nguồn' : '1. Source' },
@@ -991,7 +991,7 @@ export const Lab: React.FC = () => {
                   activeStep === item.step
                     ? 'bg-[#1FC8DB] text-slate-950 font-bold shadow'
                     : item.step < activeStep
-                    ? 'bg-gray-800 text-gray-300 hover:text-white'
+                    ? 'bg-[#262626] text-gray-300 hover:text-white'
                     : 'bg-transparent text-gray-500 hover:text-gray-400'
                 }`}
               >
@@ -1017,14 +1017,14 @@ export const Lab: React.FC = () => {
           <span>•</span>
           <span className="text-emerald-400 font-semibold">Che Watermark: BẬT</span>
           <span>•</span>
-          <span className="text-cyan-400 font-semibold">Âm thanh: Cục bộ</span>
+          <span className="text-[#1FC8DB] font-semibold">Âm thanh: Cục bộ</span>
           <span>•</span>
           <span>Max 48 khung</span>
         </div>
       </div>
 
       {/* Persistent Copyright & Purpose Notice Banner */}
-      <div className="bg-[#090C15] border-b border-gray-800/80 px-6 py-1.5 flex items-center justify-between text-[11px] text-gray-400 shrink-0">
+      <div className="bg-[#1A1A1A] border-b border-[#333333] px-6 py-1.5 flex items-center justify-between text-[11px] text-gray-400 shrink-0">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <span className="font-medium text-gray-300">{AI_PRIVACY_COPYRIGHT_NOTICE.vi}</span>
@@ -1041,9 +1041,9 @@ export const Lab: React.FC = () => {
           <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
             <div className="max-w-2xl w-full space-y-6 animate-in fade-in duration-200">
               {/* URL Input Box */}
-              <div className="bg-[#121829] border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+              <div className="bg-[#1F1F1F] border border-[#333333] p-6 rounded-2xl shadow-xl space-y-4">
                 <h2 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4 text-cyan-400" />
+                  <LinkIcon className="w-4 h-4 text-[#1FC8DB]" />
                   Dán liên kết tham khảo hoặc thả tệp video
                 </h2>
                 <form onSubmit={handleUrlSubmit} className="flex gap-2">
@@ -1052,11 +1052,11 @@ export const Lab: React.FC = () => {
                     placeholder="Dán link TikTok (ví dụ: tiktok.com/@.../video/750639598... hoặc mã ID)..."
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    className="flex-1 bg-[#0A0D16] border border-gray-700 rounded-lg px-3.5 py-2 text-xs text-gray-200 focus:outline-none focus:border-cyan-500"
+                    className="flex-1 bg-[#141414] border border-[#333333] rounded-lg px-3.5 py-2 text-xs text-gray-200 focus:outline-none focus:border-[#1FC8DB] transition-colors"
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-medium text-cyan-300 rounded-lg border border-gray-700 cursor-pointer"
+                    className="px-4 py-2 bg-[#262626] hover:bg-[#2E2E2E] text-xs font-medium text-[#1FC8DB] rounded-lg border border-[#333333] cursor-pointer transition-colors"
                   >
                     Kiểm tra link
                   </button>
@@ -1080,9 +1080,9 @@ export const Lab: React.FC = () => {
               {/* File Dropzone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-700 hover:border-cyan-500 bg-[#0E1424]/60 hover:bg-[#0E1424] p-10 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all space-y-3"
+                className="border-2 border-dashed border-[#333333] hover:border-[#1FC8DB] bg-[#1F1F1F]/60 hover:bg-[#1F1F1F] p-10 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all space-y-3"
               >
-                <div className="p-4 bg-gray-800/80 rounded-full text-cyan-400">
+                <div className="p-4 bg-[#262626] rounded-full text-[#1FC8DB]">
                   <Upload className="w-8 h-8" />
                 </div>
                 <div className="text-center">
@@ -1108,10 +1108,10 @@ export const Lab: React.FC = () => {
         {/* ==================================================================== */}
         {activeStep === 2 && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
-            <div className="max-w-xl w-full bg-[#121829] border border-gray-800 p-7 rounded-2xl shadow-2xl space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+            <div className="max-w-xl w-full bg-[#1F1F1F] border border-[#333333] p-7 rounded-2xl shadow-2xl space-y-6">
+              <div className="flex items-center justify-between border-b border-[#333333] pb-3">
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className="w-5 h-5 text-cyan-400 animate-spin" />
+                  <Sparkles className="w-5 h-5 text-[#1FC8DB] animate-spin" />
                   <h3 className="font-bold text-sm text-white">
                     {analysisPhase === 'measure' && 'Giai đoạn 1/4: Đo đạc cục bộ (Measure)'}
                     {analysisPhase === 'interpret' && 'Giai đoạn 2/4: Diễn giải kỹ thuật (Interpret)'}
@@ -1121,11 +1121,11 @@ export const Lab: React.FC = () => {
                     {analysisPhase === 'cancelled' && 'Đã dừng phân tích'}
                   </h3>
                 </div>
-                <span className="text-xs font-mono font-bold text-cyan-400">{analysisProgress}%</span>
+                <span className="text-xs font-mono font-bold text-[#1FC8DB]">{analysisProgress}%</span>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full h-3 bg-gray-900 rounded-full overflow-hidden border border-gray-800 p-0.5">
+              <div className="w-full h-3 bg-[#141414] rounded-full overflow-hidden border border-[#333333] p-0.5">
                 <div
                   className="h-full bg-gradient-to-r from-[#1FC8DB] to-[#0070F3] rounded-full transition-all duration-300"
                   style={{ width: `${analysisProgress}%` }}
@@ -1134,22 +1134,22 @@ export const Lab: React.FC = () => {
 
               {/* 4 Phase Stepper Indicator */}
               <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
-                <div className={`p-2 rounded-lg border ${analysisProgress >= 25 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>
+                <div className={`p-2 rounded-lg border ${analysisProgress >= 25 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-[#141414] border-[#333333] text-gray-500'}`}>
                   1. Đo đạc
                 </div>
-                <div className={`p-2 rounded-lg border ${analysisProgress >= 50 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>
+                <div className={`p-2 rounded-lg border ${analysisProgress >= 50 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-[#141414] border-[#333333] text-gray-500'}`}>
                   2. Hỏi AI
                 </div>
-                <div className={`p-2 rounded-lg border ${analysisProgress >= 75 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>
+                <div className={`p-2 rounded-lg border ${analysisProgress >= 75 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-[#141414] border-[#333333] text-gray-500'}`}>
                   3. Kiểm chứng
                 </div>
-                <div className={`p-2 rounded-lg border ${analysisProgress >= 95 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-500'}`}>
+                <div className={`p-2 rounded-lg border ${analysisProgress >= 95 ? 'bg-cyan-950/40 border-cyan-700 text-cyan-300 font-bold' : 'bg-[#141414] border-[#333333] text-gray-500'}`}>
                   4. Tinh chỉnh
                 </div>
               </div>
 
               {/* Live Cost & Token Metrics Counter */}
-              <div className="grid grid-cols-3 gap-3 p-3 bg-[#0A0D18] rounded-xl border border-gray-800 text-xs">
+              <div className="grid grid-cols-3 gap-3 p-3 bg-[#141414] rounded-xl border border-[#333333] text-xs">
                 <div className="flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-cyan-400" />
                   <div>
@@ -1205,7 +1205,7 @@ export const Lab: React.FC = () => {
         {/* ==================================================================== */}
         {activeStep === 3 && (
           <div className="flex-1 flex flex-col p-6 overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+            <div className="flex items-center justify-between pb-3 border-b border-[#333333]">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   Kỹ thuật phát hiện được ({detectedTechniques.length} kỹ thuật)
@@ -1231,7 +1231,7 @@ export const Lab: React.FC = () => {
                 {readyTechniques.map((tech) => (
                   <div
                     key={tech.id}
-                    className="p-4 bg-[#121829] border border-gray-800 hover:border-cyan-500/50 rounded-xl flex flex-col gap-3 transition-all"
+                    className="p-4 bg-[#1F1F1F] border border-[#333333] hover:border-[#1FC8DB] rounded-xl flex flex-col gap-3 transition-all"
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -1249,35 +1249,35 @@ export const Lab: React.FC = () => {
                     </div>
 
                     {/* Filmstrip Evidence Preview */}
-                    <div className="flex items-center gap-2 p-2 bg-[#0A0D18] rounded-lg border border-gray-800">
-                      <Film className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div className="flex items-center gap-2 p-2 bg-[#141414] rounded-lg border border-[#333333]">
+                      <Film className="w-4 h-4 text-[#1FC8DB] shrink-0" />
                       <span className="text-[11px] text-gray-400">Bằng chứng khung hình:</span>
                       <div className="flex gap-1.5 overflow-x-auto">
                         {tech.filmstrip.map((f, i) => (
-                          <div key={i} className="w-10 h-10 rounded bg-gray-900 border border-gray-700 overflow-hidden relative shrink-0">
+                          <div key={i} className="w-10 h-10 rounded bg-[#1F1F1F] border border-[#333333] overflow-hidden relative shrink-0">
                             {f.dataUrl && <img src={f.dataUrl} alt="" className="w-full h-full object-cover" />}
-                            <span className="absolute bottom-0 right-0 bg-black/70 text-[7px] text-cyan-300 px-0.5 font-mono">{f.timestampSec}s</span>
+                            <span className="absolute bottom-0 right-0 bg-black/70 text-[7px] text-[#1FC8DB] px-0.5 font-mono">{f.timestampSec}s</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Controls Bar: Toggle & Parameter Adjust */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-800/80">
+                    <div className="flex items-center justify-between pt-2 border-t border-[#333333]">
                       <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={tech.enabled}
                           onChange={() => handleToggleTechnique(tech.id)}
-                          className="w-4 h-4 rounded text-cyan-500"
+                          className="w-4 h-4 rounded text-[#1FC8DB]"
                         />
                         <span>{tech.enabled ? 'Đang kích hoạt' : 'Đã tắt'}</span>
                       </label>
                       <button
                         onClick={() => setEditingTechId(editingTechId === tech.id ? null : tech.id)}
-                        className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-gray-200 rounded border border-gray-700 flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 bg-[#262626] hover:bg-[#2E2E2E] text-xs text-gray-200 rounded border border-[#333333] flex items-center gap-1 cursor-pointer transition-colors"
                       >
-                        <Sliders className="w-3 h-3 text-cyan-400" />
+                        <Sliders className="w-3 h-3 text-[#1FC8DB]" />
                         Chỉnh tham số
                       </button>
                     </div>
@@ -1296,14 +1296,14 @@ export const Lab: React.FC = () => {
                                 max={100}
                                 defaultValue={v}
                                 onChange={(e) => handleUpdateTechniqueParam(tech.id, k, parseFloat(e.target.value))}
-                                className="flex-1 accent-cyan-400 h-1 bg-gray-700 rounded cursor-pointer"
+                                className="flex-1 accent-[#1FC8DB] h-1 bg-gray-700 rounded cursor-pointer"
                               />
                             ) : (
                               <input
                                 type="text"
                                 defaultValue={String(v)}
                                 onChange={(e) => handleUpdateTechniqueParam(tech.id, k, e.target.value)}
-                                className="px-2 py-0.5 bg-gray-900 border border-gray-700 rounded text-[11px] text-white"
+                                className="px-2 py-0.5 bg-[#141414] border border-[#333333] rounded text-[11px] text-white"
                               />
                             )}
                           </div>
@@ -1325,7 +1325,7 @@ export const Lab: React.FC = () => {
                   {aiHypotheses.map((tech) => (
                     <div
                       key={tech.id}
-                      className="p-4 bg-[#121829] border border-amber-900/50 rounded-xl flex flex-col gap-3"
+                      className="p-4 bg-[#1F1F1F] border border-amber-900/50 rounded-xl flex flex-col gap-3"
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -1352,13 +1352,13 @@ export const Lab: React.FC = () => {
 
             {/* Section C: Mục "Chưa hỗ trợ" & "Cần primitive mới" (Tách riêng biệt) */}
             {unsupportedOrNeedsPrimitive.length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-gray-800">
+              <div className="space-y-3 pt-4 border-t border-[#333333]">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
                   <XCircle className="w-4 h-4" /> Mục chưa hỗ trợ & Cần Primitive mới
                 </h3>
                 <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-900/40 flex flex-col gap-3">
                   {unsupportedOrNeedsPrimitive.map((tech) => (
-                    <div key={tech.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#0A0D18] rounded-lg border border-gray-800">
+                    <div key={tech.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#141414] rounded-lg border border-[#333333]">
                       <div>
                         <div className="font-bold text-sm text-white flex items-center gap-2">
                           <span>{tech.name.vi}</span>
@@ -1374,7 +1374,7 @@ export const Lab: React.FC = () => {
                       </div>
                       <button
                         onClick={() => showToast('Đã ghi nhận yêu cầu primitive mới vào backlog!', 'info')}
-                        className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 rounded border border-gray-700 self-start sm:self-auto cursor-pointer"
+                        className="px-3 py-1 bg-[#262626] hover:bg-[#2E2E2E] text-xs text-gray-300 rounded border border-[#333333] self-start sm:self-auto cursor-pointer transition-colors"
                       >
                         Ghi nhận phát triển
                       </button>
@@ -1392,13 +1392,13 @@ export const Lab: React.FC = () => {
         {activeStep === 4 && timeline && (
           <div className="flex-1 flex overflow-hidden relative">
             {/* Left: Slots Filmstrip & Timeline Overview */}
-            <div className="flex-1 min-w-0 flex flex-col lg:border-r border-gray-800 overflow-hidden">
+            <div className="flex-1 min-w-0 flex flex-col lg:border-r border-[#333333] overflow-hidden">
               {/* Top Preview Canvas & Comparison */}
               <div className="flex-1 bg-black flex flex-col items-center justify-center relative p-2 sm:p-4">
                 {/* Synchronized Side-by-Side Canvas */}
-                <div className="w-full max-w-2xl aspect-[9/16] max-h-[58vh] bg-[#0A0D14] border border-gray-800 rounded-xl overflow-hidden flex relative shadow-2xl">
+                <div className="w-full max-w-2xl aspect-[9/16] max-h-[38vh] sm:max-h-[50vh] lg:max-h-[58vh] bg-[#141414] border border-[#333333] rounded-xl overflow-hidden flex relative shadow-2xl">
                   {/* Reference Side (50%) */}
-                  <div className="w-1/2 h-full border-r border-gray-700/60 relative flex flex-col items-center justify-center bg-gray-950">
+                  <div className="w-1/2 h-full border-r border-[#333333] relative flex flex-col items-center justify-center bg-gray-950">
                     <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-rose-600/90 text-white text-[9px] sm:text-[10px] font-bold rounded shadow max-w-[85%] truncate">
                       Tham chiếu – không xuất
                     </div>
@@ -1409,13 +1409,13 @@ export const Lab: React.FC = () => {
                   </div>
 
                   {/* User Remix Side (50%) */}
-                  <div className="w-1/2 h-full relative flex flex-col items-center justify-center bg-[#070A10]">
+                  <div className="w-1/2 h-full relative flex flex-col items-center justify-center bg-[#141414]">
                     <div className="absolute top-2 right-2 z-10 px-2 py-0.5 bg-cyan-600/90 text-white text-[9px] sm:text-[10px] font-bold rounded shadow max-w-[85%] truncate">
                       Clip của bạn (Remix)
                     </div>
                     {selectedSlot?.assignedClip ? (
                       <div className="text-xs text-cyan-300 text-center px-4">
-                        <CheckCircle className="w-8 h-8 mb-1 text-cyan-400 mx-auto" />
+                        <CheckCircle className="w-8 h-8 mb-1 text-[#1FC8DB] mx-auto" />
                         <span className="font-semibold">{selectedSlot.assignedClip.name}</span>
                         <p className="text-[10px] text-gray-400 mt-1">
                           Tốc độ: {selectedSlot.assignedClip.speed}x ({selectedSlot.assignedClip.fitMode})
@@ -1441,12 +1441,12 @@ export const Lab: React.FC = () => {
               </div>
 
               {/* Bottom: Multi-Track Working Timeline (CapCut-style Cuts, Audio Waveform & FX) */}
-              <div className="h-64 border-t border-gray-800 bg-[#0B0F19] p-3 flex flex-col shrink-0 overflow-hidden">
+              <div className="h-64 border-t border-[#333333] bg-[#141414] p-3 flex flex-col shrink-0 overflow-hidden">
                 {/* Timeline Header Info & Actions */}
-                <div className="flex items-center justify-between text-xs text-gray-300 pb-2 border-b border-gray-800 shrink-0 gap-2">
+                <div className="flex items-center justify-between text-xs text-gray-300 pb-2 border-b border-[#333333] shrink-0 gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-white flex items-center gap-1.5 text-xs">
-                      <Film className="w-3.5 h-3.5 text-cyan-400" />
+                      <Film className="w-3.5 h-3.5 text-[#1FC8DB]" />
                       <span className="hidden xs:inline">Timeline Làm Việc</span> (Remix)
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800 text-[10px] font-mono">
@@ -1466,16 +1466,16 @@ export const Lab: React.FC = () => {
                     {/* Mobile/Tablet Inspector Trigger Button (<1024px) */}
                     <button
                       onClick={() => setIsInspectorOpen(true)}
-                      className="lg:hidden px-2 py-1 bg-gray-800 hover:bg-gray-700 text-[11px] text-cyan-300 border border-cyan-800 rounded flex items-center gap-1 cursor-pointer transition-colors"
+                      className="lg:hidden px-2 py-1 bg-[#262626] hover:bg-[#2E2E2E] text-[11px] text-[#1FC8DB] border border-[#333333] rounded flex items-center gap-1 cursor-pointer transition-colors"
                       title="Xem chi tiết kỹ thuật phân cảnh"
                     >
-                      <Sliders className="w-3 h-3 text-cyan-400" />
+                      <Sliders className="w-3 h-3 text-[#1FC8DB]" />
                       <span>{selectedSlot ? `Cảnh #${selectedSlot.index + 1}` : 'Chi tiết'}</span>
                     </button>
 
                     <button
                       onClick={handleAutoFill}
-                      className="px-2 sm:px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-[11px] text-cyan-300 border border-cyan-800 rounded flex items-center gap-1 cursor-pointer transition-colors"
+                      className="px-2 sm:px-2.5 py-1 bg-[#262626] hover:bg-[#2E2E2E] text-[11px] text-[#1FC8DB] border border-[#333333] rounded flex items-center gap-1 cursor-pointer transition-colors"
                       title="Tự động gán 4 clip mẫu khớp nhịp beat 128 BPM"
                     >
                       <RefreshCw className="w-3 h-3" />
@@ -1496,12 +1496,12 @@ export const Lab: React.FC = () => {
                 </div>
 
                 {/* SMPTE Time Ruler */}
-                <div className="relative h-6 bg-[#070A12] border-b border-gray-800/80 flex items-center px-2 text-[9px] font-mono text-gray-400 select-none shrink-0">
-                  <div className="w-20 sm:w-28 shrink-0 text-gray-500 font-sans text-[9px] sm:text-[10px] font-semibold border-r border-gray-800 truncate px-1">
+                <div className="relative h-6 bg-[#1F1F1F] border-b border-[#333333] flex items-center px-2 text-[9px] font-mono text-gray-400 select-none shrink-0">
+                  <div className="w-20 sm:w-28 shrink-0 text-gray-500 font-sans text-[9px] sm:text-[10px] font-semibold border-r border-[#333333] truncate px-1">
                     THỜI GIAN
                   </div>
                   <div className="flex-1 relative h-full flex items-center">
-                    <span className="absolute left-0 text-cyan-400 font-bold">00:00.00</span>
+                    <span className="absolute left-0 text-[#1FC8DB] font-bold">00:00.00</span>
                     <span className="absolute left-[21.3%] -translate-x-1/2 text-amber-400 font-bold flex items-center gap-0.5">
                       <Scissors className="w-2.5 h-2.5" /> 00:03.20 (Cut 1)
                     </span>
@@ -1511,15 +1511,15 @@ export const Lab: React.FC = () => {
                     <span className="absolute left-[78.7%] -translate-x-1/2 text-amber-400 font-bold flex items-center gap-0.5">
                       <Scissors className="w-2.5 h-2.5" /> 00:11.80 (Cut 3)
                     </span>
-                    <span className="absolute right-0 text-cyan-400 font-bold">00:15.00</span>
+                    <span className="absolute right-0 text-[#1FC8DB] font-bold">00:15.00</span>
                   </div>
                 </div>
 
                 {/* Timeline Tracks Container */}
                 <div className="flex-1 flex flex-col justify-between overflow-y-auto pt-1 gap-1">
                   {/* Track 1: Track Hiệu ứng & Chuyển cảnh (FX Track) */}
-                  <div className="flex items-center h-10 border border-gray-800/80 rounded bg-[#0A0D18] shrink-0">
-                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-purple-300 border-r border-gray-800 truncate">
+                  <div className="flex items-center h-10 border border-[#333333] rounded bg-[#1F1F1F] shrink-0">
+                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-purple-300 border-r border-[#333333] truncate">
                       <Sparkles className="w-3 h-3 text-purple-400" />
                       <span>Hiệu ứng FX</span>
                     </div>
@@ -1564,9 +1564,9 @@ export const Lab: React.FC = () => {
                   </div>
 
                   {/* Track 2: Track Cắt Phân Cảnh Video (4 Phân Cảnh Rõ Ràng) */}
-                  <div className="flex items-center h-14 border border-gray-800/80 rounded bg-[#0B0F1C] shrink-0">
-                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-cyan-300 border-r border-gray-800 truncate">
-                      <Scissors className="w-3 h-3 text-cyan-400" />
+                  <div className="flex items-center h-14 border border-[#333333] rounded bg-[#1F1F1F] shrink-0">
+                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-[#1FC8DB] border-r border-[#333333] truncate">
+                      <Scissors className="w-3 h-3 text-[#1FC8DB]" />
                       <span>Cắt Cảnh (4)</span>
                     </div>
                     <div className="flex-1 h-full relative flex items-center px-1">
@@ -1583,7 +1583,7 @@ export const Lab: React.FC = () => {
                             className={`h-11 mx-0.5 p-1.5 rounded-lg border-2 flex flex-col justify-between cursor-pointer transition-all relative overflow-hidden ${
                               isSelected
                                 ? 'border-cyan-400 bg-cyan-950/40 shadow-md ring-1 ring-cyan-400/50'
-                                : 'border-gray-800 bg-[#121829] hover:border-gray-700'
+                                : 'border-[#333333] bg-[#262626] hover:border-[#444444]'
                             }`}
                           >
                             <div className="flex items-center justify-between text-[9px]">
@@ -1596,7 +1596,7 @@ export const Lab: React.FC = () => {
                             </div>
                             <div className="text-[9px] truncate">
                               {hasUserClip ? (
-                                <span className="text-cyan-300 font-semibold flex items-center gap-1">
+                                <span className="text-[#1FC8DB] font-semibold flex items-center gap-1">
                                   <Check className="w-2.5 h-2.5" /> {slot.assignedClip?.name}
                                 </span>
                               ) : (
@@ -1612,8 +1612,8 @@ export const Lab: React.FC = () => {
                   </div>
 
                   {/* Track 3: Track Âm Thanh & Sóng Âm (Audio Waveform & 128 BPM Beat Grid) */}
-                  <div className="flex items-center h-12 border border-gray-800/80 rounded bg-[#090C16] shrink-0">
-                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-amber-300 border-r border-gray-800 truncate">
+                  <div className="flex items-center h-12 border border-[#333333] rounded bg-[#1F1F1F] shrink-0">
+                    <div className="w-20 sm:w-28 shrink-0 px-1 sm:px-2 flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-amber-300 border-r border-[#333333] truncate">
                       <Music className="w-3 h-3 text-amber-400" />
                       <span>Audio (128 BPM)</span>
                     </div>
@@ -1681,7 +1681,7 @@ export const Lab: React.FC = () => {
             {/* Right: Slot Technique Inspector Panel */}
             <div
               className={`
-                bg-[#0E1424] p-4 flex flex-col justify-between overflow-y-auto z-50 transition-all duration-300
+                bg-[#1F1F1F] p-4 flex flex-col justify-between overflow-y-auto z-50 transition-all duration-300
                 lg:static lg:z-auto lg:w-80 lg:border-l lg:border-gray-800 lg:flex
                 md:max-lg:fixed md:max-lg:top-0 md:max-lg:right-0 md:max-lg:bottom-0 md:max-lg:w-80 md:max-lg:border-l md:max-lg:border-gray-700 md:max-lg:shadow-2xl
                 ${isInspectorOpen ? 'md:max-lg:translate-x-0' : 'md:max-lg:translate-x-full'}
@@ -1691,12 +1691,12 @@ export const Lab: React.FC = () => {
               `}
             >
               <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                <div className="flex items-center justify-between border-b border-[#333333] pb-2">
                   <div className="flex items-center gap-2">
                     {/* Mobile/Tablet Close Button */}
                     <button
                       onClick={() => setIsInspectorOpen(false)}
-                      className="lg:hidden p-1 text-gray-400 hover:text-white rounded hover:bg-gray-800 cursor-pointer"
+                      className="lg:hidden p-1 text-gray-400 hover:text-white rounded hover:bg-[#262626] cursor-pointer"
                       aria-label="Đóng bảng chi tiết"
                     >
                       <X className="w-4 h-4" />
@@ -1712,7 +1712,7 @@ export const Lab: React.FC = () => {
                         userMediaInputRef.current?.click();
                       }
                     }}
-                    className="px-2 py-1 bg-cyan-600/30 hover:bg-cyan-600/50 text-[10px] text-cyan-200 border border-cyan-500 rounded cursor-pointer min-h-[32px] flex items-center"
+                    className="px-2 py-1 bg-[#1FC8DB]/20 hover:bg-[#1FC8DB]/30 text-[10px] text-[#1FC8DB] border border-[#1FC8DB]/40 rounded cursor-pointer min-h-[32px] flex items-center transition-colors"
                   >
                     + Thay clip
                   </button>
@@ -1735,7 +1735,7 @@ export const Lab: React.FC = () => {
                         <div className="space-y-2">
                           <span className="text-xs font-bold text-gray-300">Kỹ thuật áp dụng ({activeTechs.length}):</span>
                           {activeTechs.map(({ key, data }) => (
-                            <div key={data.id} className="p-2.5 bg-gray-900 rounded border border-gray-800 flex items-center justify-between text-xs">
+                            <div key={data.id} className="p-2.5 bg-[#141414] rounded border border-[#333333] flex items-center justify-between text-xs">
                               <div>
                                 <div className="font-semibold text-gray-200">{data.name.vi}</div>
                                 <div className="text-[10px] text-gray-400 font-mono">{data.techniqueId || key}</div>
@@ -1748,7 +1748,7 @@ export const Lab: React.FC = () => {
                                     setTimeline(toggleSlotTechnique(timeline, selectedSlot.id, key, e.target.checked));
                                   }
                                 }}
-                                className="w-5 h-5 rounded text-cyan-500 cursor-pointer min-w-[20px] min-h-[20px]"
+                                className="w-5 h-5 rounded text-[#1FC8DB] cursor-pointer min-w-[20px] min-h-[20px]"
                               />
                             </div>
                           ))}
@@ -1760,7 +1760,7 @@ export const Lab: React.FC = () => {
               </div>
 
               {/* Next Button to Step 5 */}
-              <div className="pt-4 border-t border-gray-800">
+              <div className="pt-4 border-t border-[#333333]">
                 <button
                   onClick={() => {
                     setIsInspectorOpen(false);
@@ -1781,7 +1781,7 @@ export const Lab: React.FC = () => {
         {/* ==================================================================== */}
         {activeStep === 5 && (
           <div className="flex-1 flex flex-col p-6 overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+            <div className="flex items-center justify-between pb-3 border-b border-[#333333]">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   Kỹ thuật đã học ({learnedList.length} kỹ thuật)
@@ -1792,9 +1792,9 @@ export const Lab: React.FC = () => {
               </div>
 
               {/* M4 Quota Badge */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#121829] border border-gray-800 text-xs font-mono">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1F1F1F] border border-[#333333] text-xs font-mono">
                 <span className="text-gray-400">Dung lượng đã dùng:</span>
-                <span className="text-cyan-400 font-bold">{(storageUsageBytes / 1024).toFixed(1)} KB / 50 MB</span>
+                <span className="text-[#1FC8DB] font-bold">{(storageUsageBytes / 1024).toFixed(1)} KB / 50 MB</span>
               </div>
             </div>
 
@@ -1803,7 +1803,7 @@ export const Lab: React.FC = () => {
               {learnedList.map((item) => (
                 <div
                   key={item.fullId}
-                  className="p-4 bg-[#121829] border border-gray-800 hover:border-cyan-500/50 rounded-xl flex flex-col justify-between gap-3 shadow-lg"
+                  className="p-4 bg-[#1F1F1F] border border-[#333333] hover:border-[#1FC8DB] rounded-xl flex flex-col justify-between gap-3 shadow-lg transition-all"
                 >
                   <div>
                     <div className="flex items-start justify-between">
@@ -1815,12 +1815,12 @@ export const Lab: React.FC = () => {
                               value={renameText}
                               onChange={(e) => setRenameText(e.target.value)}
                               placeholder="Tên kỹ thuật mới..."
-                              className="px-2 py-1 bg-black border border-cyan-500 rounded text-xs text-white flex-1"
+                              className="px-2 py-1 bg-[#141414] border border-[#1FC8DB] rounded text-xs text-white flex-1"
                               autoFocus
                             />
                             <button
                               onClick={() => handleSaveRename(item.fullId)}
-                              className="px-2 py-1 bg-cyan-600 text-white rounded text-xs cursor-pointer"
+                              className="px-2 py-1 bg-[#1FC8DB] text-slate-950 font-bold rounded text-xs cursor-pointer"
                             >
                               Lưu
                             </button>
@@ -1833,7 +1833,7 @@ export const Lab: React.FC = () => {
                                 setRenamingItemId(item.fullId);
                                 setRenameText(item.name.vi);
                               }}
-                              className="p-1 text-gray-400 hover:text-cyan-300"
+                              className="p-1 text-gray-400 hover:text-[#1FC8DB]"
                               title="Đổi tên"
                             >
                               <Edit2 className="w-3 h-3" />
@@ -1853,7 +1853,7 @@ export const Lab: React.FC = () => {
                     </div>
 
                     <div className="mt-2 text-xs text-gray-300 flex items-center gap-2">
-                      <span className="text-cyan-400 font-bold font-mono">
+                      <span className="text-[#1FC8DB] font-bold font-mono">
                         Điểm kiểm chứng: {Math.round(item.verifiedScore * 100)}%
                       </span>
                       <span>•</span>
@@ -1862,11 +1862,11 @@ export const Lab: React.FC = () => {
                   </div>
 
                   {/* Actions for this item */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-800 text-xs">
+                  <div className="flex items-center justify-between pt-2 border-t border-[#333333] text-xs">
                     {item.status === 'auto' ? (
                       <button
                         onClick={() => handleUndoSave(item.fullId)}
-                        className="px-2.5 py-1 bg-gray-800 hover:bg-rose-950 hover:text-rose-300 text-gray-300 rounded border border-gray-700 flex items-center gap-1 cursor-pointer transition-colors"
+                        className="px-2.5 py-1 bg-[#262626] hover:bg-rose-950 hover:text-rose-300 text-gray-300 rounded border border-[#333333] flex items-center gap-1 cursor-pointer transition-colors"
                       >
                         <Undo2 className="w-3 h-3" /> Hoàn tác
                       </button>
@@ -1883,7 +1883,7 @@ export const Lab: React.FC = () => {
                       onClick={() => {
                         showToast(`Đã chọn kỹ thuật "${item.name.vi}"`, 'success');
                       }}
-                      className="px-3 py-1 bg-cyan-950/60 hover:bg-cyan-900 text-cyan-300 rounded border border-cyan-800 flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1 bg-[#1FC8DB]/20 hover:bg-[#1FC8DB]/30 text-[#1FC8DB] rounded border border-[#1FC8DB]/40 flex items-center gap-1 cursor-pointer transition-colors"
                     >
                       Dùng kỹ thuật
                     </button>
@@ -1893,10 +1893,10 @@ export const Lab: React.FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="pt-6 border-t border-gray-800 flex items-center justify-between">
+            <div className="pt-6 border-t border-[#333333] flex items-center justify-between">
               <button
                 onClick={() => setActiveStep(4)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 rounded-xl flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-[#262626] hover:bg-[#2E2E2E] text-xs text-gray-300 rounded-xl flex items-center gap-1.5 cursor-pointer border border-[#333333] transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" /> Quay lại Remix
               </button>
@@ -1915,7 +1915,7 @@ export const Lab: React.FC = () => {
       {/* Preflight Modal */}
       {preflightModalOpen && preflightResult && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#121829] border border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-[#1F1F1F] border border-[#333333] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <ShieldAlert className="w-6 h-6 text-amber-400" />
               <div>
@@ -1930,7 +1930,7 @@ export const Lab: React.FC = () => {
               {preflightResult.unresolvedSlots.map((slot) => (
                 <div
                   key={slot.slotId}
-                  className="p-3 bg-[#0A0D18] rounded-xl border border-gray-800 flex items-center justify-between text-xs"
+                  className="p-3 bg-[#141414] rounded-xl border border-[#333333] flex items-center justify-between text-xs"
                 >
                   <div>
                     <span className="font-semibold text-gray-200">Cảnh #{slot.index + 1}</span>
@@ -1943,7 +1943,7 @@ export const Lab: React.FC = () => {
                           setTimeline(resolveSlotAction(timeline, slot.slotId, 'black'));
                         }
                       }}
-                      className="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-[10px] text-gray-300 rounded border border-gray-700 cursor-pointer"
+                      className="px-2 py-1 bg-[#262626] hover:bg-[#2E2E2E] text-[10px] text-gray-300 rounded border border-[#333333] cursor-pointer transition-colors"
                     >
                       Để đen
                     </button>

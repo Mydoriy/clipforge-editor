@@ -629,6 +629,16 @@ export const Editor: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && drawerOpen) {
+        setDrawerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [drawerOpen]);
+
+  useEffect(() => {
     const updatePosition = (clientX: number, clientY: number) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
@@ -894,25 +904,36 @@ export const Editor: React.FC = () => {
 
           {/* Drawer for Details when screen < 1100px */}
           {isCompactDetails && drawerOpen && (
-            <div className="fixed inset-y-0 right-0 w-80 bg-[#1F1F1F] border-l border-[#333333] z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
-              <div className="h-[44px] px-3 border-b border-[#333333] flex items-center justify-between text-xs font-bold text-white bg-[#262626]">
-                <div className="flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-[#1FC8DB]" />
-                  <span>DETAILS (THUỘC TÍNH)</span>
+            <>
+              {/* Backdrop Scrim */}
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity animate-in fade-in cursor-pointer"
+                onClick={() => setDrawerOpen(false)}
+                onTouchStart={() => setDrawerOpen(false)}
+                aria-label="Đóng bảng thuộc tính"
+                role="button"
+                tabIndex={0}
+              />
+              <div className="fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-[#1F1F1F] border-l border-[#333333] z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+                <div className="h-[44px] px-3 border-b border-[#333333] flex items-center justify-between text-xs font-bold text-white bg-[#262626]">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-[#1FC8DB]" />
+                    <span>DETAILS (THUỘC TÍNH)</span>
+                  </div>
+                  <button
+                    onClick={() => setDrawerOpen(false)}
+                    className="p-1 rounded-md text-[#8A8A8A] hover:text-white hover:bg-[#1F1F1F]"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button
-                  onClick={() => setDrawerOpen(false)}
-                  className="p-1 rounded-md text-[#8A8A8A] hover:text-white hover:bg-[#1F1F1F]"
-                >
-                  ✕
-                </button>
+                <div className="flex-1 overflow-y-auto">
+                  <PanelErrorBoundary panelName="Bảng thuộc tính (Inspector)">
+                    <Inspector />
+                  </PanelErrorBoundary>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                <PanelErrorBoundary panelName="Bảng thuộc tính (Inspector)">
-                  <Inspector />
-                </PanelErrorBoundary>
-              </div>
-            </div>
+            </>
           )}
         </div>
 

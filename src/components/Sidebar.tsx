@@ -68,19 +68,19 @@ export const Sidebar: React.FC = () => {
 
       {/* Sidebar Drawer Container */}
       <aside
-        className="fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] bg-[#0E1320] border-r border-[#1F2937] flex flex-col justify-between p-4 select-none h-full overflow-y-auto shadow-2xl transition-all duration-200 lg:static lg:w-[274px] lg:z-auto lg:shadow-none lg:shrink-0"
+        className="fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] bg-[#141414] border-r border-[#333333] flex flex-col justify-between p-4 select-none h-full overflow-y-auto shadow-2xl transition-all duration-200 lg:static lg:w-[274px] lg:z-auto lg:shadow-none lg:shrink-0"
       >
         {/* Top Section */}
         <div className="flex flex-col gap-4">
           {/* Mobile/Tablet Drawer Header with Close Button */}
-          <div className="flex items-center justify-between lg:hidden pb-2 border-b border-[#1F2937]">
-            <span className="text-xs font-bold text-[#E5E7EB] uppercase tracking-wider">
+          <div className="flex items-center justify-between lg:hidden pb-2 border-b border-[#333333]">
+            <span className="text-xs font-bold text-[#E6E6E6] uppercase tracking-wider">
               {language === 'VN' ? 'Menu Điều Hướng' : 'Navigation Menu'}
             </span>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] hover-lift transition-all"
+              className="p-1.5 rounded-xl bg-[#1F1F1F] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] hover-lift transition-all touch-target-44"
               title="Đóng menu"
               aria-label="Đóng menu"
             >
@@ -94,32 +94,32 @@ export const Sidebar: React.FC = () => {
             <div className="relative">
               <div
                 onClick={() => setAccountMenuOpen(!accountMenuOpen)}
-                className="p-3 rounded-2xl bg-[#111827] border border-[#1F2937] hover:border-[#22D3EE]/50 flex items-center justify-between cursor-pointer hover-lift shadow-sm transition-all"
+                className="p-3 rounded-2xl bg-[#1F1F1F] border border-[#333333] hover:border-[#1FC8DB]/50 flex items-center justify-between cursor-pointer hover-lift shadow-sm transition-all"
               >
                 <div className="flex items-center gap-3 truncate">
                   <img
                     src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80'}
                     alt={user.name}
-                    className="w-9 h-9 rounded-full object-cover border border-[#22D3EE]/40"
+                    className="w-9 h-9 rounded-full object-cover border border-[#1FC8DB]/40"
                   />
                   <div className="flex flex-col truncate">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-[#E5E7EB] truncate">{user.name}</span>
+                      <span className="text-xs font-bold text-[#E6E6E6] truncate">{user.name}</span>
                       <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 flex items-center gap-0.5 shadow-sm">
                         <Crown className="w-2.5 h-2.5" />
                         PRO VIP
                       </span>
                     </div>
-                    <span className="text-[10px] text-[#9CA3AF] truncate">{user.email}</span>
+                    <span className="text-[10px] text-[#8A8A8A] truncate">{user.email}</span>
                   </div>
                 </div>
-                <ChevronDown className="w-4 h-4 text-[#9CA3AF] shrink-0" />
+                <ChevronDown className="w-4 h-4 text-[#8A8A8A] shrink-0" />
               </div>
 
               {/* Account Menu Dropdown */}
               {accountMenuOpen && (
                 <div
-                  className="absolute left-0 right-0 mt-2 bg-[#111827] border border-[#1F2937] rounded-2xl shadow-2xl py-1.5 text-xs text-[#E5E7EB] z-50 animate-in fade-in"
+                  className="absolute left-0 right-0 mt-2 bg-[#1F1F1F] border border-[#333333] rounded-2xl shadow-2xl py-1.5 text-xs text-[#E6E6E6] z-50 animate-in fade-in"
                   onMouseLeave={() => setAccountMenuOpen(false)}
                 >
                   <button
@@ -133,7 +133,7 @@ export const Sidebar: React.FC = () => {
                     <Crown className="w-4 h-4 text-amber-400" />
                     <span>Đặc quyền PRO VIP (Mức cao nhất)</span>
                   </button>
-                  <div className="border-t border-[#1F2937] my-1" />
+                  <div className="border-t border-[#333333] my-1" />
                   <button
                     onClick={() => {
                       setAccountMenuOpen(false);
@@ -151,15 +151,15 @@ export const Sidebar: React.FC = () => {
             </div>
           ) : (
             /* CHƯA ĐĂNG NHẬP (GUEST MODE) */
-            <div className="p-3 rounded-2xl bg-[#111827] border border-[#1F2937] flex flex-col gap-2.5 shadow-sm">
+            <div className="p-3 rounded-2xl bg-[#1F1F1F] border border-[#333333] flex flex-col gap-2.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#0E1320] flex items-center justify-center border border-[#1F2937] text-[#9CA3AF]">
-                    <User className="w-4 h-4 text-[#9CA3AF]" />
+                  <div className="w-9 h-9 rounded-full bg-[#141414] flex items-center justify-center border border-[#333333] text-[#8A8A8A]">
+                    <User className="w-4 h-4 text-[#8A8A8A]" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-[#E5E7EB]">{t.guestMode}</span>
-                    <span className="text-[10px] text-[#9CA3AF]">Lưu trên máy (IndexedDB)</span>
+                    <span className="text-xs font-semibold text-[#E6E6E6]">{t.guestMode}</span>
+                    <span className="text-[10px] text-[#8A8A8A]">Lưu trên máy (IndexedDB)</span>
                   </div>
                 </div>
 
@@ -168,7 +168,7 @@ export const Sidebar: React.FC = () => {
                     closeDrawerOnMobile();
                     openModal('auth');
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#0E1320] hover:bg-[#1F2937] text-[#22D3EE] border border-[#1F2937] text-[11px] font-bold hover-lift transition-all"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#141414] hover:bg-[#262626] text-[#1FC8DB] border border-[#333333] text-[11px] font-bold hover-lift transition-all"
                 >
                   <LogIn className="w-3 h-3" />
                   <span>{t.signIn}</span>
@@ -196,8 +196,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937] shadow-sm'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333] shadow-sm'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -212,8 +212,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937] shadow-sm'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333] shadow-sm'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -223,8 +223,8 @@ export const Sidebar: React.FC = () => {
           </nav>
 
           {/* Create with AI Section */}
-          <div className="flex flex-col gap-1 pt-3 border-t border-[#1F2937]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF]/70 px-3 py-1">
+          <div className="flex flex-col gap-1 pt-3 border-t border-[#333333]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A] px-3 py-1">
               {t.navCreateWithAi}
             </span>
 
@@ -234,8 +234,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -249,8 +249,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -260,8 +260,8 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* More Tools */}
-          <div className="flex flex-col gap-1 pt-3 border-t border-[#1F2937]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF]/70 px-3 py-1">
+          <div className="flex flex-col gap-1 pt-3 border-t border-[#333333]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A] px-3 py-1">
               {t.navMarketingTools}
             </span>
 
@@ -271,8 +271,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -286,8 +286,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -297,8 +297,8 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* Management */}
-          <div className="flex flex-col gap-1 pt-3 border-t border-[#1F2937]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF]/70 px-3 py-1">
+          <div className="flex flex-col gap-1 pt-3 border-t border-[#333333]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A8A8A] px-3 py-1">
               {t.navLibrary}
             </span>
 
@@ -308,8 +308,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
@@ -323,9 +323,9 @@ export const Sidebar: React.FC = () => {
                 closeDrawerOnMobile();
                 openModal('extensionLibrary');
               }}
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60 transition-all hover-lift text-left w-full cursor-pointer"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F] transition-all hover-lift text-left w-full cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <Sparkles className="w-4 h-4 text-[#1FC8DB]" />
               <span>{language === 'VN' ? 'Kho hiệu ứng mở rộng' : 'Extension Store'}</span>
             </button>
 
@@ -335,12 +335,12 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-[#22D3EE] border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-[#1FC8DB] border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >
-              <Cloud className="w-4 h-4 text-[#22D3EE]" />
+              <Cloud className="w-4 h-4 text-[#1FC8DB]" />
               <span>Cloud storage (Supabase)</span>
             </NavLink>
 
@@ -350,8 +350,8 @@ export const Sidebar: React.FC = () => {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover-lift ${
                   isActive
-                    ? 'bg-[#111827] text-emerald-400 border border-[#1F2937]'
-                    : 'text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#111827]/60'
+                    ? 'bg-[#1F1F1F] text-emerald-400 border border-[#333333]'
+                    : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#1F1F1F]'
                 }`
               }
             >

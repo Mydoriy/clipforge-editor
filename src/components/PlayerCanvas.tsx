@@ -97,6 +97,7 @@ export const PlayerCanvas: React.FC = () => {
   const [zoomDropdownOpen, setZoomDropdownOpen] = useState(false);
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
   const [sleepTimerDropdownOpen, setSleepTimerDropdownOpen] = useState(false);
+  const [mobileControlsOpen, setMobileControlsOpen] = useState(false);
   const [sleepTimerState, setSleepTimerState] = useState(sleepTimerManager.getState());
 
   // Close dropdowns on outside click
@@ -107,6 +108,7 @@ export const PlayerCanvas: React.FC = () => {
       setZoomDropdownOpen(false);
       setRatioDropdownOpen(false);
       setSleepTimerDropdownOpen(false);
+      setMobileControlsOpen(false);
     };
     window.addEventListener('click', handleGlobalClick);
     return () => window.removeEventListener('click', handleGlobalClick);
@@ -888,7 +890,7 @@ export const PlayerCanvas: React.FC = () => {
             {menuOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute top-full left-0 mt-1 w-60 rounded-md bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1.5 text-xs text-[#E6E6E6] z-50 flex flex-col gap-0.5"
+                className="absolute top-full left-0 mt-1 w-60 rounded-lg backdrop-blur-md bg-[#1F1F1F]/90 border border-[#333333] shadow-2xl py-1.5 text-xs text-[#E6E6E6] z-50 flex flex-col gap-0.5"
               >
                 {/* 1. Safe Zones */}
                 <button
@@ -1340,37 +1342,37 @@ export const PlayerCanvas: React.FC = () => {
               >
                 {/* Mask Shape Outline */}
                 {maskType === 'circle' && (
-                  <div className="w-full h-full rounded-full border-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                  <div className="w-full h-full rounded-full border-2 border-dashed border-[#1FC8DB] shadow-[0_0_10px_rgba(31,200,219,0.5)]" />
                 )}
                 {maskType === 'rect' && (
                   <div
                     style={{ borderRadius: `${roundness}px` }}
-                    className="w-full h-full border-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]"
+                    className="w-full h-full border-2 border-dashed border-[#1FC8DB] shadow-[0_0_10px_rgba(31,200,219,0.5)]"
                   />
                 )}
                 {maskType === 'split' && (
-                  <div className="w-[200vw] h-0 border-t-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                  <div className="w-[200vw] h-0 border-t-2 border-dashed border-[#1FC8DB] shadow-[0_0_10px_rgba(31,200,219,0.5)]" />
                 )}
                 {maskType === 'filmstrip' && (
-                  <div className="w-[200vw] h-full border-y-2 border-dashed border-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+                  <div className="w-[200vw] h-full border-y-2 border-dashed border-[#1FC8DB] shadow-[0_0_10px_rgba(31,200,219,0.5)]" />
                 )}
                 {maskType === 'heart' && (
-                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_8px_#00E5FF]">
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_8px_#1FC8DB]">
                     <path
                       d="M 50,80 C 10,50 10,20 50,35 C 90,20 90,50 50,80 Z"
                       fill="none"
-                      stroke="#00E5FF"
+                      stroke="#1FC8DB"
                       strokeWidth="2"
                       strokeDasharray="4 4"
                     />
                   </svg>
                 )}
                 {maskType === 'star' && (
-                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_8px_#00E5FF]">
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_8px_#1FC8DB]">
                     <polygon
                       points="50,5 64,36 98,36 70,57 81,91 50,70 19,91 30,57 2,36 36,36"
                       fill="none"
-                      stroke="#00E5FF"
+                      stroke="#1FC8DB"
                       strokeWidth="2"
                       strokeDasharray="4 4"
                     />
@@ -1378,10 +1380,10 @@ export const PlayerCanvas: React.FC = () => {
                 )}
 
                 {/* Center Anchor Point */}
-                <div className="w-2 h-2 rounded-full bg-[#00E5FF] shadow-[0_0_6px_#00E5FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <div className="w-2 h-2 rounded-full bg-[#1FC8DB] shadow-[0_0_6px_#1FC8DB] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
 
                 {/* Badge */}
-                <div className="absolute -top-6 px-1.5 py-0.5 rounded bg-black/80 border border-[#00E5FF]/40 text-[#00E5FF] font-mono text-[9px] uppercase whitespace-nowrap">
+                <div className="absolute -top-6 px-1.5 py-0.5 rounded bg-black/80 border border-[#1FC8DB]/40 text-[#1FC8DB] font-mono text-[9px] uppercase whitespace-nowrap">
                   Mask: {maskType} {invert ? '(Invert)' : ''}
                 </div>
               </div>
@@ -1393,13 +1395,13 @@ export const PlayerCanvas: React.FC = () => {
       {/* ======================================================== */}
       {/* 3. BOTTOM CONTROLS BAR                                   */}
       {/* ======================================================== */}
-      <div className="h-11 px-3 bg-[#181818] border-t border-[#262626] flex items-center justify-between z-30 shrink-0 text-[#E6E6E6]">
+      <div className="h-11 px-2 sm:px-3 bg-[#181818] border-t border-[#262626] flex items-center justify-between z-30 shrink-0 text-[#E6E6E6] gap-1 sm:gap-2">
         {/* Left Side: Timecode / Frame Display & Step Controls */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {/* Timecode Toggle Button (HH:MM:SS:FF <-> Frame count) */}
           <button
             onClick={() => setTimecodeDisplayMode(timecodeDisplayMode === 'smpte' ? 'frames' : 'smpte')}
-            className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] font-mono text-[11px] font-medium transition-all touch-target-40 min-h-[36px] flex items-center ${
+            className={`px-1.5 sm:px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border border-[#333333] font-mono text-[10px] sm:text-[11px] font-medium transition-all touch-target-40 min-h-[36px] flex items-center shrink-0 ${
               duration === 0 || clips.length === 0 ? 'opacity-40' : 'text-[#E6E6E6]'
             }`}
             title="Bấm để chuyển đổi giữa Timecode (HH:MM:SS:FF) và Số Frame"
@@ -1439,13 +1441,13 @@ export const PlayerCanvas: React.FC = () => {
         </div>
 
         {/* Center: Prominent Master Play / Pause Button */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button
             onClick={() => {
               masterAudio.playSynthesizer('click');
               setIsPlaying(!isPlaying);
             }}
-            className="px-4 py-1.5 bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 rounded-md font-bold text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shadow-md shadow-cyan-500/20 touch-target-44 min-h-[36px]"
+            className="px-3 sm:px-4 py-1.5 bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 rounded-md font-bold text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shadow-md shadow-cyan-500/20 touch-target-44 min-h-[36px] shrink-0"
             title={isPlaying ? 'Tạm dừng (Space)' : 'Phát video (Space)'}
           >
             {isPlaying ? (
@@ -1480,10 +1482,10 @@ export const PlayerCanvas: React.FC = () => {
           </button>
         </div>
 
-        {/* Right Side: Quality, Zoom, Ratio & Fullscreen */}
-        <div className="flex items-center gap-1.5 text-xs">
-          {/* Quality Dropdown: Full / Half / Quarter */}
-          <div className="relative">
+        {/* Right Side: Quality, Zoom, Ratio, Sleep Timer & Fullscreen */}
+        <div className="flex items-center gap-1 sm:gap-1.5 text-xs shrink-0">
+          {/* Quality Dropdown: Full / Half / Quarter (Desktop & Tablet >=640px) */}
+          <div className="hidden sm:block relative">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1499,7 +1501,7 @@ export const PlayerCanvas: React.FC = () => {
                 <div className="fixed inset-0 z-40" onClick={() => setQualityDropdownOpen(false)} />
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+                  className="absolute bottom-full right-0 mb-1 w-28 rounded-lg backdrop-blur-md bg-[#1F1F1F]/90 border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
                 >
                   {[
                     { id: 'full', label: 'Full (100%)' },
@@ -1526,8 +1528,8 @@ export const PlayerCanvas: React.FC = () => {
             )}
           </div>
 
-          {/* Zoom / Fit Dropdown */}
-          <div className="relative">
+          {/* Zoom / Fit Dropdown (Desktop & Tablet >=640px) */}
+          <div className="hidden sm:block relative">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1543,7 +1545,7 @@ export const PlayerCanvas: React.FC = () => {
                 <div className="fixed inset-0 z-40" onClick={() => setZoomDropdownOpen(false)} />
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-full right-0 mb-1 w-28 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50 max-h-48 overflow-y-auto"
+                  className="absolute bottom-full right-0 mb-1 w-28 rounded-lg backdrop-blur-md bg-[#1F1F1F]/90 border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50 max-h-48 overflow-y-auto"
                 >
                   {[
                     { id: 'fit', label: 'Fit' },
@@ -1596,7 +1598,7 @@ export const PlayerCanvas: React.FC = () => {
                 <div className="fixed inset-0 z-40" onClick={() => setRatioDropdownOpen(false)} />
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-full right-0 mb-1 w-44 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+                  className="absolute bottom-full right-0 mb-1 w-44 rounded-lg backdrop-blur-md bg-[#1F1F1F]/90 border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
                 >
                   <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold">Tỉ lệ khung hình</div>
                   {[
@@ -1635,7 +1637,7 @@ export const PlayerCanvas: React.FC = () => {
                 e.stopPropagation();
                 setSleepTimerDropdownOpen(!sleepTimerDropdownOpen);
               }}
-              className={`px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border text-[11px] font-semibold flex items-center gap-1 transition-colors touch-target-40 min-h-[36px] ${
+              className={`px-1.5 sm:px-2 py-1 rounded bg-[#222222] hover:bg-[#2A2A2A] border text-[11px] font-semibold flex items-center gap-1 transition-colors touch-target-40 min-h-[36px] ${
                 sleepTimerState.isActive
                   ? 'border-[#1FC8DB] text-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.3)]'
                   : 'border-[#333333] text-[#A0A0A0] hover:text-white'
@@ -1643,7 +1645,7 @@ export const PlayerCanvas: React.FC = () => {
               title="Hẹn giờ tự tắt (Sleep Timer)"
             >
               <Clock className="w-3 h-3" />
-              <span>
+              <span className="hidden sm:inline">
                 {sleepTimerState.option === 'off'
                   ? 'Hẹn giờ'
                   : sleepTimerState.option === 'end_of_track'
@@ -1652,13 +1654,20 @@ export const PlayerCanvas: React.FC = () => {
                   ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}:${String(sleepTimerState.remainingSeconds % 60).padStart(2, '0')}`
                   : `${sleepTimerState.option}p`}
               </span>
+              {sleepTimerState.isActive && (
+                <span className="sm:hidden text-[10px] font-mono">
+                  {sleepTimerState.remainingSeconds !== null
+                    ? `${Math.floor(sleepTimerState.remainingSeconds / 60)}m`
+                    : '●'}
+                </span>
+              )}
             </button>
             {sleepTimerDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setSleepTimerDropdownOpen(false)} />
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-full right-0 mb-1 w-52 rounded bg-[#1F1F1F] border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
+                  className="absolute bottom-full right-0 mb-1 w-52 rounded-lg backdrop-blur-md bg-[#1F1F1F]/90 border border-[#333333] shadow-2xl py-1 text-[11px] text-[#E6E6E6] flex flex-col z-50"
                 >
                   <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold flex items-center justify-between border-b border-[#2A2A2A] pb-1.5 mb-1">
                     <span>Hẹn giờ tự tắt</span>
@@ -1701,6 +1710,89 @@ export const PlayerCanvas: React.FC = () => {
                       {sleepTimerState.option === item.opt && <Check className="w-3 h-3 text-[#1FC8DB]" />}
                     </button>
                   ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Secondary Controls (<640px) */}
+          <div className="sm:hidden relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMobileControlsOpen(!mobileControlsOpen);
+              }}
+              className={`p-1.5 rounded bg-[#222222] hover:bg-[#2A2A2A] border text-[11px] font-semibold flex items-center justify-center transition-colors touch-target-40 min-h-[36px] min-w-[36px] ${
+                mobileControlsOpen ? 'border-[#1FC8DB] text-[#1FC8DB]' : 'border-[#333333] text-[#A0A0A0] hover:text-white'
+              }`}
+              title="Cài đặt xem trước & Phóng to"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+            </button>
+            {mobileControlsOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMobileControlsOpen(false)} />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-full right-0 mb-1 w-48 rounded-lg backdrop-blur-md bg-[#1F1F1F]/90 border border-[#333333] shadow-2xl p-2.5 text-[11px] text-[#E6E6E6] flex flex-col gap-2.5 z-50"
+                >
+                  <div>
+                    <div className="text-[10px] text-[#8A8A8A] uppercase font-bold mb-1">Chất lượng Preview</div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {[
+                        { id: 'full', label: '100%' },
+                        { id: 'half', label: '50%' },
+                        { id: 'quarter', label: '25%' }
+                      ].map((q) => (
+                        <button
+                          key={q.id}
+                          onClick={() => {
+                            setPreviewQuality(q.id as any);
+                            setMobileControlsOpen(false);
+                            showToast(`Chất lượng preview: ${q.label}`, 'info');
+                          }}
+                          className={`py-1 text-center rounded text-[10px] font-semibold border transition-all ${
+                            previewQuality === q.id
+                              ? 'bg-[#1FC8DB] text-slate-950 font-bold border-[#1FC8DB]'
+                              : 'bg-[#262626] text-[#E6E6E6] border-[#333333]'
+                          }`}
+                        >
+                          {q.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[#8A8A8A] uppercase font-bold mb-1">Phóng to (Zoom)</div>
+                    <div className="grid grid-cols-4 gap-1">
+                      {[
+                        { id: 'fit', label: 'Fit' },
+                        { id: 0.5, label: '50%' },
+                        { id: 1.0, label: '100%' },
+                        { id: 2.0, label: '200%' }
+                      ].map((z) => (
+                        <button
+                          key={String(z.id)}
+                          onClick={() => {
+                            if (z.id === 'fit') {
+                              setZoomMode('fit');
+                              setPanOffset({ x: 0, y: 0 });
+                            } else {
+                              setZoomMode(z.id as any);
+                            }
+                            setMobileControlsOpen(false);
+                          }}
+                          className={`py-1 text-center rounded text-[10px] font-semibold border transition-all ${
+                            zoomMode === z.id
+                              ? 'bg-[#1FC8DB] text-slate-950 font-bold border-[#1FC8DB]'
+                              : 'bg-[#262626] text-[#E6E6E6] border-[#333333]'
+                          }`}
+                        >
+                          {z.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </>
             )}

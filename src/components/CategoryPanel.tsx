@@ -207,6 +207,7 @@ export const CategoryPanel: React.FC = () => {
   // Media Sub-Sidebar state
   const [selectedMediaNav, setSelectedMediaNav] = useState<string>('media');
   const [importDropdownOpen, setImportDropdownOpen] = useState(false);
+  const [mediaSubSidebarCollapsed, setMediaSubSidebarCollapsed] = useState(false);
   const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
     yours: false,
     generate: false,
@@ -327,15 +328,15 @@ export const CategoryPanel: React.FC = () => {
     if (matching.length === 0) return null;
 
     return (
-      <div className="p-2.5 rounded-lg bg-gradient-to-r from-cyan-950/40 to-slate-900 border border-cyan-800/40 flex flex-col gap-2 my-2">
+      <div className="p-2.5 rounded-lg bg-gradient-to-r from-[#1FC8DB]/10 via-[#1F1F1F] to-[#262626] border border-[#1FC8DB]/30 flex flex-col gap-2 my-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#1FC8DB]">
+            <Sparkles className="w-3.5 h-3.5 text-[#1FC8DB]" />
             <span>Tìm thêm trong Kho Mở Rộng ({matching.length})</span>
           </div>
           <button
             onClick={() => openModal('extensionLibrary')}
-            className="text-[10px] text-cyan-400 hover:underline font-medium"
+            className="text-[10px] text-[#1FC8DB] hover:underline font-medium"
           >
             Mở kho &gt;
           </button>
@@ -345,7 +346,7 @@ export const CategoryPanel: React.FC = () => {
           {matching.slice(0, 3).map((pkg) => (
             <div
               key={pkg.id}
-              className="p-2 bg-[#1A1A1A] rounded-md border border-slate-800 flex items-center justify-between gap-2 text-xs"
+              className="p-2 bg-[#262626] rounded-md border border-[#333333] flex items-center justify-between gap-2 text-xs"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -364,7 +365,7 @@ export const CategoryPanel: React.FC = () => {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => handleTryPackage(pkg)}
-                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded text-[10px] font-semibold border border-cyan-500/30 transition-colors"
+                  className="px-2 py-1 bg-[#2E2E2E] hover:bg-[#333333] text-[#1FC8DB] rounded text-[10px] font-semibold border border-[#1FC8DB]/30 transition-colors"
                   title="Dùng thử: Chỉ nạp spec vài KB để render trực tiếp trên clip"
                 >
                   Dùng thử
@@ -375,7 +376,7 @@ export const CategoryPanel: React.FC = () => {
                   className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${
                     pkg.isInstalled
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950'
+                      : 'bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950'
                   }`}
                   title="Cài đặt: Giữ lại bản tải vào máy ngoại tuyến"
                 >
@@ -2051,23 +2052,48 @@ export const CategoryPanel: React.FC = () => {
       {/* Panel Body Content */}
       {activeTab === 'Media' ? (
         <div className="flex-1 flex overflow-hidden">
-          {/* Media Tab Secondary Sidebar (w-[125px]) */}
-          <div className="w-[125px] shrink-0 border-r border-[#333333] bg-[#1A1A1A] flex flex-col py-2 px-1.5 gap-1 overflow-y-auto scrollbar-none text-[11px]">
+          {/* Media Tab Secondary Sidebar (w-[130px] or compact w-11) */}
+          <div
+            className={`${
+              mediaSubSidebarCollapsed ? 'w-11 items-center px-1' : 'w-[130px] px-1.5'
+            } shrink-0 border-r border-[#333333] bg-[#141414] flex flex-col py-2 gap-1 overflow-y-auto scrollbar-none text-[11px] transition-all duration-200`}
+          >
+            {/* Collapse / Expand Toggle Header */}
+            <div className={`flex items-center ${mediaSubSidebarCollapsed ? 'justify-center' : 'justify-between px-1'} mb-1 w-full`}>
+              {!mediaSubSidebarCollapsed && (
+                <span className="text-[10px] font-bold text-[#8A8A8A] uppercase tracking-wider truncate">
+                  Media Hub
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setMediaSubSidebarCollapsed(!mediaSubSidebarCollapsed)}
+                className="p-1 rounded-md text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626] transition-colors"
+                title={mediaSubSidebarCollapsed ? 'Mở rộng thanh phụ' : 'Thu gọn thanh phụ'}
+                aria-label={mediaSubSidebarCollapsed ? 'Mở rộng' : 'Thu gọn'}
+              >
+                {mediaSubSidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
             {/* Import ▾ Dropdown */}
-            <div className="relative mb-1">
+            <div className="relative mb-1 w-full">
               <button
                 onClick={() => setImportDropdownOpen(!importDropdownOpen)}
-                className="w-full py-1.5 px-2 rounded-md bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold flex items-center justify-between transition-colors shadow-sm"
+                className={`w-full py-1.5 ${
+                  mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+                } rounded-md bg-[#1FC8DB]/15 hover:bg-[#1FC8DB] text-[#1FC8DB] hover:text-black font-bold flex items-center transition-colors shadow-sm`}
+                title="Import"
               >
                 <span className="flex items-center gap-1 truncate">
-                  <Upload className="w-3 h-3" />
-                  Import
+                  <Upload className="w-3 h-3 shrink-0" />
+                  {!mediaSubSidebarCollapsed && <span>Import</span>}
                 </span>
-                <ChevronDown className="w-3 h-3" />
+                {!mediaSubSidebarCollapsed && <ChevronDown className="w-3 h-3 shrink-0" />}
               </button>
 
               {importDropdownOpen && (
-                <div className="absolute left-0 top-full mt-1 w-52 bg-[#262626] border border-[#333333] rounded-md shadow-2xl py-1 z-50 flex flex-col text-[11px]">
+                <div className={`absolute ${mediaSubSidebarCollapsed ? 'left-full ml-1' : 'left-0'} top-full mt-1 w-52 bg-[#262626] border border-[#333333] rounded-md shadow-2xl py-1 z-50 flex flex-col text-[11px]`}>
                   <button
                     onClick={() => {
                       setImportDropdownOpen(false);
@@ -2132,52 +2158,72 @@ export const CategoryPanel: React.FC = () => {
             {/* Media Item */}
             <button
               onClick={() => setSelectedMediaNav('media')}
-              className={`w-full py-1.5 px-2 rounded-md flex items-center justify-between text-left font-medium transition-colors ${
+              className={`w-full py-1.5 ${
+                mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+              } rounded-md flex items-center text-left font-medium transition-colors ${
                 selectedMediaNav === 'media'
                   ? 'bg-[#2E2E2E] text-[#1FC8DB] font-semibold'
                   : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626]'
               }`}
+              title={`Media (${dbMediaList.length})`}
             >
               <span className="flex items-center gap-1.5 truncate">
-                <FolderOpen className="w-3.5 h-3.5" />
-                Media
+                <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                {!mediaSubSidebarCollapsed && <span>Media</span>}
               </span>
-              <span className="text-[9px] px-1 bg-[#1F1F1F] rounded text-[#8A8A8A]">
-                {dbMediaList.length}
-              </span>
+              {!mediaSubSidebarCollapsed && (
+                <span className="text-[9px] px-1 bg-[#1F1F1F] rounded text-[#8A8A8A]">
+                  {dbMediaList.length}
+                </span>
+              )}
             </button>
 
             {/* Subprojects Item */}
             <button
               onClick={() => setSelectedMediaNav('subprojects')}
-              className={`w-full py-1.5 px-2 rounded-md flex items-center justify-between text-left font-medium transition-colors ${
+              className={`w-full py-1.5 ${
+                mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+              } rounded-md flex items-center text-left font-medium transition-colors ${
                 selectedMediaNav === 'subprojects'
                   ? 'bg-[#2E2E2E] text-[#1FC8DB] font-semibold'
                   : 'text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626]'
               }`}
+              title={`Subprojects (${timelines.length})`}
             >
               <span className="flex items-center gap-1.5 truncate">
-                <FolderKanban className="w-3.5 h-3.5" />
-                Subprojects
+                <FolderKanban className="w-3.5 h-3.5 shrink-0" />
+                {!mediaSubSidebarCollapsed && <span>Subprojects</span>}
               </span>
-              <span className="text-[9px] px-1 bg-[#1F1F1F] rounded text-[#8A8A8A]">
-                {timelines.length}
-              </span>
+              {!mediaSubSidebarCollapsed && (
+                <span className="text-[9px] px-1 bg-[#1F1F1F] rounded text-[#8A8A8A]">
+                  {timelines.length}
+                </span>
+              )}
             </button>
 
             {/* Yours ▾ */}
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full">
               <button
-                onClick={() => setExpandedNav({ ...expandedNav, yours: !expandedNav.yours })}
-                className="w-full py-1 px-2 rounded-md flex items-center justify-between text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium"
+                onClick={() => {
+                  if (mediaSubSidebarCollapsed) {
+                    setMediaSubSidebarCollapsed(false);
+                    setExpandedNav((prev) => ({ ...prev, yours: true }));
+                  } else {
+                    setExpandedNav((prev) => ({ ...prev, yours: !prev.yours }));
+                  }
+                }}
+                className={`w-full py-1 ${
+                  mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+                } rounded-md flex items-center text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium transition-colors`}
+                title="Yours"
               >
-                <span className="flex items-center gap-1.5">
-                  <Bookmark className="w-3.5 h-3.5" />
-                  Yours
+                <span className="flex items-center gap-1.5 truncate">
+                  <Bookmark className="w-3.5 h-3.5 shrink-0" />
+                  {!mediaSubSidebarCollapsed && <span>Yours</span>}
                 </span>
-                {expandedNav.yours ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {!mediaSubSidebarCollapsed && (expandedNav.yours ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />)}
               </button>
-              {expandedNav.yours && (
+              {expandedNav.yours && !mediaSubSidebarCollapsed && (
                 <div className="flex flex-col pl-4 gap-0.5 border-l border-[#333333] ml-2 mt-0.5">
                   <button
                     onClick={() => {
@@ -2223,23 +2269,35 @@ export const CategoryPanel: React.FC = () => {
             </div>
 
             {/* Generate ▾ (AI Badge) */}
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full">
               <button
-                onClick={() => setExpandedNav({ ...expandedNav, generate: !expandedNav.generate })}
-                className="w-full py-1 px-2 rounded-md flex items-center justify-between text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium"
+                onClick={() => {
+                  if (mediaSubSidebarCollapsed) {
+                    setMediaSubSidebarCollapsed(false);
+                    setExpandedNav((prev) => ({ ...prev, generate: true }));
+                  } else {
+                    setExpandedNav((prev) => ({ ...prev, generate: !prev.generate }));
+                  }
+                }}
+                className={`w-full py-1 ${
+                  mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+                } rounded-md flex items-center text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium transition-colors`}
+                title="Generate AI"
               >
                 <span className="flex items-center gap-1.5 truncate">
-                  <Wand2 className="w-3.5 h-3.5 text-pink-400" />
-                  Generate
+                  <Wand2 className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                  {!mediaSubSidebarCollapsed && <span>Generate</span>}
                 </span>
-                <div className="flex items-center gap-1">
-                  <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white leading-tight">
-                    AI
-                  </span>
-                  {expandedNav.generate ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </div>
+                {!mediaSubSidebarCollapsed && (
+                  <div className="flex items-center gap-1">
+                    <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white leading-tight">
+                      AI
+                    </span>
+                    {expandedNav.generate ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
+                  </div>
+                )}
               </button>
-              {expandedNav.generate && (
+              {expandedNav.generate && !mediaSubSidebarCollapsed && (
                 <div className="flex flex-col pl-4 gap-0.5 border-l border-[#333333] ml-2 mt-0.5">
                   <button
                     onClick={() => setSelectedMediaNav('gen_image')}
@@ -2285,18 +2343,28 @@ export const CategoryPanel: React.FC = () => {
             </div>
 
             {/* Spaces ▾ */}
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full">
               <button
-                onClick={() => setExpandedNav({ ...expandedNav, spaces: !expandedNav.spaces })}
-                className="w-full py-1 px-2 rounded-md flex items-center justify-between text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium"
+                onClick={() => {
+                  if (mediaSubSidebarCollapsed) {
+                    setMediaSubSidebarCollapsed(false);
+                    setExpandedNav((prev) => ({ ...prev, spaces: true }));
+                  } else {
+                    setExpandedNav((prev) => ({ ...prev, spaces: !prev.spaces }));
+                  }
+                }}
+                className={`w-full py-1 ${
+                  mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+                } rounded-md flex items-center text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium transition-colors`}
+                title="Spaces"
               >
-                <span className="flex items-center gap-1.5">
-                  <HardDrive className="w-3.5 h-3.5" />
-                  Spaces
+                <span className="flex items-center gap-1.5 truncate">
+                  <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                  {!mediaSubSidebarCollapsed && <span>Spaces</span>}
                 </span>
-                {expandedNav.spaces ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {!mediaSubSidebarCollapsed && (expandedNav.spaces ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />)}
               </button>
-              {expandedNav.spaces && (
+              {expandedNav.spaces && !mediaSubSidebarCollapsed && (
                 <div className="flex flex-col pl-4 gap-0.5 border-l border-[#333333] ml-2 mt-0.5">
                   {spacesList.map((sp) => (
                     <button
@@ -2326,18 +2394,28 @@ export const CategoryPanel: React.FC = () => {
             </div>
 
             {/* Library ▾ */}
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full">
               <button
-                onClick={() => setExpandedNav({ ...expandedNav, library: !expandedNav.library })}
-                className="w-full py-1 px-2 rounded-md flex items-center justify-between text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium"
+                onClick={() => {
+                  if (mediaSubSidebarCollapsed) {
+                    setMediaSubSidebarCollapsed(false);
+                    setExpandedNav((prev) => ({ ...prev, library: true }));
+                  } else {
+                    setExpandedNav((prev) => ({ ...prev, library: !prev.library }));
+                  }
+                }}
+                className={`w-full py-1 ${
+                  mediaSubSidebarCollapsed ? 'px-1 justify-center' : 'px-2 justify-between'
+                } rounded-md flex items-center text-[#8A8A8A] hover:text-[#E6E6E6] hover:bg-[#262626] font-medium transition-colors`}
+                title="Library"
               >
-                <span className="flex items-center gap-1.5">
-                  <Film className="w-3.5 h-3.5" />
-                  Library
+                <span className="flex items-center gap-1.5 truncate">
+                  <Film className="w-3.5 h-3.5 shrink-0" />
+                  {!mediaSubSidebarCollapsed && <span>Library</span>}
                 </span>
-                {expandedNav.library ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {!mediaSubSidebarCollapsed && (expandedNav.library ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />)}
               </button>
-              {expandedNav.library && (
+              {expandedNav.library && !mediaSubSidebarCollapsed && (
                 <div className="flex flex-col pl-4 gap-0.5 border-l border-[#333333] ml-2 mt-0.5">
                   <button
                     onClick={() => {
@@ -2436,7 +2514,7 @@ export const CategoryPanel: React.FC = () => {
           </div>
 
           {/* Right Sub-Panel Content */}
-          <div ref={contentRef} className="flex-1 p-3 overflow-y-auto text-xs text-[#E6E6E6] bg-[#1F1F1F] flex flex-col gap-3">
+          <div ref={contentRef} className="min-w-0 flex-1 p-3 overflow-y-auto text-xs text-[#E6E6E6] bg-[#1F1F1F] flex flex-col gap-3">
             {/* Input file ngầm */}
             <input
               ref={mediaFileInputRef}
@@ -2497,7 +2575,7 @@ export const CategoryPanel: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleImportFolder}
-                      className="px-3 py-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#383838] border border-[#444444] text-[#E6E6E6] hover:text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                      className="px-3 py-1.5 rounded-md bg-[#262626] hover:bg-[#2E2E2E] border border-[#333333] text-[#E6E6E6] hover:text-white font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
                     >
                       <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
                       <span>Chọn thư mục (Folder)</span>
@@ -2518,7 +2596,7 @@ export const CategoryPanel: React.FC = () => {
                   <span className="text-[10px] font-bold text-[#8A8A8A] uppercase tracking-wider">
                     Chưa có media? Tạo nhanh bằng các công cụ thông minh
                   </span>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {/* Card 1: Generate */}
                     <button
                       onClick={() => setSelectedMediaNav('gen_image')}
@@ -2580,12 +2658,13 @@ export const CategoryPanel: React.FC = () => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Tìm kiếm tệp media..."
-                        className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#2E2E2E] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB]"
+                        className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
                       />
                       {searchQuery && (
                         <button
                           onClick={() => setSearchQuery('')}
                           className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                          title="Xóa tìm kiếm"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -2715,7 +2794,7 @@ export const CategoryPanel: React.FC = () => {
                 )}
 
                 {/* Media Thumbnails Grid */}
-                <div className="grid grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-0.5">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(115px,1fr))] sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-0.5">
                   {(() => {
                     let list = [...dbMediaList];
                     if (selectedMediaNav === 'yours_view' && yoursSubnav === 'recent') list = list.slice(0, 10);
@@ -3121,7 +3200,7 @@ export const CategoryPanel: React.FC = () => {
                       step="0.1"
                       value={ttsSpeed}
                       onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
-                      className="accent-[#1FC8DB] mt-1"
+                      className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider mt-1"
                     />
                   </div>
                 </div>
@@ -3386,7 +3465,7 @@ export const CategoryPanel: React.FC = () => {
                 </div>
 
                 {/* Mobile & Tablet Friendly Toolbar: Sleep Timer & Background Audio */}
-                <div className="flex items-center justify-between bg-[#181818] p-2 rounded-lg border border-[#333333] relative">
+                <div className="flex items-center justify-between bg-[#141414] p-2 rounded-lg border border-[#333333] relative">
                   {/* Sleep Timer Selector Button */}
                   <div className="relative">
                     <button
@@ -3394,7 +3473,7 @@ export const CategoryPanel: React.FC = () => {
                       className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all min-h-[36px] ${
                         sleepTimerState.isActive
                           ? 'bg-purple-600/30 text-purple-300 border border-purple-500 shadow-sm'
-                          : 'bg-[#262626] text-[#A0A0A0] hover:text-white border border-[#3A3A3A]'
+                          : 'bg-[#262626] text-[#A0A0A0] hover:text-white border border-[#333333]'
                       }`}
                       title="Chọn thời gian tự tắt nhạc (Sleep Timer)"
                     >
@@ -3411,7 +3490,7 @@ export const CategoryPanel: React.FC = () => {
 
                     {/* Sleep Timer Dropdown Popover */}
                     {showSleepTimerMenu && (
-                      <div className="absolute z-50 mt-1 top-full left-0 w-52 bg-[#1E1E1E] border border-[#3A3A3A] rounded-lg shadow-2xl p-1.5 flex flex-col gap-1 animate-in fade-in">
+                      <div className="absolute z-50 mt-1 top-full left-0 w-52 bg-[#1F1F1F] border border-[#333333] rounded-lg shadow-2xl p-1.5 flex flex-col gap-1 animate-in fade-in">
                         <div className="text-[10px] font-bold text-[#8A8A8A] px-2 py-1 uppercase border-b border-[#333333]">
                           Thời gian tự tắt (Sleep Timer)
                         </div>
@@ -3443,7 +3522,7 @@ export const CategoryPanel: React.FC = () => {
                             className={`w-full text-left px-2.5 py-2 rounded text-xs flex items-center justify-between min-h-[36px] ${
                               sleepTimerState.option === opt.val
                                 ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] font-bold'
-                                : 'text-[#C5C5C5] hover:bg-[#2A2A2A] hover:text-white'
+                                : 'text-[#C5C5C5] hover:bg-[#2E2E2E] hover:text-white'
                             }`}
                           >
                             <span>{opt.label}</span>
@@ -3469,12 +3548,12 @@ export const CategoryPanel: React.FC = () => {
                     }}
                     className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all min-h-[36px] ${
                       isBackgroundAudioOn
-                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-800'
-                        : 'bg-[#262626] text-[#7A7A7A] hover:text-white border border-[#3A3A3A]'
+                        ? 'bg-[#1FC8DB]/20 text-[#1FC8DB] border border-[#1FC8DB]/40'
+                        : 'bg-[#262626] text-[#7A7A7A] hover:text-white border border-[#333333]'
                     }`}
                     title="Phát dưới nền khi khóa màn hình hoặc đổi tab (iOS / Android)"
                   >
-                    <Headphones className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <Headphones className="w-3.5 h-3.5 text-[#1FC8DB] shrink-0" />
                     <span className="hidden sm:inline">Phát dưới nền:</span>
                     <span className="font-bold">{isBackgroundAudioOn ? 'BẬT' : 'TẮT'}</span>
                   </button>
@@ -3482,22 +3561,22 @@ export const CategoryPanel: React.FC = () => {
 
                 {/* Search & Genre Filter with Accents Support & Clear Button */}
                 <div className="flex flex-col gap-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-3" />
+                  <div className="relative w-full">
+                    <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       value={musicSearch}
                       onChange={(e) => setMusicSearch(e.target.value)}
                       placeholder="Tìm bài hát, thể loại, giai điệu..."
-                      className="w-full bg-[#262626] border border-[#333333] focus:border-[#1FC8DB] rounded-md pl-8 pr-8 py-2 text-xs text-white outline-none min-h-[38px]"
+                      className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
                     />
                     {musicSearch && (
                       <button
                         onClick={() => setMusicSearch('')}
-                        className="absolute right-2 top-2.5 p-1 rounded-full text-[#8A8A8A] hover:text-white hover:bg-[#333333] transition-colors"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
                         title="Xóa tìm kiếm"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3 h-3" />
                       </button>
                     )}
                   </div>
@@ -3710,7 +3789,7 @@ export const CategoryPanel: React.FC = () => {
 
                 {/* Floating Mini Player for Mobile & Tablet */}
                 {activeTrackPlaying && (
-                  <div className="sticky bottom-0 z-30 p-2.5 bg-[#141824]/95 backdrop-blur border border-cyan-500/40 rounded-lg shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-200">
+                  <div className="sticky bottom-0 z-30 p-2.5 bg-[#1F1F1F]/95 backdrop-blur border border-[#1FC8DB]/40 rounded-lg shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-200">
                     <div className="flex items-center gap-2 overflow-hidden flex-1">
                       <div className="p-2 rounded-full bg-[#1FC8DB] text-slate-950 shrink-0">
                         <Music className="w-3.5 h-3.5 animate-pulse" />
@@ -3746,7 +3825,7 @@ export const CategoryPanel: React.FC = () => {
                             }
                           }
                         }}
-                        className="p-2 rounded-full bg-[#2E2E2E] hover:bg-[#3A3A3A] text-white min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
+                        className="p-2 rounded-full bg-[#2E2E2E] hover:bg-[#333333] text-white min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
                         title={musicAudioRef.current?.paused ? 'Tiếp tục phát' : 'Tạm dừng'}
                       >
                         {musicAudioRef.current?.paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -3773,15 +3852,24 @@ export const CategoryPanel: React.FC = () => {
             {audioSubnav === 'sfx' && (
               <div className="flex flex-col gap-3">
                 {/* Search Input for SFX */}
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+                <div className="relative w-full">
+                  <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={sfxSearch}
                     onChange={(e) => setSfxSearch(e.target.value)}
                     placeholder="Tìm kiếm âm thanh SFX (whoosh, hit, risers...)..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                    className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
                   />
+                  {sfxSearch && (
+                    <button
+                      onClick={() => setSfxSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                      title="Xóa tìm kiếm"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Inline Discovery Block for SFX */}
@@ -3991,7 +4079,7 @@ export const CategoryPanel: React.FC = () => {
                       step="0.1"
                       value={ttsSpeed}
                       onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
-                      className="accent-[#1FC8DB] cursor-pointer"
+                      className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                     />
                   </div>
                 </div>
@@ -4209,13 +4297,25 @@ export const CategoryPanel: React.FC = () => {
             {/* 3.1 20+ TEXT PRESETS */}
             {textSubnav === 'presets' && (
               <div className="flex flex-col gap-2">
-                <input
-                  type="text"
-                  value={textSearch}
-                  onChange={(e) => setTextSearch(e.target.value)}
-                  placeholder="Tìm kiếm mẫu chữ hot trend..."
-                  className="w-full bg-[#262626] border border-[#333333] focus:border-[#1FC8DB] rounded-md px-3 py-1.5 text-xs text-white outline-none mb-1"
-                />
+                <div className="relative w-full mb-1">
+                  <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={textSearch}
+                    onChange={(e) => setTextSearch(e.target.value)}
+                    placeholder="Tìm kiếm mẫu chữ hot trend..."
+                    className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
+                  />
+                  {textSearch && (
+                    <button
+                      onClick={() => setTextSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                      title="Xóa tìm kiếm"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
 
                 {/* Inline Discovery Block for Text Presets */}
                 {renderRegistryDiscoveryBlock('textPreset', textSearch)}
@@ -4520,15 +4620,24 @@ export const CategoryPanel: React.FC = () => {
         {activeTab === 'Stickers' && (
           <div className="flex flex-col gap-3">
             {/* Search Input for Stickers */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={stickerSearch}
                 onChange={(e) => setStickerSearch(e.target.value)}
                 placeholder="Tìm nhãn dán, sticker, Lottie, SVG..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
               />
+              {stickerSearch && (
+                <button
+                  onClick={() => setStickerSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* Inline Discovery Block for Stickers */}
@@ -4819,15 +4928,24 @@ export const CategoryPanel: React.FC = () => {
         {activeTab === 'Effects' && (
           <div className="flex flex-col gap-3">
             {/* Search Input for Effects */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={effectSearchQuery}
                 onChange={(e) => setEffectSearchQuery(e.target.value)}
                 placeholder="Tìm hiệu ứng (VD: rung, glitch, mờ, hạt phim)..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
               />
+              {effectSearchQuery && (
+                <button
+                  onClick={() => setEffectSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* Interactive Effect Parameter Controls */}
@@ -4866,7 +4984,7 @@ export const CategoryPanel: React.FC = () => {
                     max="100"
                     value={effectIntensity}
                     onChange={(e) => setEffectIntensity(parseInt(e.target.value))}
-                    className="accent-[#1FC8DB] cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                   />
                 </div>
 
@@ -4882,7 +5000,7 @@ export const CategoryPanel: React.FC = () => {
                     step="0.1"
                     value={effectSpeed}
                     onChange={(e) => setEffectSpeed(parseFloat(e.target.value))}
-                    className="accent-[#1FC8DB] cursor-pointer"
+                    className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                   />
                 </div>
               </div>
@@ -5022,15 +5140,24 @@ export const CategoryPanel: React.FC = () => {
         {activeTab === 'Transitions' && (
           <div className="flex flex-col gap-3">
             {/* Search Input for Transitions */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={transitionSearchQuery}
                 onChange={(e) => setTransitionSearchQuery(e.target.value)}
                 placeholder="Tìm chuyển cảnh (VD: zoom, glitch, swipe)..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
               />
+              {transitionSearchQuery && (
+                <button
+                  onClick={() => setTransitionSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* Transition Controls Bar */}
@@ -5046,7 +5173,7 @@ export const CategoryPanel: React.FC = () => {
                 step="0.1"
                 value={transitionDuration}
                 onChange={(e) => setTransitionDuration(parseFloat(e.target.value))}
-                className="accent-[#1FC8DB] cursor-pointer"
+                className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
               />
 
               <button
@@ -5187,7 +5314,7 @@ export const CategoryPanel: React.FC = () => {
 
               {/* Whisper Run Button & Progress Bar */}
               {isWhisperRunning ? (
-                <div className="flex flex-col gap-1.5 p-2.5 rounded bg-[#1A1A1A] border border-[#1FC8DB]/40">
+                <div className="flex flex-col gap-1.5 p-2.5 rounded bg-[#262626] border border-[#1FC8DB]/40">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-[#1FC8DB] font-semibold flex items-center gap-1.5">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -5267,7 +5394,7 @@ export const CategoryPanel: React.FC = () => {
                 step="0.5"
                 value={manualCaptionDuration}
                 onChange={(e) => setManualCaptionDuration(parseFloat(e.target.value))}
-                className="accent-[#1FC8DB] cursor-pointer"
+                className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
               />
               <button
                 onClick={() => {
@@ -5397,7 +5524,7 @@ export const CategoryPanel: React.FC = () => {
                 step="0.1"
                 value={styleCaptionScale}
                 onChange={(e) => setStyleCaptionScale(parseFloat(e.target.value))}
-                className="accent-[#1FC8DB] cursor-pointer"
+                className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
               />
 
               <button
@@ -5459,15 +5586,24 @@ export const CategoryPanel: React.FC = () => {
             </div>
 
             {/* Search Input for Filters */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={filterSearchQuery}
                 onChange={(e) => setFilterSearchQuery(e.target.value)}
                 placeholder="Tìm bộ lọc / LUT 3D (VD: teal, vintage, noir)..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
               />
+              {filterSearchQuery && (
+                <button
+                  onClick={() => setFilterSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* Inline Discovery Block for Filters & LUTs */}
@@ -5508,7 +5644,7 @@ export const CategoryPanel: React.FC = () => {
                     updateClip(selectedClipId, { filterIntensity: val });
                   }
                 }}
-                className="accent-[#1FC8DB] cursor-pointer"
+                className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
               />
             </div>
 
@@ -5656,7 +5792,7 @@ export const CategoryPanel: React.FC = () => {
                   max="100"
                   value={adjExposure}
                   onChange={(e) => setAdjExposure(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5672,7 +5808,7 @@ export const CategoryPanel: React.FC = () => {
                   max="150"
                   value={adjBrightness}
                   onChange={(e) => setAdjBrightness(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5688,7 +5824,7 @@ export const CategoryPanel: React.FC = () => {
                   max="150"
                   value={adjContrast}
                   onChange={(e) => setAdjContrast(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5704,7 +5840,7 @@ export const CategoryPanel: React.FC = () => {
                   max="100"
                   value={adjHighlight}
                   onChange={(e) => setAdjHighlight(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5720,7 +5856,7 @@ export const CategoryPanel: React.FC = () => {
                   max="100"
                   value={adjShadow}
                   onChange={(e) => setAdjShadow(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
             </div>
@@ -5743,7 +5879,7 @@ export const CategoryPanel: React.FC = () => {
                   max="50"
                   value={adjTemp}
                   onChange={(e) => setAdjTemp(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5759,7 +5895,7 @@ export const CategoryPanel: React.FC = () => {
                   max="50"
                   value={adjTint}
                   onChange={(e) => setAdjTint(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5775,7 +5911,7 @@ export const CategoryPanel: React.FC = () => {
                   max="200"
                   value={adjSaturation}
                   onChange={(e) => setAdjSaturation(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5791,7 +5927,7 @@ export const CategoryPanel: React.FC = () => {
                   max="180"
                   value={adjHue}
                   onChange={(e) => setAdjHue(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
             </div>
@@ -5814,7 +5950,7 @@ export const CategoryPanel: React.FC = () => {
                   max="100"
                   value={adjVignette}
                   onChange={(e) => setAdjVignette(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5830,7 +5966,7 @@ export const CategoryPanel: React.FC = () => {
                   max="100"
                   value={adjSharpness}
                   onChange={(e) => setAdjSharpness(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
 
@@ -5846,7 +5982,7 @@ export const CategoryPanel: React.FC = () => {
                   max="100"
                   value={adjGrain}
                   onChange={(e) => setAdjGrain(parseInt(e.target.value))}
-                  className="accent-[#1FC8DB] cursor-pointer"
+                  className="w-full accent-[#1FC8DB] h-1.5 bg-[#2E2E2E] rounded cursor-pointer touch-slider"
                 />
               </div>
             </div>
@@ -5938,15 +6074,24 @@ export const CategoryPanel: React.FC = () => {
             </div>
 
             {/* Search Input for Templates */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A8A8A]" />
+            <div className="relative w-full">
+              <Search className="w-3.5 h-3.5 text-[#8A8A8A] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
                 placeholder="Tìm mẫu template (TikTok, Vlog, Sales, Hook)..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#262626] border border-[#333333] rounded-md text-xs text-white placeholder-[#8A8A8A] focus:outline-none focus:border-[#1FC8DB]"
+                className="w-full pl-8 pr-7 py-1.5 rounded-md bg-[#262626] border border-[#333333] text-xs text-white placeholder-[#8A8A8A] outline-none focus:border-[#1FC8DB] transition-colors"
               />
+              {templateSearch && (
+                <button
+                  onClick={() => setTemplateSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-white"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
             {/* Mục "Từ link/video" (T5 Entry Point: Mở Phòng Lab & Remix) */}

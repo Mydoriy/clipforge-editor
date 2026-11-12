@@ -271,7 +271,7 @@ export const Timeline: React.FC = () => {
     { id: 'text', name: 'Text / Sub', icon: Type, color: 'border-amber-500/60 bg-amber-950/40 text-amber-300', locked: false, hidden: false, muted: false, height: 44 },
     { id: 'sticker', name: 'Sticker', icon: Smile, color: 'border-pink-500/60 bg-pink-950/40 text-pink-300', locked: false, hidden: false, muted: false, height: 44 },
     { id: 'adjustment', name: 'Adjustment', icon: Sliders, color: 'border-violet-500/60 bg-violet-950/40 text-violet-300', locked: false, hidden: false, muted: false, height: 44 },
-    { id: 'video', name: 'Video 9:16', icon: Video, color: 'border-[#22D3EE]/60 bg-cyan-950/40 text-[#22D3EE]', locked: false, hidden: false, muted: false, height: 52 },
+    { id: 'video', name: 'Video 9:16', icon: Video, color: 'border-[#1FC8DB]/60 bg-cyan-950/40 text-[#1FC8DB]', locked: false, hidden: false, muted: false, height: 52 },
     { id: 'audio', name: 'Audio / BGM', icon: Music, color: 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300', locked: false, hidden: false, muted: false, height: 44 },
     { id: 'effect', name: 'Effects', icon: Sparkles, color: 'border-purple-500/60 bg-purple-950/40 text-purple-300', locked: false, hidden: false, muted: false, height: 44 },
     { id: 'filter', name: 'Filter', icon: Sparkles, color: 'border-sky-500/60 bg-sky-950/40 text-sky-300', locked: false, hidden: false, muted: false, height: 44 }
@@ -571,7 +571,7 @@ export const Timeline: React.FC = () => {
       adjustment: Sliders
     };
     const colors: Record<string, string> = {
-      video: 'border-[#22D3EE]/60 bg-cyan-950/40 text-[#22D3EE]',
+      video: 'border-[#1FC8DB]/60 bg-cyan-950/40 text-[#1FC8DB]',
       audio: 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300',
       text: 'border-amber-500/60 bg-amber-950/40 text-amber-300',
       sticker: 'border-pink-500/60 bg-pink-950/40 text-pink-300',
@@ -1501,9 +1501,9 @@ export const Timeline: React.FC = () => {
       {/* ======================================================== */}
       {/* TIMELINE TOOLBAR (SECTION 6)                             */}
       {/* ======================================================== */}
-      <div className="h-10 px-3 bg-[#1F1F1F] border-b border-[#333333] flex items-center justify-between z-30 shrink-0">
+      <div className="h-10 px-3 bg-[#1F1F1F] border-b border-[#333333] flex items-center justify-between z-30 shrink-0 overflow-x-auto scrollbar-none gap-4">
         {/* Left Side: + Menu, Tools, Undo/Redo, Split/Delete, Lock */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* 1. "+" Button with Green Notification Dot */}
           <div className="relative">
             <button
@@ -1823,7 +1823,7 @@ export const Timeline: React.FC = () => {
         </div>
 
         {/* Right Side: Voiceover, 4 Cyan Toggles, Zoom */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Voiceover Mic Button */}
           <button
             onClick={() => setVoiceoverOpen(true)}
@@ -2387,7 +2387,7 @@ export const Timeline: React.FC = () => {
                             track.color
                           } ${
                             isSelected
-                              ? 'ring-2 ring-white border-[#00E5FF] brightness-110 z-20 shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                              ? 'ring-2 ring-white border-[#1FC8DB] brightness-110 z-20 shadow-[0_0_12px_rgba(31,200,219,0.4)]'
                               : 'hover:brightness-105 z-10'
                           } ${isGrouped ? 'border-dashed border-amber-400/80' : ''}`}
                         >
@@ -2565,7 +2565,7 @@ export const Timeline: React.FC = () => {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-            className="fixed z-50 bg-[#1F1F1F] border border-[#333333] shadow-2xl rounded-lg py-1.5 min-w-[210px] text-xs text-[#E6E6E6] flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none divide-y divide-[#2B2B2B]"
+            className="fixed z-50 bg-[#1F1F1F] border border-[#333333] shadow-2xl rounded-lg py-1.5 min-w-[210px] text-xs text-[#E6E6E6] flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none divide-y divide-[#262626]"
           >
           {/* Section 1: Cut, Split, Delete */}
           <div className="py-1 flex flex-col gap-0.5">

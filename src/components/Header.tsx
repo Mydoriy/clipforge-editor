@@ -44,14 +44,33 @@ import {
   Activity,
   Maximize2,
   History,
-  WifiOff
+  WifiOff,
+  MoreHorizontal
 } from 'lucide-react';
 
 interface HeaderProps {
   isEditor?: boolean;
+  projectName?: string;
+  setProjectName?: (name: string) => void;
+  aspectRatio?: string;
+  setAspectRatio?: (ratio: string) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
+export const Header: React.FC<HeaderProps> = ({
+  isEditor = false,
+  projectName: projectNameProp,
+  setProjectName: setProjectNameProp,
+  aspectRatio: aspectRatioProp,
+  setAspectRatio: setAspectRatioProp,
+  onUndo: onUndoProp,
+  onRedo: onRedoProp,
+  canUndo: canUndoProp,
+  canRedo: canRedoProp
+}) => {
   const navigate = useNavigate();
   const {
     language,
@@ -84,8 +103,8 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     toggleShowDetails,
     toggleShowTimeline,
     resetLayout,
-    undo,
-    redo,
+    undo: storeUndo,
+    redo: storeRedo,
     undoStack,
     redoStack,
     cutClip,
@@ -94,18 +113,69 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
     selectAllClips,
     deselectAllClips,
     selectedClipId,
-    duplicateClip
+    duplicateClip,
+    projectSettings,
+    updateProjectSettings,
+    settings,
+    updateSettings
   } = useEditorStore();
+
+  const undo = onUndoProp || storeUndo;
+  const redo = onRedoProp || storeRedo;
+  const canUndoEffective = canUndoProp !== undefined ? canUndoProp : undoStack.length > 0;
+  const canRedoEffective = canRedoProp !== undefined ? canRedoProp : redoStack.length > 0;
+
+  const currentTitle = projectNameProp !== undefined ? projectNameProp : projectTitle;
+  const currentAspect = aspectRatioProp || projectSettings?.aspect || settings?.defaultAspect || '9:16';
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeMenuTab, setActiveMenuTab] = useState<'file' | 'edit' | 'view' | 'help'>('file');
   const [layoutDropdownOpen, setLayoutDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
+  const [aspectDropdownOpen, setAspectDropdownOpen] = useState(false);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
 
   // Inline Rename State
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [tempTitle, setTempTitle] = useState(projectTitle);
+  const [tempTitle, setTempTitle] = useState(currentTitle);
+
+  useEffect(() => {
+    setTempTitle(currentTitle);
+  }, [currentTitle]);
+
+  const commitTitle = (newVal: string) => {
+    const trimmed = newVal.trim();
+    if (trimmed) {
+      if (setProjectNameProp) setProjectNameProp(trimmed);
+      setProjectTitle(trimmed);
+      if (currentProjectId) {
+        db.projects
+          .update(currentProjectId, { title: trimmed, name: trimmed })
+          .catch(() => {});
+      }
+      showToast('Đã đổi tên dự án!', 'success');
+    }
+    setIsEditingTitle(false);
+  };
+
+  const ASPECT_RATIOS = [
+    { id: '9:16', label: '9:16 (Dọc TikTok/Reels)', desc: '1080 × 1920' },
+    { id: '16:9', label: '16:9 (Ngang YouTube)', desc: '1920 × 1080' },
+    { id: '1:1', label: '1:1 (Vuông Instagram)', desc: '1080 × 1080' },
+    { id: '4:5', label: '4:5 (Dọc Feed)', desc: '1080 × 1350' },
+    { id: '21:9', label: '21:9 (Điện ảnh Ultrawide)', desc: '2560 × 1080' }
+  ] as const;
+
+  const handleSelectAspect = (ratio: string) => {
+    if (setAspectRatioProp) {
+      setAspectRatioProp(ratio);
+    }
+    updateProjectSettings({ aspect: ratio as any });
+    updateSettings({ defaultAspect: ratio as any });
+    setAspectDropdownOpen(false);
+    showToast(`Đã đổi tỉ lệ khung hình: ${ratio}`, 'info');
+  };
 
   const importFileRef = useRef<HTMLInputElement>(null);
   const t = translations[language];
@@ -335,8 +405,10 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
   return (
     <header
       className={`${
-        isEditor ? 'h-[44px] bg-[#1F1F1F] border-[#333333] px-3 font-sans' : 'h-14 bg-[#0E1320] border-[#1F2937] px-5'
-      } border-b flex items-center justify-between select-none z-30 shrink-0 text-xs`}
+        isEditor
+          ? 'h-[44px] bg-[#1F1F1F] border-[#333333] px-2.5 sm:px-3 font-sans'
+          : 'h-14 bg-[#1F1F1F] border-[#333333] px-4 sm:px-5 font-sans'
+      } border-b flex items-center justify-between select-none z-30 shrink-0 text-xs w-full min-w-0`}
     >
       {/* Hidden file input for import .capproj */}
       <input
@@ -348,11 +420,11 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
       />
 
       {/* LEFT: Logo "CapCut" + Menu ▾ Dropdown */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         {!isEditor && (
           <button
             onClick={toggleSidebar}
-            className="p-1.5 rounded-xl bg-[#111827] border border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] hover-lift lg:hidden touch-target-44"
+            className="p-1.5 rounded-xl bg-[#262626] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] hover-lift lg:hidden touch-target-44"
             title="Thu gọn / Mở sidebar"
           >
             <MenuIcon className="w-4 h-4" />
@@ -692,10 +764,10 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           <div className="flex items-center gap-0.5 border-l border-[#333333] pl-2 ml-1">
             <button
               onClick={undo}
-              disabled={undoStack.length === 0}
-              title={undoStack.length === 0 ? 'Không có thao tác nào để hoàn tác (Ctrl+Z)' : 'Hoàn tác (Undo - Ctrl+Z)'}
+              disabled={!canUndoEffective}
+              title={!canUndoEffective ? 'Không có thao tác nào để hoàn tác (Ctrl+Z)' : 'Hoàn tác (Undo - Ctrl+Z)'}
               className={`p-1.5 rounded-md transition-colors touch-target-44 ${
-                undoStack.length === 0
+                !canUndoEffective
                   ? 'text-[#555555] cursor-not-allowed opacity-40'
                   : 'text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626]'
               }`}
@@ -704,14 +776,14 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             </button>
             <button
               onClick={redo}
-              disabled={redoStack.length === 0}
+              disabled={!canRedoEffective}
               title={
-                redoStack.length === 0
+                !canRedoEffective
                   ? 'Không có thao tác nào để làm lại (Ctrl+Shift+Z / Ctrl+Y)'
                   : 'Làm lại (Redo - Ctrl+Shift+Z)'
               }
               className={`p-1.5 rounded-md transition-colors touch-target-44 ${
-                redoStack.length === 0
+                !canRedoEffective
                   ? 'text-[#555555] cursor-not-allowed opacity-40'
                   : 'text-[#8A8A8A] hover:text-[#1FC8DB] hover:bg-[#262626]'
               }`}
@@ -721,117 +793,139 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           </div>
         )}
 
-        {/* CapCut Auto-saved green status badge */}
+        {/* CapCut Auto-saved single status badge */}
         {isEditor && (
-          <div className="flex items-center gap-1.5 text-[11px] text-[#888] font-mono ml-1.5 pl-2 border-l border-[#333333] hidden md:flex select-none">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono ml-1.5 pl-2 border-l border-[#333333] hidden md:flex select-none">
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                autosaveStatus === 'saving' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'
+                autosaveStatus === 'saving'
+                  ? 'bg-amber-400 animate-ping'
+                  : 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]'
               }`}
             />
-            <span>{autosaveStatus === 'saving' ? 'Saving…' : 'Auto saved'}</span>
+            <span className={autosaveStatus === 'saving' ? 'text-amber-400' : 'text-[#888]'}>
+              {autosaveStatus === 'saving' ? 'Saving…' : autosaveStatus === 'saved' ? 'Saved' : 'Auto saved'}
+            </span>
           </div>
         )}
       </div>
 
-      {/* CENTER: Project Name Inline Rename + Saved/Saving Status */}
+      {/* CENTER: Project Name Inline Rename + Aspect Ratio Selector */}
       {isEditor ? (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           {isEditingTitle ? (
             <input
               type="text"
               value={tempTitle}
               onChange={(e) => setTempTitle(e.target.value)}
               onBlur={() => {
-                if (tempTitle.trim()) {
-                  setProjectTitle(tempTitle.trim());
-                  if (currentProjectId) {
-                    db.projects
-                      .update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() })
-                      .catch(() => {});
-                  }
+                if (tempTitle.trim() && tempTitle.trim() !== currentTitle) {
+                  commitTitle(tempTitle);
+                } else {
+                  setTempTitle(currentTitle);
+                  setIsEditingTitle(false);
                 }
-                setIsEditingTitle(false);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  if (tempTitle.trim()) {
-                    setProjectTitle(tempTitle.trim());
-                    if (currentProjectId) {
-                      db.projects
-                        .update(currentProjectId, { title: tempTitle.trim(), name: tempTitle.trim() })
-                        .catch(() => {});
-                    }
-                    showToast('Đã đổi tên dự án!', 'success');
-                  }
-                  setIsEditingTitle(false);
+                  commitTitle(tempTitle);
                 } else if (e.key === 'Escape') {
-                  setTempTitle(projectTitle);
+                  setTempTitle(currentTitle);
                   setIsEditingTitle(false);
                 }
               }}
               autoFocus
-              className="bg-[#2E2E2E] border border-[#1FC8DB] text-[#E6E6E6] text-xs px-2.5 py-0.5 rounded-md outline-none font-medium text-center w-40"
+              className="bg-[#2E2E2E] border border-[#1FC8DB] text-[#E6E6E6] text-xs px-2.5 py-0.5 rounded-md outline-none font-medium text-center w-32 sm:w-40"
             />
           ) : (
             <span
               onClick={() => {
-                setTempTitle(projectTitle);
+                setTempTitle(currentTitle);
                 setIsEditingTitle(true);
               }}
               title="Bấm để đổi tên dự án (Enter lưu, Esc hủy)"
-              className="text-xs font-semibold text-[#E6E6E6] hover:text-[#1FC8DB] cursor-pointer px-2 py-0.5 rounded-md hover:bg-[#262626] transition-all truncate max-w-[200px]"
+              className="text-xs font-semibold text-[#E6E6E6] hover:text-[#1FC8DB] cursor-pointer px-2 py-0.5 rounded-md hover:bg-[#262626] transition-all truncate max-w-[110px] sm:max-w-[160px] md:max-w-[220px]"
             >
-              {projectTitle}
+              {currentTitle}
             </span>
           )}
 
-          {/* Aspect ratio 9:16 tag */}
-          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#262626] text-[#8A8A8A] border border-[#333333] font-mono">
-            9:16
-          </span>
-
-          {/* Saved / Saving Status Indicator */}
-          <span
-            className={`text-[10px] px-2 py-0.5 rounded-md border font-medium flex items-center gap-1.5 transition-all ${
-              autosaveStatus === 'saving'
-                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                : 'bg-[#262626] text-[#8A8A8A] border-[#333333]'
-            }`}
-            title="Dự án được lưu tự động mỗi 3 giây vào IndexedDB"
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                autosaveStatus === 'saving' ? 'bg-amber-400 animate-ping' : 'bg-[#1FC8DB]'
+          {/* Interactive Aspect Ratio Selector Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAspectDropdownOpen(!aspectDropdownOpen)}
+              className={`text-[10px] px-2 py-0.5 rounded-md border font-mono font-medium flex items-center gap-1 transition-all touch-target-44 ${
+                aspectDropdownOpen
+                  ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/50 text-[#1FC8DB] shadow-[0_0_8px_rgba(31,200,219,0.25)]'
+                  : 'bg-[#262626] hover:bg-[#2E2E2E] text-[#E6E6E6] hover:text-[#1FC8DB] border-[#333333]'
               }`}
-            />
-            <span>{autosaveStatus === 'saving' ? 'Saving…' : 'Saved'}</span>
-          </span>
+              title="Đổi tỉ lệ khung hình (Aspect Ratio: 9:16, 16:9, 1:1, 4:5, 21:9)"
+              aria-label="Chọn tỉ lệ khung hình"
+              aria-expanded={aspectDropdownOpen}
+            >
+              <span>{currentAspect}</span>
+              <ChevronDown
+                className={`w-2.5 h-2.5 text-[#8A8A8A] transition-transform duration-150 ${
+                  aspectDropdownOpen ? 'rotate-180 text-[#1FC8DB]' : ''
+                }`}
+              />
+            </button>
+
+            {aspectDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setAspectDropdownOpen(false)} />
+                <div
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 w-48 bg-[#1F1F1F] border border-[#333333] rounded-md shadow-2xl py-1 text-xs text-[#E6E6E6] z-50 animate-in fade-in flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-2.5 py-1 text-[10px] text-[#8A8A8A] uppercase font-bold tracking-wider border-b border-[#333333]/50">
+                    Tỉ lệ khung hình
+                  </div>
+                  {ASPECT_RATIOS.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => handleSelectAspect(r.id)}
+                      className={`px-2.5 py-1.5 text-left flex items-center justify-between hover:bg-[#1FC8DB]/10 hover:text-[#1FC8DB] transition-colors ${
+                        currentAspect === r.id ? 'text-[#1FC8DB] font-bold bg-[#1FC8DB]/5' : 'text-[#CCCCCC]'
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium text-[11px]">{r.label}</span>
+                        <span className="text-[9px] text-[#777] font-mono">{r.desc}</span>
+                      </div>
+                      {currentAspect === r.id && <Check className="w-3.5 h-3.5 text-[#1FC8DB] shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Offline Status Badge */}
           {isOffline && (
             <span
-              className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium flex items-center gap-1 select-none"
+              className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium flex items-center gap-1 select-none shrink-0"
               title="Đang ở chế độ Ngoại tuyến. Mọi thao tác dựng và xuất video vẫn hoạt động bình thường trên máy của bạn."
             >
               <WifiOff className="w-3 h-3 text-amber-400 shrink-0" />
-              <span>Offline</span>
+              <span className="hidden sm:inline">Offline</span>
             </span>
           )}
         </div>
       ) : (
-        <div className="hidden md:flex items-center gap-2 text-xs text-[#9CA3AF]">
-          <span className="font-semibold text-[#E5E7EB]">{APP_NAME} v{APP_VERSION}</span>
+        <div className="hidden md:flex items-center gap-2 text-xs text-[#8A8A8A]">
+          <span className="font-semibold text-[#E6E6E6]">{APP_NAME} v{APP_VERSION}</span>
           <span>•</span>
           <span className="text-[#1FC8DB] font-medium">9:16 Vertical Video Studio</span>
         </div>
       )}
 
-      {/* RIGHT: Layout, Shortcuts, Pro, Share, Export, Window controls */}
-      <div className="flex items-center gap-2">
+      {/* RIGHT: Layout, Shortcuts, Safe Zone, Language, Notifications, Beta Tasks, Feedback, Settings, PRO VIP, Share, Export, Window controls */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Layout Presets Dropdown */}
         {isEditor && (
-          <div className="relative">
+          <div className="relative hidden md:block">
             <button
               onClick={() => setLayoutDropdownOpen(!layoutDropdownOpen)}
               title="Tùy chọn bố cục làm việc (Layout)"
@@ -879,12 +973,12 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           </div>
         )}
 
-        {/* Keyboard Shortcuts Icon Button */}
+        {/* Keyboard Shortcuts Icon Button (Desktop only, available in More menu on tablet) */}
         {isEditor && (
           <button
             onClick={() => openModal('shortcuts')}
             title="Xem phím tắt (Keyboard shortcuts)"
-            className="p-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#262626] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] transition-all touch-target-44"
+            className="p-1.5 rounded-md bg-[#2E2E2E] hover:bg-[#262626] border border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] transition-all touch-target-44 hidden xl:inline-flex"
           >
             <Keyboard className="w-3.5 h-3.5" />
           </button>
@@ -898,11 +992,11 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
             className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border transition-all touch-target-44 ${
               safeZoneEnabled
                 ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
-                : 'bg-[#2E2E2E] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
+                : 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
             }`}
           >
             {safeZoneEnabled ? <Eye className="w-3.5 h-3.5 text-[#1FC8DB]" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{t.safeZone}</span>
+            <span className="hidden 2xl:inline">{t.safeZone}</span>
           </button>
         )}
 
@@ -910,23 +1004,17 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <div className="relative">
           <button
             onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-            className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border transition-all touch-target-44 ${
-              isEditor
-                ? 'bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border-[#333333]'
-                : 'bg-[#111827] hover:bg-[#1F2937] text-[#E5E7EB] border-[#1F2937]'
-            }`}
+            className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md border transition-all touch-target-44 bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border-[#333333]"
             title="Đổi ngôn ngữ toàn app"
           >
             <Globe className="w-3.5 h-3.5 text-[#1FC8DB]" />
-            <span>{language}</span>
+            <span className="hidden sm:inline">{language}</span>
             <ChevronDown className="w-3 h-3 text-[#8A8A8A]" />
           </button>
 
           {langDropdownOpen && (
             <div
-              className={`absolute right-0 mt-2 w-32 ${
-                isEditor ? 'bg-[#1F1F1F] border-[#333333]' : 'bg-[#111827] border-[#1F2937]'
-              } border rounded-md shadow-2xl py-1 text-xs text-[#E6E6E6] z-50 animate-in fade-in`}
+              className="absolute right-0 mt-2 w-32 bg-[#1F1F1F] border border-[#333333] rounded-md shadow-2xl py-1 text-xs text-[#E6E6E6] z-50 animate-in fade-in"
               onMouseLeave={() => setLangDropdownOpen(false)}
             >
               <button
@@ -963,11 +1051,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
         <div className="relative">
           <button
             onClick={() => setNotifDrawerOpen(!notifDrawerOpen)}
-            className={`relative p-1.5 rounded-md border transition-all touch-target-44 ${
-              isEditor
-                ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
-                : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
-            }`}
+            className="relative p-1.5 rounded-md border transition-all touch-target-44 bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]"
             title="Thông báo hệ thống"
           >
             <Bell className="w-3.5 h-3.5" />
@@ -980,9 +1064,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
 
           {notifDrawerOpen && (
             <div
-              className={`absolute right-0 mt-2 w-80 ${
-                isEditor ? 'bg-[#1F1F1F] border-[#333333]' : 'bg-[#111827] border-[#1F2937]'
-              } border rounded-md shadow-2xl p-3 text-xs text-[#E6E6E6] z-50 animate-in fade-in`}
+              className="absolute right-0 mt-2 w-80 bg-[#1F1F1F] border border-[#333333] rounded-md shadow-2xl p-3 text-xs text-[#E6E6E6] z-50 animate-in fade-in"
               onMouseLeave={() => setNotifDrawerOpen(false)}
             >
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#333333]">
@@ -1023,77 +1105,135 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
           )}
         </div>
 
-        {/* Closed Beta Guided Tasks Button */}
+        {/* Closed Beta Guided Tasks Button - visible on >= 1280px (xl), collapsed in More on tablet */}
         <button
           onClick={() => openModal('betaTasks')}
           aria-label="Kịch bản thử nghiệm Beta kín (Closed Beta Tasks)"
-          className={`px-2 py-1.5 rounded-md border text-[11px] font-bold flex items-center gap-1 transition-all touch-target-44 ${
-            isEditor
-              ? 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/40 text-amber-300'
-              : 'bg-amber-950/50 hover:bg-amber-900/60 border-amber-500/40 text-amber-300'
-          }`}
+          className="px-2 py-1.5 rounded-md border text-[11px] font-bold items-center gap-1 transition-all touch-target-44 bg-amber-950/40 hover:bg-amber-900/50 border-amber-500/40 text-amber-300 hidden xl:flex"
           title="Kịch bản 5 nhiệm vụ thử nghiệm Beta (Closed Beta Tasks)"
         >
           <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="hidden md:inline">Nhiệm vụ Beta</span>
+          <span className="hidden 2xl:inline">Nhiệm vụ Beta</span>
         </button>
 
-        {/* Feedback / Bug Report button */}
+        {/* Feedback / Bug Report button - visible on >= 1280px (xl), collapsed in More on tablet */}
         <button
           onClick={() => openModal('feedback')}
           aria-label="Báo lỗi hoặc Góp ý phát triển (Feedback & Bug Report)"
-          className={`p-1.5 rounded-md border transition-all touch-target-44 ${
-            isEditor
-              ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB]'
-              : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#22D3EE]'
-          }`}
+          className="p-1.5 rounded-md border transition-all touch-target-44 bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#1FC8DB] hidden xl:inline-flex"
           title="Báo lỗi / Góp ý tính năng (Feedback)"
         >
           <MessageSquarePlus className="w-3.5 h-3.5" />
         </button>
 
-        {/* Settings button */}
+        {/* Settings button - visible on >= 1280px (xl), collapsed in More on tablet */}
         <button
           onClick={() => openModal('settings')}
           aria-label="Cài đặt hệ thống (Settings)"
-          className={`p-1.5 rounded-md border transition-all touch-target-44 ${
-            isEditor
-              ? 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
-              : 'bg-[#111827] hover:bg-[#1F2937] border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB]'
-          }`}
+          className="p-1.5 rounded-md border transition-all touch-target-44 bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6] hidden xl:inline-flex"
           title="Cài đặt hệ thống (Settings)"
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
+
+        {/* Responsive More Tools Dropdown for Tablet & Mobile (< 1280px) */}
+        <div className="relative xl:hidden">
+          <button
+            type="button"
+            onClick={() => setMoreToolsOpen(!moreToolsOpen)}
+            className={`p-1.5 rounded-md border transition-all touch-target-44 ${
+              moreToolsOpen
+                ? 'bg-[#1FC8DB]/20 border-[#1FC8DB]/40 text-[#1FC8DB]'
+                : 'bg-[#2E2E2E] hover:bg-[#262626] border-[#333333] text-[#8A8A8A] hover:text-[#E6E6E6]'
+            }`}
+            title="Công cụ bổ sung (Nhiệm vụ Beta, Báo lỗi, Cài đặt)"
+            aria-label="Công cụ bổ sung"
+          >
+            <MoreHorizontal className="w-3.5 h-3.5" />
+          </button>
+
+          {moreToolsOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setMoreToolsOpen(false)} />
+              <div
+                className="absolute right-0 mt-2 w-52 bg-[#1F1F1F] border border-[#333333] rounded-md shadow-2xl py-1 text-xs text-[#E6E6E6] z-50 animate-in fade-in flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setMoreToolsOpen(false);
+                    openModal('betaTasks');
+                  }}
+                  className="px-3 py-2 hover:bg-[#262626] text-amber-300 flex items-center gap-2 text-left"
+                >
+                  <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Nhiệm vụ Beta</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMoreToolsOpen(false);
+                    openModal('feedback');
+                  }}
+                  className="px-3 py-2 hover:bg-[#262626] text-[#E6E6E6] hover:text-[#1FC8DB] flex items-center gap-2 text-left"
+                >
+                  <MessageSquarePlus className="w-3.5 h-3.5 text-[#1FC8DB] shrink-0" />
+                  <span>Báo lỗi / Góp ý</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMoreToolsOpen(false);
+                    openModal('settings');
+                  }}
+                  className="px-3 py-2 hover:bg-[#262626] text-[#E6E6E6] hover:text-[#1FC8DB] flex items-center gap-2 text-left"
+                >
+                  <Settings className="w-3.5 h-3.5 text-[#8A8A8A] shrink-0" />
+                  <span>Cài đặt hệ thống</span>
+                </button>
+                {isEditor && (
+                  <button
+                    onClick={() => {
+                      setMoreToolsOpen(false);
+                      openModal('shortcuts');
+                    }}
+                    className="px-3 py-2 hover:bg-[#262626] text-[#E6E6E6] hover:text-[#1FC8DB] flex items-center gap-2 text-left border-t border-[#333333]"
+                  >
+                    <Keyboard className="w-3.5 h-3.5 text-[#8A8A8A] shrink-0" />
+                    <span>Phím tắt</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Huy hiệu PRO VIP: Khẳng định đặc quyền tài khoản mức hạn cao nhất */}
         <button
           onClick={() => {
             showToast('👑 Tài khoản PRO VIP: Đang hoạt động ở mức hạn cao nhất (4K 60fps & AI Unlimited)!', 'success');
           }}
-          className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md transition-all shadow-sm bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/25 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 active:scale-95 cursor-pointer touch-target-44"
+          className="flex items-center gap-1.5 text-xs font-bold px-2 sm:px-2.5 py-1 rounded-md transition-all shadow-sm bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/25 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 active:scale-95 cursor-pointer touch-target-44 shrink-0"
           title="Tài khoản PRO VIP vĩnh viễn (Mức hạn cao nhất)"
         >
           <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
-          <span>PRO VIP</span>
+          <span className="hidden sm:inline">PRO VIP</span>
         </button>
 
         {/* Nút Share: Mở Share modal */}
         {isEditor && (
           <button
             onClick={() => openModal('share')}
-            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border border-[#333333] hover:border-[#1FC8DB] transition-all touch-target-44"
+            className="flex items-center gap-1 text-xs font-medium px-2 sm:px-2.5 py-1 rounded-md bg-[#2E2E2E] hover:bg-[#262626] text-[#E6E6E6] border border-[#333333] hover:border-[#1FC8DB] transition-all touch-target-44 shrink-0"
             title="Chia sẻ dự án (.capproj, link, Web Share)"
           >
             <Share2 className="w-3.5 h-3.5 text-[#1FC8DB]" />
-            <span className="hidden sm:inline">{t.share}</span>
+            <span className="hidden md:inline">{t.share}</span>
           </button>
         )}
 
         {/* Nút Export (Cyan) */}
         <button
           onClick={() => openModal('export')}
-          className="flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-md bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 transition-all shadow-sm active:scale-95 touch-target-44"
+          className="flex items-center gap-1 text-xs font-bold px-2.5 sm:px-3 py-1 rounded-md bg-[#1FC8DB] hover:bg-[#4BD9E8] text-slate-950 transition-all shadow-sm active:scale-95 touch-target-44 shrink-0"
           title="Xuất video hoàn tất (MP4 / WebM)"
         >
           <Download className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -1102,7 +1242,7 @@ export const Header: React.FC<HeaderProps> = ({ isEditor = false }) => {
 
         {/* Cụm cửa sổ (– ☐ ✕) */}
         {isEditor && (
-          <div className="flex items-center gap-1 ml-1 pl-1.5 border-l border-[#333333]">
+          <div className="hidden sm:flex items-center gap-1 ml-0.5 sm:ml-1 pl-1 sm:pl-1.5 border-l border-[#333333]">
             <button
               onClick={() => {
                 toggleShowTimeline();
